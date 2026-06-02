@@ -1,0 +1,727 @@
+/* ========== GESTÃO DE EQUIPE ========== */
+.gestao-wrapper {
+  max-width: 1100px;
+  margin: 2rem auto;
+  padding: 0 1rem;
+}
+
+/* Sub-abas */
+.gestao-sub-nav {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 1.5rem;
+  background: var(--branco);
+  padding: 6px;
+  border-radius: 12px;
+  box-shadow: var(--sombra);
+  flex-wrap: wrap;
+}
+
+.gestao-sub-tab {
+  background: none;
+  border: none;
+  color: var(--cinza-texto);
+  padding: 10px 20px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 14px;
+  font-weight: 500;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.gestao-sub-tab:hover {
+  background: var(--azul-fade);
+  color: var(--azul-meio);
+}
+
+.gestao-sub-tab.ativo {
+  background: var(--azul);
+  color: #fff;
+}
+
+.gestao-sub-aba {
+  display: none;
+}
+
+.gestao-sub-aba.ativo {
+  display: block;
+}
+
+/* ===== CALENDÁRIO ===== */
+.cal-topo {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 1.2rem;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.cal-nav {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.cal-nav button {
+  background: var(--branco);
+  border: 1.5px solid var(--cinza-borda);
+  color: var(--azul);
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  cursor: pointer;
+  font-size: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+}
+
+.cal-nav button:hover {
+  background: var(--azul);
+  color: #fff;
+  border-color: var(--azul);
+}
+
+#cal-mes-label {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 1.6rem;
+  color: var(--azul);
+  letter-spacing: 2px;
+  min-width: 200px;
+  text-align: center;
+}
+
+.btn-hoje {
+  background: none;
+  border: 1.5px solid var(--azul-claro);
+  color: var(--azul-claro);
+  padding: 7px 16px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 13px;
+  font-weight: 500;
+  transition: all 0.2s;
+}
+
+.btn-hoje:hover {
+  background: var(--azul-claro);
+  color: #fff;
+}
+
+.cal-card {
+  background: var(--branco);
+  border-radius: 14px;
+  box-shadow: var(--sombra);
+  padding: 1.5rem;
+}
+
+.cal-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 4px;
+}
+
+.cal-dia-semana {
+  text-align: center;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  color: var(--cinza-texto);
+  padding: 8px 4px;
+}
+
+.cal-celula {
+  min-height: 90px;
+  border: 1px solid var(--cinza-borda);
+  border-radius: 8px;
+  padding: 6px;
+  cursor: pointer;
+  transition: all 0.15s;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  background: var(--branco);
+}
+
+.cal-celula:hover {
+  border-color: var(--azul-claro);
+  box-shadow: 0 2px 10px rgba(37, 99, 168, 0.12);
+}
+
+.cal-celula.drop-hover {
+  border-color: var(--azul-claro);
+  background: #eaf3ff;
+  box-shadow: inset 0 0 0 2px rgba(74, 144, 217, 0.25), 0 6px 18px rgba(37, 99, 168, 0.18);
+}
+
+.cal-celula.vazia {
+  background: transparent;
+  border-color: transparent;
+  cursor: default;
+}
+
+.cal-celula.hoje {
+  border-color: var(--azul-claro);
+  background: var(--azul-fade);
+}
+
+.cal-celula.hoje .cal-num {
+  background: var(--azul);
+  color: #fff;
+  border-radius: 50%;
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+}
+
+.cal-num {
+  font-family: 'DM Mono', monospace;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--preto);
+  margin-bottom: 2px;
+}
+
+.cal-evento {
+  font-size: 10px;
+  padding: 2px 6px;
+  border-radius: 4px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-weight: 500;
+}
+
+.cal-evento[draggable="true"],
+.agendamento-draggable {
+  cursor: grab;
+}
+
+.cal-evento[draggable="true"]:active,
+.agendamento-draggable:active {
+  cursor: grabbing;
+}
+
+.cal-evento.agendamento {
+  background: var(--azul-fade);
+  color: var(--azul-meio);
+  border-left: 3px solid var(--azul-claro);
+}
+
+.cal-evento.relatorio {
+  background: #fff3e6;
+  color: #b84a00;
+  border-left: 3px solid var(--laranja);
+}
+
+.cal-mais {
+  font-size: 10px;
+  color: var(--cinza-texto);
+  font-weight: 600;
+}
+
+/* Legenda */
+.cal-legenda {
+  display: flex;
+  gap: 1.5rem;
+  margin-top: 1rem;
+  flex-wrap: wrap;
+}
+
+.cal-legenda-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--cinza-texto);
+}
+
+.cal-legenda-dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 3px;
+}
+
+.cal-legenda-dot.agendamento { background: var(--azul-claro); }
+.cal-legenda-dot.relatorio { background: var(--laranja); }
+
+/* ===== MODAL DETALHE DIA ===== */
+#modal-detalhe-dia {
+  max-width: 520px;
+}
+
+body.arrastando-agendamento #modal-detalhe-dia {
+  pointer-events: none;
+}
+
+body.arrastando-agendamento #modal-detalhe-dia .modal-gestao {
+  pointer-events: auto;
+}
+
+.detalhe-data-titulo {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 1.5rem;
+  color: var(--azul);
+  letter-spacing: 2px;
+  margin-bottom: 1rem;
+}
+
+.detalhe-secao-label {
+  font-size: 11px;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: var(--azul-meio);
+  font-weight: 700;
+  margin: 1rem 0 0.5rem;
+}
+
+.detalhe-item {
+  background: var(--cinza-quente);
+  border-radius: 8px;
+  padding: 10px 14px;
+  margin-bottom: 8px;
+  border-left: 4px solid var(--azul-claro);
+}
+
+.detalhe-item.relat {
+  border-left-color: var(--laranja);
+}
+
+.detalhe-item-titulo {
+  font-weight: 600;
+  font-size: 14px;
+  margin-bottom: 4px;
+}
+
+.detalhe-item-meta {
+  font-size: 13px;
+  color: var(--cinza-texto);
+}
+
+.detalhe-item-obs {
+  font-size: 12px;
+  color: var(--cinza-texto);
+  font-style: italic;
+  margin-top: 4px;
+}
+
+.detalhe-item .btn-mini {
+  margin-top: 8px;
+}
+
+.detalhe-vazio {
+  color: var(--cinza-texto);
+  font-size: 14px;
+  text-align: center;
+  padding: 1.5rem;
+}
+
+/* ===== FUNCIONÁRIOS ===== */
+.func-topo {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1.2rem;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.func-topo-titulo {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 1.4rem;
+  color: var(--azul);
+  letter-spacing: 2px;
+}
+
+.func-lista {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 12px;
+}
+
+.func-card {
+  background: var(--branco);
+  border-radius: 12px;
+  box-shadow: var(--sombra);
+  padding: 1.2rem 1.4rem;
+  border-left: 5px solid var(--azul-meio);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  transition: box-shadow 0.2s;
+}
+
+.func-card:hover {
+  box-shadow: 0 4px 20px rgba(26, 58, 92, 0.16);
+}
+
+.func-card-nome {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--preto);
+}
+
+.func-card-meta {
+  font-size: 13px;
+  color: var(--cinza-texto);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.func-tipo-badge {
+  background: var(--azul-fade);
+  color: var(--azul-meio);
+  font-size: 11px;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 20px;
+  letter-spacing: 0.3px;
+}
+
+.func-card-acoes {
+  display: flex;
+  gap: 8px;
+}
+
+/* ===== RELATÓRIOS ===== */
+.rel-topo {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 1.2rem;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.rel-acoes-topo {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.rel-filtros {
+  background: var(--branco);
+  border-radius: 12px;
+  box-shadow: var(--sombra);
+  padding: 1rem 1.4rem;
+  margin-bottom: 1.2rem;
+  display: flex;
+  gap: 1rem;
+  align-items: flex-end;
+  flex-wrap: wrap;
+}
+
+.rel-filtros .campo {
+  min-width: 160px;
+  flex: 1;
+}
+
+.rel-lista {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.rel-card {
+  background: var(--branco);
+  border-radius: 12px;
+  box-shadow: var(--sombra);
+  padding: 1.2rem 1.4rem;
+  border-left: 5px solid var(--laranja);
+  transition: box-shadow 0.2s;
+}
+
+.rel-card:hover {
+  box-shadow: 0 4px 20px rgba(26, 58, 92, 0.16);
+}
+
+.rel-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.rel-card-obra {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--preto);
+  margin-bottom: 4px;
+}
+
+.rel-card-meta {
+  font-size: 13px;
+  color: var(--cinza-texto);
+  margin-bottom: 2px;
+}
+
+.rel-card-obs {
+  font-size: 12px;
+  color: var(--cinza-texto);
+  font-style: italic;
+  margin-top: 4px;
+}
+
+.rel-card-valor {
+  text-align: right;
+  flex-shrink: 0;
+}
+
+.rel-card-valor-label {
+  font-size: 10px;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  color: var(--cinza-texto);
+  font-weight: 600;
+}
+
+.rel-card-valor-num {
+  font-family: 'DM Mono', monospace;
+  font-size: 1.3rem;
+  font-weight: 700;
+  color: var(--laranja);
+}
+
+.rel-card-acoes {
+  display: flex;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+/* ===== MODAIS GESTÃO ===== */
+.modal-gestao {
+  background: var(--branco);
+  border-radius: 16px;
+  padding: 2rem;
+  max-width: 520px;
+  width: 100%;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+  transform: translateY(20px);
+  transition: transform 0.25s;
+  max-height: 90vh;
+  overflow-y: auto;
+}
+
+.modal-overlay.aberto .modal-gestao {
+  transform: translateY(0);
+}
+
+.modal-gestao h3 {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 1.5rem;
+  color: var(--azul);
+  letter-spacing: 2px;
+  margin-bottom: 1.5rem;
+}
+
+.modal-gestao .secao-titulo {
+  margin-top: 0.5rem;
+}
+
+/* Salário com tipo inline */
+.salario-grupo {
+  display: flex;
+  gap: 8px;
+  align-items: stretch;
+}
+
+.salario-grupo input {
+  flex: 1;
+}
+
+.salario-grupo select {
+  flex: 0 0 140px;
+}
+
+@media (max-width: 768px) {
+  .gestao-wrapper {
+    margin: 1rem auto;
+    padding: 0 0.75rem;
+  }
+
+  .gestao-sub-nav {
+    gap: 4px;
+    padding: 5px;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    flex-wrap: nowrap;
+    scrollbar-width: none;
+  }
+
+  .gestao-sub-nav::-webkit-scrollbar {
+    display: none;
+  }
+
+  .gestao-sub-tab {
+    padding: 9px 14px;
+    font-size: 13px;
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+
+  .cal-topo {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+  }
+
+  .cal-nav {
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  #cal-mes-label {
+    min-width: 0;
+    flex: 1;
+    text-align: center;
+    font-size: 1.3rem;
+  }
+
+  .btn-hoje {
+    align-self: flex-start;
+  }
+
+  .cal-celula {
+    min-height: 62px;
+    padding: 4px;
+  }
+
+  .cal-evento {
+    font-size: 9px;
+    padding: 2px 4px;
+  }
+
+  .func-lista {
+    grid-template-columns: 1fr;
+  }
+
+  .func-topo {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .func-topo button {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .func-card-acoes {
+    flex-wrap: wrap;
+  }
+
+  .func-card-acoes .btn-mini {
+    flex: 1;
+    justify-content: center;
+  }
+
+  .rel-topo {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .rel-acoes-topo {
+    width: 100%;
+  }
+
+  .rel-acoes-topo button {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .rel-filtros {
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+
+  .rel-filtros .campo {
+    min-width: 0;
+    width: 100%;
+  }
+
+  .rel-filtros .btn-secundario {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .rel-card-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .rel-card-valor {
+    text-align: left;
+  }
+
+  .rel-card-acoes {
+    flex-wrap: wrap;
+  }
+
+  .rel-card-acoes .btn-mini {
+    flex: 1;
+    justify-content: center;
+  }
+}
+
+@media (max-width: 500px) {
+  .cal-grid {
+    gap: 2px;
+  }
+
+  .cal-card {
+    padding: 0.75rem 0.5rem;
+  }
+
+  .cal-celula {
+    min-height: 48px;
+    padding: 3px;
+    border-radius: 5px;
+  }
+
+  .cal-dia-semana {
+    font-size: 9px;
+    padding: 4px 2px;
+  }
+
+  .cal-num {
+    font-size: 11px;
+  }
+
+  .cal-evento {
+    display: none;
+  }
+
+  .cal-legenda {
+    gap: 0.75rem;
+  }
+
+  .cal-legenda-item {
+    font-size: 11px;
+  }
+
+  .modal-gestao {
+    padding: 1.5rem 1.2rem;
+  }
+
+  .salario-grupo {
+    flex-direction: column;
+  }
+
+  .salario-grupo select {
+    flex: unset;
+    width: 100%;
+  }
+}

@@ -1,0 +1,1026 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Confidere Impermeabilizações — Sistema de Orçamentos</title>
+  <link
+    href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap"
+    rel="stylesheet">
+  <link rel="stylesheet" href="src/style.css?v=20260602-tooltip-zindex">
+  <link rel="stylesheet" href="src/gestao.css?v=20260602-financeiro-cards-orc-cobranca">
+  <link rel="stylesheet" href="src/auth.css?v=20260602-financeiro-cards-orc-cobranca">
+  <link rel="stylesheet" href="src/insumos_obras.css?v=20260602-financeiro-cards-orc-cobranca">
+  <link rel="shortcut icon" href="src/assets/Confidere.png" type="image/x-icon">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+</head>
+
+<body>
+
+  <!-- ===== LOADING INICIAL ===== -->
+  <div id="app-loading">
+    <div class="loading-logo">CONFI<span>DERE</span></div>
+    <div class="loading-barra">
+      <div class="loading-barra-inner"></div>
+    </div>
+  </div>
+
+  <!-- ===== TELA DE LOGIN ===== -->
+  <div id="tela-login">
+    <div class="login-card">
+      <div class="login-logo">
+        <div class="login-logo-titulo">CONFI<span>DERE</span></div>
+        <div class="login-logo-sub">Impermeabilizações</div>
+      </div>
+      <div class="login-titulo">Acesse sua conta</div>
+      <div id="login-erro" class="login-erro"></div>
+      <div class="login-campo">
+        <label for="login-email">E-mail</label>
+        <input type="email" id="login-email" placeholder="seu@email.com" autocomplete="username">
+      </div>
+      <div class="login-campo">
+        <label for="login-senha">Senha</label>
+        <input type="password" id="login-senha" placeholder="••••••••" autocomplete="current-password">
+      </div>
+      <button class="btn-login" id="btn-login">
+        <div class="login-spinner"></div>
+        <span class="login-texto">Entrar</span>
+      </button>
+      <div class="login-rodape">
+        Acesso somente para usuários autorizados.<br>
+        Contas são criadas pelo administrador do sistema.
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== CONTEÚDO PRINCIPAL (visível após login) ===== -->
+  <div id="app-conteudo">
+
+    <nav>
+      <div class="nav-logo-area nav-logo-placeholder" aria-hidden="true">
+        <input type="file" id="input-logo" accept="image/png,image/jpeg,image/svg+xml" style="display:none"
+          onchange="carregarLogo(event)">
+      </div>
+      <div class="nav-tabs">
+        <button class="nav-tab ativo" onclick="mudarAba('orcamento', this)">Novo Orçamento</button>
+        <button class="nav-tab" onclick="mudarAba('historico', this)">Histórico</button>
+        <button class="nav-tab" onclick="mudarAba('gestao', this)">Gestão de Equipe</button>
+        <button class="nav-tab" onclick="mudarAba('financeiro', this)">Fluxo Financeiro</button>
+      </div>
+      <!-- Usuário logado + botão sair -->
+      <div class="nav-usuario">
+        <div class="nav-logo-area nav-logo-direita">
+          <div class="nav-brand">
+            <img id="nav-logo-img" src="" alt="Logo" class="nav-logo-img" style="display:none">
+            <div class="nav-brand-texto">
+              <div class="logo-nav" id="nav-logo-texto">CONFI<span>DERE</span></div>
+              <div class="nav-marca-sub" id="nav-marca-sub"></div>
+            </div>
+          </div>
+          <button class="btn-logo-remover" id="btn-remover-logo" onclick="removerLogo()" title="Remover logo"
+            style="display:none">×</button>
+        </div>
+        <div class="config-menu-wrap">
+          <button class="btn-config" type="button" title="Configurações" aria-label="Configurações">⚙</button>
+          <div class="config-menu">
+            <div class="config-menu-titulo">Configurações</div>
+            <div class="config-email-info">
+              <span>E-mail da conta</span>
+              <strong id="config-user-email"></strong>
+            </div>
+            <label class="config-campo">
+              <span>Nome da empresa</span>
+              <input type="text" id="config-empresa" placeholder="Ex: Confidere Impermeabilizações">
+            </label>
+            <label class="config-campo">
+              <span>Local</span>
+              <input type="text" id="config-local" placeholder="Cidade / UF">
+            </label>
+            <label class="config-campo">
+              <span>Contato</span>
+              <div class="config-contato-row">
+                <input type="text" id="config-contato" placeholder="Telefone, WhatsApp ou e-mail">
+                <label class="config-whatsapp" title="Marcar contato como WhatsApp">
+                  <input type="checkbox" id="config-contato-whatsapp">
+                  <span>WhatsApp</span>
+                </label>
+              </div>
+            </label>
+            <label class="config-campo">
+              <span>CEO/Gestor</span>
+              <input type="text" id="config-gestor" placeholder="Nome do responsável">
+            </label>
+            <label class="config-campo">
+              <span>Link/URL</span>
+              <input type="url" id="config-url" placeholder="Site, Instagram ou link público">
+            </label>
+            <div class="config-acoes">
+              <label class="btn-config-logo" for="input-logo">Logo</label>
+              <button class="btn-config-salvar" type="button" onclick="salvarConfiguracoesEmpresa()">Salvar</button>
+            </div>
+          </div>
+        </div>
+        <button class="btn-logout" id="btn-logout">Sair</button>
+      </div>
+    </nav>
+
+    <!-- ===== ABA: ORÇAMENTO ===== -->
+    <div id="aba-orcamento" class="aba ativo">
+      <div class="orcamento-wrapper">
+        <div class="cartao" id="orca-cartao">
+
+          <!-- HEADER -->
+          <div class="orca-header">
+            <div class="logo-bloco">
+              <img id="header-logo-img" src="" alt="Logo" class="header-logo-img" style="display:none">
+              <div id="header-logo-texto">
+                <div class="logo-grande">CONFI<span>DERE</span></div>
+              </div>
+              <div class="logo-sub" id="header-marca-sub">Impermeabilizações</div>
+            </div>
+            <div class="orca-num-bloco">
+              <span class="tooltip-wrap tooltip-doc-tipo" data-tooltip="Alterna entre modo or&ccedil;amento ou modo relat&oacute;rio de cobran&ccedil;a. Cada tipo ser&aacute; salvo em seu hist&oacute;rico distinto.">
+                <button type="button" class="orca-tipo-btn" id="btn-tipo-documento" onclick="toggleTipoDocumento()">
+                  Or&ccedil;amento
+                </button>
+              </span>
+              <div class="orca-num-valor" id="display-numero">#001</div>
+              <div id="display-rev"></div>
+            </div>
+          </div>
+
+          <!-- DADOS DO CLIENTE -->
+          <div class="secao">
+            <div class="secao-titulo">Dados do Cliente</div>
+            <div class="grid-2">
+              <div class="campo">
+                <label>Cliente</label>
+                <input type="text" id="campo-cliente" placeholder="Nome completo ou razão social">
+              </div>
+              <div class="campo">
+                <label>Assunto</label>
+                <input type="text" id="campo-obra" placeholder="Ex: Impermeabilização terraço, Piscina cobertura...">
+              </div>
+              <div class="campo">
+                <label>Endereço / Cidade</label>
+                <input type="text" id="campo-endereco" placeholder="Rua, número, bairro">
+              </div>
+              <div class="campo">
+                <label>Estado</label>
+                <select id="campo-estado">
+                  <option value="">Selecione o estado...</option>
+                  <option>AC</option>
+                  <option>AL</option>
+                  <option>AP</option>
+                  <option>AM</option>
+                  <option>BA</option>
+                  <option>CE</option>
+                  <option>DF</option>
+                  <option>ES</option>
+                  <option>GO</option>
+                  <option>MA</option>
+                  <option>MT</option>
+                  <option>MS</option>
+                  <option>MG</option>
+                  <option>PA</option>
+                  <option>PB</option>
+                  <option>PR</option>
+                  <option>PE</option>
+                  <option>PI</option>
+                  <option>RJ</option>
+                  <option>RN</option>
+                  <option>RS</option>
+                  <option>RO</option>
+                  <option>RR</option>
+                  <option selected>SC</option>
+                  <option>SP</option>
+                  <option>SE</option>
+                  <option>TO</option>
+                </select>
+              </div>
+              <div class="campo">
+                <label id="label-campo-data">Data do Orçamento</label>
+                <input type="date" id="campo-data">
+              </div>
+              <div class="campo">
+                <label id="label-campo-validade">Validade do Orçamento</label>
+                <input type="date" id="campo-validade">
+              </div>
+            </div>
+          </div>
+
+          <!-- TABELA DE ITENS -->
+          <div class="secao">
+            <div class="secao-titulo">Itens do Orçamento</div>
+            <div class="tabela-wrapper">
+              <table id="tabela-itens">
+                <thead>
+                  <tr>
+                    <th class="col-desc">Descrição do Serviço</th>
+                    <th class="col-area">Área</th>
+                    <th class="col-material">Material</th>
+                    <th class="col-qtd">Custo Mat. m²</th>
+                    <th class="col-unit">Mão Obra m²</th>
+                    <th class="col-subtmat">Total Material</th>
+                    <th class="col-subtmao">Total M.O.</th>
+                    <th class="col-total">Total (R$)</th>
+                    <th class="col-acao"></th>
+                  </tr>
+                </thead>
+                <tbody id="linhas-tbody"></tbody>
+              </table>
+            </div>
+            <div class="btn-add-row">
+              <span class="tooltip-wrap" data-tooltip="Crie um novo item na lista. Pode ser usado para criar um novo item na lista ap&oacute;s inserir uma imagem.">
+                <button class="btn-add-linha" onclick="adicionarLinha()">
+                  <span style="font-size:18px;line-height:1">+</span> Adicionar Item
+                </button>
+              </span>
+              <span class="tooltip-wrap" data-tooltip="Cria um cabe&ccedil;alho na tabela, ideal para separar por pavimentos ou organizar o or&ccedil;amento.">
+                <button class="btn-add-cabecalho" onclick="adicionarCabecalho()">
+                  <span style="font-size:15px;line-height:1">+</span> Adicionar Cabe&ccedil;alho
+                </button>
+              </span>
+              <span class="tooltip-wrap" data-tooltip="Adiciona uma imagem abaixo do &uacute;ltimo item criado na tabela. &Eacute; ideal para indicar um detalhe da &aacute;rea ou algo espec&iacute;fico referente aos itens acima.">
+                <button class="btn-add-imagem" onclick="document.getElementById('input-imagem-orcamento').click()">
+                  <span style="font-size:15px;line-height:1">+</span> Adicionar Imagem
+                </button>
+              </span>
+              <span class="tooltip-wrap" data-tooltip="Permitir&aacute; escolher algum item da lista j&aacute; criado e far&aacute; uma clonagem do item para indicar um m&eacute;todo alternativo para o servi&ccedil;o, permitindo alterar materiais e custos de material e m&atilde;o de obra, bem como far&aacute; o c&aacute;lculo separado apenas desta op&ccedil;&atilde;o.">
+                <button class="btn-add-opcao" onclick="toggleMenuOpcao()">
+                  <span style="font-size:15px;line-height:1">+</span> Adicionar Op&ccedil;&atilde;o
+                </button>
+              </span>
+              <input type="file" id="input-imagem-orcamento" accept="image/png,image/jpeg" style="display:none"
+                onchange="handleImagemOrcamento(this)">
+              <div class="menu-opcao" id="menu-opcao" style="display:none">
+                <select id="select-opcao-base"></select>
+                <button type="button" onclick="adicionarOpcaoSelecionada()">Criar Op&ccedil;&atilde;o</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- TOTAIS -->
+          <div class="totais-bloco" id="bloco-totais">
+            <div class="totais-linha">
+              <span class="label">Subtotal Material</span>
+              <span class="valor" id="disp-subtotal-material">R$ 0,00</span>
+            </div>
+            <div class="totais-linha">
+              <span class="label">Subtotal Mão de Obra</span>
+              <span class="valor" id="disp-subtotal-mao">R$ 0,00</span>
+            </div>
+            <div class="totais-linha principal">
+              <span class="label">TOTAL GERAL</span>
+              <span class="valor" id="disp-total">R$ 0,00</span>
+            </div>
+            <div class="opcoes-totais" id="opcoes-totais"></div>
+          </div>
+
+          <!-- DESCONTO -->
+          <div class="desconto-area">
+            <button class="btn-desconto" onclick="toggleDesconto()">
+              <span>%</span> Aplicar Desconto
+            </button>
+            <div class="desconto-form" id="form-desconto">
+              <div class="desconto-input-wrap">
+                <input type="number" id="input-desconto" min="0" max="100" step="0.5" placeholder="0">
+                <span class="pct">%</span>
+              </div>
+              <button class="btn-aplicar-desc" onclick="aplicarDesconto()">Calcular Desconto</button>
+              <button class="btn-mini ver" onclick="limparDesconto()">Limpar</button>
+            </div>
+            <div class="desconto-resultados" id="resultados-desconto">
+              <div class="desc-cartoes" id="desc-cartoes"></div>
+            </div>
+          </div>
+
+          <!-- OBSERVAÇÕES -->
+          <div class="secao">
+            <div class="secao-titulo">Observações</div>
+            <div class="obs-opcoes">
+              <label class="obs-opcao-item">
+                <input type="checkbox" name="obs-opcao" value="medidas_projeto">
+                <span>MEDIDAS FORNECIDAS POR PROJETO, NECESSÁRIO CONFERIR IN LOCO, VALORES SUJEITOS A ALTERAÇÃO CONFORME MEDIÇÃO;</span>
+              </label>
+              <label class="obs-opcao-item">
+                <input type="checkbox" name="obs-opcao" value="medidas_contato">
+                <span>MEDIDAS FORNECIDAS POR CONTATO, NECESSÁRIO CONFERIR IN LOCO, VALORES SUJEITOS A ALTERAÇÃO CONFORME MEDIÇÃO;</span>
+              </label>
+              <label class="obs-opcao-item">
+                <input type="checkbox" name="obs-opcao" value="ralos_tubos">
+                <span>RALOS E TUBOS EMERGENTES SERÃO TRATADOS COM ASFALTO ELASTOMÉRICO (OU TELA DUPLA ESTRUTURANTE) AO CUSTO DE 45,00 CADA. NECESSÁRIO CONFERIR IN LOCO QUANTIDADE DE TUBOS, SALDO SERÁ COBRADO JUNTO A MEDIÇÃO MENSAL/SALDO FINAL;</span>
+              </label>
+              <label class="obs-opcao-item">
+                <input type="checkbox" name="obs-opcao" value="furos_cortes">
+                <span>FUROS, CORTES E ALTERAÇÕES NA IMPERMEABILIZAÇÃO APÓS A CONCLUSÃO DA MESMA DEVERÁ SER COMUNICADO À EMPRESA CONTRATADA PARA EVENTUAIS REPAROS, SENDO ESTES TENDO VALOR SEPARADO DESTE ORÇAMENTO;</span>
+              </label>
+              <label class="obs-opcao-item">
+                <input type="checkbox" name="obs-opcao" value="paliativo_sem_garantia">
+                <span>TRATAMENTO PALIATIVO, SEM GARANTIA;</span>
+              </label>
+              <label class="obs-opcao-item">
+                <input type="checkbox" name="obs-opcao" value="tela_poliester">
+                <span>TELA DE POLIÉSTER EM PONTOS CRÍTICOS (RALOS, TUBOS, ENCONTROS PISO/PAREDE);</span>
+              </label>
+              <label class="obs-opcao-item">
+                <input type="checkbox" name="obs-opcao" value="andaimes_nao_cotados">
+                <span>ALUGUEL DE ANDAIMES NÃO COTADOS NESTE ORÇAMENTO;</span>
+              </label>
+            </div>
+            <div class="campo">
+              <textarea id="campo-obs" rows="4"
+                placeholder="Ex: Aluguel de andaimes não cotado neste orçamento. Prazo de execução estimado em 5 dias úteis. Material incluso..."></textarea>
+            </div>
+          </div>
+
+          <!-- FORMAS DE PAGAMENTO -->
+          <div class="desconto-area">
+            <button class="btn-desconto" onclick="togglePagamento()">
+              <span>💳</span> Formas de Pagamento
+            </button>
+            <div class="desconto-form" id="form-pagamento">
+              <div class="pgto-opcoes-grupo">
+
+                <!-- 1 - A VISTA -->
+                <label class="pgto-opcao-item">
+                  <input type="checkbox" name="pgto-opcao" value="avista" id="pgto-avista" onchange="handlePgtoChange(this)">
+                  <span class="pgto-opcao-label">A VISTA</span>
+                </label>
+
+                <!-- 2 - MATERIAL A VISTA -->
+                <label class="pgto-opcao-item">
+                  <input type="checkbox" name="pgto-opcao" value="material_avista" id="pgto-material-avista" onchange="handlePgtoChange(this)">
+                  <span class="pgto-opcao-label">MATERIAL A VISTA</span>
+                </label>
+
+                <!-- 3 - MATERIAL: ENTRADA + SALDO -->
+                <div class="pgto-opcao-row">
+                  <label class="pgto-opcao-item">
+                    <input type="checkbox" name="pgto-opcao" value="material_entrada_saldo" id="pgto-material-ent" onchange="handlePgtoChange(this)">
+                    <span class="pgto-opcao-label">MATERIAL: ENTRADA + SALDO</span>
+                  </label>
+                  <div class="pgto-campos-inline" id="campos-material-ent" style="display:none;">
+                    <div class="pgto-campo-mini">
+                      <label>Entrada (%)</label>
+                      <input type="number" id="mat-entrada-pct" min="0" max="100" placeholder="ex: 30" oninput="calcularSaldo('mat')">
+                    </div>
+                    <div class="pgto-campo-mini">
+                      <label>Saldo (%)</label>
+                      <input type="number" id="mat-saldo-pct" min="0" max="100" placeholder="auto" readonly>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- 4 - MÃO DE OBRA: ENTRADA + SALDO -->
+                <div class="pgto-opcao-row">
+                  <label class="pgto-opcao-item">
+                    <input type="checkbox" name="pgto-opcao" value="mao_entrada_saldo" id="pgto-mao-ent" onchange="handlePgtoChange(this)">
+                    <span class="pgto-opcao-label">MÃO DE OBRA: ENTRADA + SALDO</span>
+                  </label>
+                  <div class="pgto-campos-inline" id="campos-mao-ent" style="display:none;">
+                    <div class="pgto-campo-mini">
+                      <label>Entrada (%)</label>
+                      <input type="number" id="mao-entrada-pct" min="0" max="100" placeholder="ex: 30" oninput="calcularSaldo('mao')">
+                    </div>
+                    <div class="pgto-campo-mini">
+                      <label>Saldo (%)</label>
+                      <input type="number" id="mao-saldo-pct" min="0" max="100" placeholder="auto" readonly>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- 5 - MÃO DE OBRA A VISTA -->
+                <label class="pgto-opcao-item">
+                  <input type="checkbox" name="pgto-opcao" value="mao_avista" id="pgto-mao-avista" onchange="handlePgtoChange(this)">
+                  <span class="pgto-opcao-label">MÃO DE OBRA A VISTA</span>
+                </label>
+
+                <!-- 6 - MATERIAL E MÃO DE OBRA: A COMBINAR -->
+                <label class="pgto-opcao-item">
+                  <input type="checkbox" name="pgto-opcao" value="a_combinar" id="pgto-a-combinar" onchange="handlePgtoChange(this)">
+                  <span class="pgto-opcao-label">MATERIAL E MÃO DE OBRA: A COMBINAR</span>
+                </label>
+
+              </div>
+              <div style="display:flex;gap:8px;margin-top:12px;">
+                <button class="btn-aplicar-desc" onclick="aplicarPagamento()">Confirmar</button>
+                <button class="btn-mini ver" onclick="limparPagamento()">Limpar</button>
+              </div>
+            </div>
+            <div class="desconto-resultados" id="resultados-pagamento">
+              <div class="desc-cartoes" id="pagamento-cartoes"></div>
+            </div>
+          </div>
+
+          <!-- AÇÕES -->
+          <div class="acoes-finais">
+            <button class="btn-laranja" onclick="abrirPreviewPDF()">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                <polyline points="14,2 14,8 20,8" />
+                <line x1="12" y1="18" x2="12" y2="12" />
+                <line x1="9" y1="15" x2="15" y2="15" />
+              </svg>
+              GERAR PDF
+            </button>
+            <button class="btn-primario" onclick="salvarOrcamento()">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z" />
+                <polyline points="17,21 17,13 7,13 7,21" />
+                <polyline points="7,3 7,8 15,8" />
+              </svg>
+              Salvar Orçamento
+            </button>
+            <button class="btn-secundario" onclick="novoOrcamento()">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                <line x1="12" y1="5" x2="12" y2="19" />
+                <line x1="5" y1="12" x2="19" y2="12" />
+              </svg>
+              Novo
+            </button>
+          </div>
+
+        </div>
+      </div>
+    </div>
+
+    <!-- ===== ABA: HISTÓRICO ===== -->
+    <div id="aba-historico" class="aba">
+      <div class="historico-wrapper">
+        <div class="hist-topo">
+          <div>
+            <div class="hist-titulo" id="hist-titulo">Histórico de Orçamentos</div>
+            <div class="hist-tabs" role="tablist" aria-label="Tipo de histórico">
+              <button type="button" class="hist-tab ativo" id="hist-tab-orcamento" role="tab" aria-selected="true" onclick="setTipoHistorico('orcamento')">Orçamentos</button>
+              <button type="button" class="hist-tab" id="hist-tab-cobranca" role="tab" aria-selected="false" onclick="setTipoHistorico('cobranca')">Relatórios de Cobrança</button>
+            </div>
+          </div>
+          <input type="text" class="hist-busca" placeholder="Buscar por cliente, número..."
+            oninput="filtrarHistorico(this.value)">
+        </div>
+        <div id="hist-conteudo"></div>
+      </div>
+    </div>
+
+    <!-- ===== ABA: FLUXO FINANCEIRO ===== -->
+    <div id="aba-financeiro" class="aba">
+      <div class="financeiro-wrapper">
+        <div class="financeiro-topo">
+          <div>
+            <div class="financeiro-titulo">Fluxo Financeiro</div>
+            <div class="financeiro-subtitulo">Entradas por relatórios de obra, saídas por insumos e funcionários.</div>
+          </div>
+          <div class="financeiro-filtros">
+            <button type="button" class="fin-pdf-btn" onclick="gerarRelatorioFinanceiroPDF()">
+              Gerar relat&oacute;rio PDF
+            </button>
+            <label>
+              <span>Mês principal</span>
+              <input type="month" id="fin-mes" onchange="renderizarFluxoFinanceiro()">
+            </label>
+            <label>
+              <span>Comparar com</span>
+              <input type="month" id="fin-mes-comparar" onchange="renderizarFluxoFinanceiro()">
+            </label>
+          </div>
+        </div>
+        <div id="financeiro-conteudo"></div>
+      </div>
+    </div>
+
+    <!-- ===== ABA: GESTÃO DE EQUIPE ===== -->
+    <div id="aba-gestao" class="aba">
+      <div class="gestao-wrapper">
+
+        <div class="gestao-sub-nav">
+          <button class="gestao-sub-tab ativo" onclick="mudarSubAba('calendario', this)">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+              <rect x="3" y="4" width="18" height="18" rx="2" />
+              <line x1="16" y1="2" x2="16" y2="6" />
+              <line x1="8" y1="2" x2="8" y2="6" />
+              <line x1="3" y1="10" x2="21" y2="10" />
+            </svg>
+            Calendário e Agendamentos
+          </button>
+          <button class="gestao-sub-tab" onclick="mudarSubAba('funcionarios', this)">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+              <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+              <circle cx="9" cy="7" r="4" />
+              <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
+              <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+            </svg>
+            Funcionários
+          </button>
+          <button class="gestao-sub-tab" onclick="mudarSubAba('relatorios', this)">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+              <polyline points="14,2 14,8 20,8" />
+              <line x1="16" y1="13" x2="8" y2="13" />
+              <line x1="16" y1="17" x2="8" y2="17" />
+            </svg>
+            Relatório de Obra
+          </button>
+          <button class="gestao-sub-tab" onclick="mudarSubAba('insumos', this)">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+              <path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z" />
+              <line x1="3" y1="6" x2="21" y2="6" />
+              <path d="M16 10a4 4 0 01-8 0" />
+            </svg>
+            Insumos/Despesas
+          </button>
+          <button class="gestao-sub-tab" onclick="mudarSubAba('obras', this)">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+              <polygon points="3,18 12,2 21,18" />
+              <line x1="12" y1="9" x2="12" y2="14" />
+              <circle cx="12" cy="16.5" r="0.5" fill="currentColor" />
+            </svg>
+            Obras
+          </button>
+        </div>
+
+        <!-- SUB-ABA: CALENDÁRIO -->
+        <div id="sub-calendario" class="gestao-sub-aba ativo">
+          <div class="cal-topo">
+            <div class="cal-nav">
+              <button onclick="calAnterior()" title="Mês anterior">&#8592;</button>
+              <span id="cal-mes-label">Carregando...</span>
+              <button onclick="calProximo()" title="Próximo mês">&#8594;</button>
+            </div>
+            <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+              <button class="btn-hoje" onclick="calHoje()">Hoje</button>
+              <button class="btn-primario" onclick="abrirModalAgendamento()" style="padding:8px 16px;font-size:13px;">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                  <line x1="12" y1="5" x2="12" y2="19" />
+                  <line x1="5" y1="12" x2="19" y2="12" />
+                </svg>
+                Novo Agendamento
+              </button>
+            </div>
+          </div>
+          <div class="cal-card">
+            <div class="cal-grid" id="cal-grid"></div>
+            <div class="cal-legenda">
+              <div class="cal-legenda-item">
+                <div class="cal-legenda-dot agendamento"></div> Agendamento / Visita
+              </div>
+              <div class="cal-legenda-item">
+                <div class="cal-legenda-dot relatorio"></div> Relatório de Obra
+              </div>
+              <div class="cal-legenda-item">
+                <div class="cal-legenda-dot insumo"></div> Insumo / Despesa
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- SUB-ABA: FUNCIONÁRIOS -->
+        <div id="sub-funcionarios" class="gestao-sub-aba">
+          <div class="func-topo">
+            <div class="func-topo-titulo">Funcionários</div>
+            <button class="btn-primario" onclick="abrirModalFuncionario()" style="padding:8px 16px;font-size:13px;">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                <line x1="12" y1="5" x2="12" y2="19" />
+                <line x1="5" y1="12" x2="19" y2="12" />
+              </svg>
+              Novo Funcionário
+            </button>
+          </div>
+          <div class="func-lista" id="func-lista">
+            <div class="hist-vazio">
+              <div class="icone">👷</div>
+              <p>Nenhum funcionário cadastrado.</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- SUB-ABA: RELATÓRIOS -->
+        <div id="sub-relatorios" class="gestao-sub-aba">
+          <div class="rel-topo">
+            <div class="func-topo-titulo">Relatórios de Obra</div>
+            <div class="rel-acoes-topo">
+              <button class="btn-primario" onclick="abrirModalRelatorio()" style="padding:8px 16px;font-size:13px;">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                  <line x1="12" y1="5" x2="12" y2="19" />
+                  <line x1="5" y1="12" x2="19" y2="12" />
+                </svg>
+                Novo Relatório
+              </button>
+            </div>
+          </div>
+          <div class="rel-filtros">
+            <div class="campo">
+              <label>Por Funcionário</label>
+              <select id="filtro-rel-func" onchange="aplicarFiltrosRelatorio()">
+                <option value="">Todos</option>
+              </select>
+            </div>
+            <div class="campo">
+              <label>Por Mês (AAAA-MM)</label>
+              <input type="month" id="filtro-rel-mes" onchange="aplicarFiltrosRelatorio()">
+            </div>
+            <div class="campo">
+              <label>Por Dia</label>
+              <input type="date" id="filtro-rel-dia" onchange="aplicarFiltrosRelatorio()">
+            </div>
+            <div style="display:flex;align-items:flex-end;">
+              <button class="btn-secundario" onclick="limparFiltrosRel()" style="white-space:nowrap;">Limpar
+                Filtros</button>
+            </div>
+          </div>
+          <div class="rel-lista" id="rel-lista">
+            <div class="hist-vazio">
+              <div class="icone">📋</div>
+              <p>Nenhum relatório cadastrado.</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- SUB-ABA: INSUMOS / DESPESAS -->
+        <div id="sub-insumos" class="gestao-sub-aba">
+          <div class="ins-topo">
+            <div class="func-topo-titulo">Insumos / Despesas</div>
+            <button class="btn-primario" onclick="abrirModalInsumo()" style="padding:8px 16px;font-size:13px;">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                <line x1="12" y1="5" x2="12" y2="19" />
+                <line x1="5" y1="12" x2="19" y2="12" />
+              </svg>
+              Novo Insumo/Despesa
+            </button>
+          </div>
+          <div class="ins-filtros">
+            <div class="campo">
+              <label>Por Tipo</label>
+              <select id="filtro-ins-tipo" onchange="aplicarFiltrosInsumos()">
+                <option value="">Todos os tipos</option>
+                <option value="veiculo">Veículo</option>
+                <option value="trajeto">Trajeto</option>
+                <option value="material">Material</option>
+                <option value="ferramenta">Ferramenta</option>
+              </select>
+            </div>
+            <div class="campo">
+              <label>Por Funcionário</label>
+              <select id="filtro-ins-func" onchange="aplicarFiltrosInsumos()">
+                <option value="">Todos</option>
+              </select>
+            </div>
+            <div class="campo">
+              <label>Por Mês</label>
+              <input type="month" id="filtro-ins-mes" onchange="aplicarFiltrosInsumos()">
+            </div>
+            <div style="display:flex;align-items:flex-end;">
+              <button class="btn-secundario" onclick="limparFiltrosIns()" style="white-space:nowrap;">Limpar</button>
+            </div>
+          </div>
+          <div class="ins-lista" id="ins-lista">
+            <div class="hist-vazio">
+              <div class="icone">🧾</div>
+              <p>Nenhum insumo/despesa registrado.</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- SUB-ABA: OBRAS -->
+        <div id="sub-obras" class="gestao-sub-aba">
+          <div class="obras-topo">
+            <div class="func-topo-titulo">Obras</div>
+            <button class="btn-primario" onclick="abrirModalObra()" style="padding:8px 16px;font-size:13px;">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                <line x1="12" y1="5" x2="12" y2="19" />
+                <line x1="5" y1="12" x2="19" y2="12" />
+              </svg>
+              Adicionar Obra
+            </button>
+          </div>
+          <div class="obras-filtros-bar">
+            <button class="obras-filtro-btn ativo" data-filtro="todos"
+              onclick="setFiltroObras('todos', this)">Todas</button>
+            <button class="obras-filtro-btn" data-filtro="execucao" onclick="setFiltroObras('execucao', this)">Em
+              Execução</button>
+            <button class="obras-filtro-btn" data-filtro="finalizada"
+              onclick="setFiltroObras('finalizada', this)">Finalizadas</button>
+          </div>
+          <div class="obras-lista" id="obras-lista">
+            <div class="hist-vazio">
+              <div class="icone">🏗️</div>
+              <p>Nenhuma obra cadastrada.</p>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- MODAL DETALHE DO DIA -->
+    <div class="modal-overlay" id="modal-detalhe-dia" onclick="if(event.target===this)fecharDetalheDia()">
+      <div class="modal-gestao">
+        <div id="detalhe-corpo"></div>
+        <div class="modal-acoes" style="margin-top:1.5rem;">
+          <button class="btn-secundario" onclick="fecharDetalheDia()">Fechar</button>
+          <button class="btn-primario" onclick="fecharDetalheDia();abrirModalAgendamento()">+ Agendamento</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- MODAL NOVO AGENDAMENTO -->
+    <div class="modal-overlay" id="modal-agendamento" onclick="if(event.target===this)fecharModalAgendamento()">
+      <div class="modal-gestao">
+        <h3>Novo Agendamento</h3>
+        <input type="hidden" id="agend-id-edit">
+        <div style="display:flex;flex-direction:column;gap:1rem;">
+          <div class="campo">
+            <label>Cliente / Evento *</label>
+            <input type="text" id="agend-cliente" placeholder="Nome do cliente ou descrição do evento">
+          </div>
+          <div class="grid-3">
+            <div class="campo">
+              <label>Data *</label>
+              <input type="date" id="agend-data">
+            </div>
+            <div class="campo">
+              <label>Hora</label>
+              <input type="time" id="agend-hora">
+            </div>
+            <div class="campo">
+              <label>Funcionário (opcional)</label>
+              <select id="agend-funcionario"></select>
+            </div>
+          </div>
+          <div class="campo">
+            <label>Local</label>
+            <input type="text" id="agend-local" placeholder="Endereço ou local do atendimento">
+          </div>
+          <div class="campo">
+            <label>Observações</label>
+            <textarea id="agend-obs" rows="3" placeholder="Detalhes adicionais..."></textarea>
+          </div>
+        </div>
+        <div class="modal-acoes" style="margin-top:1.5rem;">
+          <button class="btn-secundario" onclick="fecharModalAgendamento()">Cancelar</button>
+          <button class="btn-primario" onclick="salvarAgendamento()">Salvar Agendamento</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- MODAL NOVO FUNCIONÁRIO -->
+    <div class="modal-overlay" id="modal-funcionario" onclick="if(event.target===this)fecharModalFuncionario()">
+      <div class="modal-gestao">
+        <h3 id="modal-func-titulo">Novo Funcionário</h3>
+        <input type="hidden" id="func-id-edit">
+        <div style="display:flex;flex-direction:column;gap:1rem;">
+          <div class="campo">
+            <label>Nome Completo *</label>
+            <input type="text" id="func-nome" placeholder="Nome completo do funcionário">
+          </div>
+          <div class="grid-2">
+            <div class="campo">
+              <label>Data de Admissão</label>
+              <input type="date" id="func-admissao">
+            </div>
+            <div class="campo">
+              <label>Telefone</label>
+              <input type="text" id="func-telefone" placeholder="(xx) xxxxx-xxxx">
+            </div>
+          </div>
+          <div class="campo">
+            <label>Salário / Custo</label>
+            <div class="salario-grupo">
+              <input type="number" id="func-salario" placeholder="0,00" step="0.01" min="0">
+              <select id="func-tipo-salario">
+                <option>Custo Mensal</option>
+                <option>Custo Diário</option>
+              </select>
+            </div>
+          </div>
+        </div>
+        <div class="modal-acoes" style="margin-top:1.5rem;">
+          <button class="btn-secundario" onclick="fecharModalFuncionario()">Cancelar</button>
+          <button class="btn-primario" onclick="salvarFuncionario()">Salvar Funcionário</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- MODAL NOVO RELATÓRIO -->
+    <div class="modal-overlay" id="modal-relatorio" onclick="if(event.target===this)fecharModalRelatorio()">
+      <div class="modal-gestao">
+        <h3 id="modal-rel-titulo">Novo Relatório de Obra</h3>
+        <input type="hidden" id="rel-id-edit">
+        <input type="hidden" id="rel-funcionarios-ids-hidden">
+        <div style="display:flex;flex-direction:column;gap:1rem;">
+          <div class="campo rel-obra-row">
+            <label>Selecionar Obra Cadastrada</label>
+            <select id="rel-obra-select">
+              <option value="">Digitar manualmente...</option>
+            </select>
+          </div>
+          <div class="campo" id="rel-obra-manual-wrap">
+            <label>Nome da Obra *</label>
+            <input type="text" id="rel-obra" placeholder="Ex: Impermeabilização Telhado - Rua das Flores">
+          </div>
+          <div class="grid-2">
+            <div class="campo">
+              <label>Data *</label>
+              <input type="date" id="rel-data">
+            </div>
+            <div class="campo">
+              <label>Valor de Rendimento (R$)</label>
+              <input type="number" id="rel-rendimento" placeholder="0,00" step="0.01" min="0">
+            </div>
+          </div>
+          <div class="campo">
+            <label>Funcionários (selecione um ou mais)</label>
+            <div class="func-check-group" id="rel-funcionarios-check">
+              <div style="font-size:13px;color:var(--cinza-texto)">Carregando...</div>
+            </div>
+          </div>
+          <!-- Mantido para compatibilidade com código legado -->
+          <select id="rel-funcionario" style="display:none"></select>
+          <div class="campo">
+            <label>Observações</label>
+            <textarea id="rel-obs" rows="3" placeholder="Detalhes da execução, materiais usados..."></textarea>
+          </div>
+        </div>
+        <div class="modal-acoes" style="margin-top:1.5rem;">
+          <button class="btn-secundario" onclick="fecharModalRelatorio()">Cancelar</button>
+          <button class="btn-primario" onclick="salvarRelatorio()">Salvar Relatório</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- MODAL NOVO INSUMO / DESPESA -->
+    <div class="modal-overlay" id="modal-insumo" onclick="if(event.target===this)fecharModalInsumo()">
+      <div class="modal-gestao">
+        <h3 id="modal-ins-titulo">Novo Insumo/Despesa</h3>
+        <input type="hidden" id="ins-id-edit">
+        <div style="display:flex;flex-direction:column;gap:1rem;">
+          <div class="grid-2">
+            <div class="campo">
+              <label>Tipo *</label>
+              <select id="ins-tipo">
+                <option value="material">Material</option>
+                <option value="ferramenta">Ferramenta</option>
+                <option value="veiculo">Veículo</option>
+                <option value="trajeto">Trajeto</option>
+              </select>
+            </div>
+            <div class="campo">
+              <label>Data *</label>
+              <input type="date" id="ins-data">
+            </div>
+          </div>
+          <div class="campo">
+            <label>Funcionário (opcional)</label>
+            <select id="ins-funcionario"></select>
+          </div>
+          <div class="campo">
+            <label>Valor (R$)</label>
+            <input type="number" id="ins-valor" placeholder="0,00" step="0.01" min="0">
+          </div>
+          <div class="campo">
+            <label>Descrição</label>
+            <input type="text" id="ins-descricao" placeholder="Ex: Reparo pneu Ranger, Chave de impacto...">
+          </div>
+          <div class="campo">
+            <label>Observações adicionais</label>
+            <textarea id="ins-obs" rows="2" placeholder="Detalhes extras..."></textarea>
+          </div>
+          <div class="campo">
+            <label>Foto (comprovante / nota fiscal)</label>
+            <div class="ins-foto-preview-wrap">
+              <img id="ins-foto-preview" src="" alt="Pré-visualização">
+              <label class="btn-foto-upload">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                  <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4" />
+                  <polyline points="17 8 12 3 7 8" />
+                  <line x1="12" y1="3" x2="12" y2="15" />
+                </svg>
+                Adicionar Foto
+                <input type="file" accept="image/*" style="display:none" onchange="handleFotoInsumo(this)">
+              </label>
+            </div>
+            <input type="hidden" id="ins-foto-base64">
+          </div>
+        </div>
+        <div class="modal-acoes" style="margin-top:1.5rem;">
+          <button class="btn-secundario" onclick="fecharModalInsumo()">Cancelar</button>
+          <button class="btn-primario" onclick="salvarInsumo()">Salvar</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- MODAL NOVA OBRA -->
+    <div class="modal-overlay" id="modal-obra" onclick="if(event.target===this)fecharModalObra()">
+      <div class="modal-gestao">
+        <h3 id="modal-obra-titulo">Adicionar Obra</h3>
+        <input type="hidden" id="obra-id-edit">
+        <div style="display:flex;flex-direction:column;gap:1rem;">
+          <div class="campo">
+            <label>Nome da Obra *</label>
+            <input type="text" id="obra-nome" placeholder="Ex: Impermeabilização Edifício Central">
+          </div>
+          <div class="campo">
+            <label>Construtora / Empreiteiro</label>
+            <input type="text" id="obra-construtora" placeholder="Razão social ou nome do responsável">
+          </div>
+          <div class="grid-2">
+            <div class="campo">
+              <label>Respons&aacute;vel T&eacute;cnico / Respons&aacute;vel</label>
+              <input type="text" id="obra-responsavel" placeholder="Nome do respons&aacute;vel">
+            </div>
+            <div class="campo">
+              <label>Contato do Respons&aacute;vel</label>
+              <input type="text" id="obra-contato-responsavel" placeholder="Telefone, WhatsApp ou e-mail">
+            </div>
+          </div>
+          <div class="grid-2">
+            <div class="campo">
+              <label>Data de Início</label>
+              <input type="date" id="obra-data">
+            </div>
+            <div class="campo">
+              <label>Local / Endereço</label>
+              <input type="text" id="obra-local" placeholder="Cidade, bairro ou endereço">
+            </div>
+          </div>
+        </div>
+        <div class="modal-acoes" style="margin-top:1.5rem;">
+          <button class="btn-secundario" onclick="fecharModalObra()">Cancelar</button>
+          <button class="btn-primario" onclick="salvarObra()">Salvar Obra</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- MODAL FOTO INSUMO (tela cheia) -->
+    <div id="modal-foto-insumo" onclick="fecharFotoInsumo()">
+      <button class="fechar-foto" onclick="fecharFotoInsumo()">×</button>
+      <img id="foto-insumo-img" src="" alt="Foto insumo">
+    </div>
+
+    <!-- MODAL CONFIRMAÇÃO -->
+    <div class="modal-overlay" id="modal-overlay">
+      <div class="modal">
+        <h3 id="modal-titulo">Confirmar</h3>
+        <p id="modal-msg">Tem certeza?</p>
+        <div class="modal-acoes">
+          <button class="btn-secundario" onclick="fecharModal()">Cancelar</button>
+          <button class="btn-primario" id="modal-confirmar">Confirmar</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- MODAL PREVIEW PDF -->
+    <div class="modal-overlay pdf-preview-overlay" id="modal-preview-pdf" onclick="if(event.target===this)fecharPreviewPDF()">
+      <div class="pdf-preview-modal">
+        <div class="pdf-preview-topo">
+          <div>
+            <h3>Prévia do PDF</h3>
+            <p>Escolha o layout antes de baixar o arquivo.</p>
+          </div>
+          <button type="button" class="pdf-preview-fechar" onclick="fecharPreviewPDF()" aria-label="Fechar">×</button>
+        </div>
+        <div class="pdf-preview-toolbar">
+          <div class="pdf-layout-selector">
+            <span class="pdf-layout-label">Layout:</span>
+            <button type="button" class="pdf-layout-btn ativo" data-orientacao="portrait" onclick="setPdfOrientacao('portrait')"
+              title="Retrato">
+              <span class="layout-icon icon-portrait"></span>
+              Retrato
+            </button>
+            <button type="button" class="pdf-layout-btn" data-orientacao="landscape" onclick="setPdfOrientacao('landscape')"
+              title="Paisagem">
+              <span class="layout-icon icon-landscape"></span>
+              Paisagem
+            </button>
+          </div>
+          <button type="button" class="btn-primario" onclick="baixarPDFPreview()">
+            Baixar PDF
+          </button>
+        </div>
+        <iframe id="pdf-preview-frame" class="pdf-preview-frame" title="Prévia do PDF"></iframe>
+      </div>
+    </div>
+
+    <!-- TOAST -->
+    <div class="toast" id="toast"></div>
+
+  </div><!-- /#app-conteudo -->
+
+  <!-- ===== SCRIPTS (ES Modules) ===== -->
+  <script type="module" src="src/script.js?v=20260602-financeiro-cards-orc-cobranca"></script>
+  <script type="module" src="src/gestao.js?v=20260602-financeiro-cards-orc-cobranca"></script>
+  <script type="module" src="src/funcionario_status.js?v=20260602-financeiro-cards-orc-cobranca"></script>
+  <script type="module" src="src/insumos.js?v=20260602-financeiro-cards-orc-cobranca"></script>
+  <script type="module" src="src/obras.js?v=20260602-financeiro-cards-orc-cobranca"></script>
+  <script type="module" src="src/financeiro.js?v=20260602-financeiro-cards-orc-cobranca"></script>
+  <script type="module" src="src/auth.js?v=20260602-financeiro-cards-orc-cobranca"></script>
+
+  <footer id="footer">
+    <div class="rodape">
+      <strong>Desenvolvido por <span style="color: #4a90d9;"><a href="https://www.sanojsistemas.com.br/"
+            target="_blank">Sanoj Sistemas</a></span></strong><br>
+    </div>
+  </footer>
+</body>
+</html>

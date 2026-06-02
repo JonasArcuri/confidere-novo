@@ -1,0 +1,27 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ── Dados do usuário ──────────────────────────────────────────────
+    // Cada usuário só pode ler e escrever no seu próprio nó.
+    // Nenhuma conta pode ver os dados de outra.
+    match /users/{userId} {
+
+      // Documento raiz do usuário (guarda logo, preferências)
+      allow read, write: if request.auth != null
+                         && request.auth.uid == userId;
+
+      // Sub-coleções: orçamentos, funcionários, agendamentos, relatórios
+      match /{collection}/{docId} {
+        allow read, write: if request.auth != null
+                           && request.auth.uid == userId;
+      }
+    }
+
+    // ── Tudo o mais é negado por padrão ──────────────────────────────
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
