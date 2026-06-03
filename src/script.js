@@ -1500,11 +1500,31 @@ function removerArraysAninhadosFirestore(valor, dentroDeArray = false) {
     return valor;
 }
 
-function validarImagensAntesDeSalvar() {
+async function validarImagensAntesDeSalvar() {
     const imagens = Array.from(document.querySelectorAll('#linhas-tbody tr[data-img-id]'));
-    const pendente = imagens.some(tr => tr.dataset.uploadStatus === 'pending');
+    const normalizarStatus = () => {
+        imagens.forEach(tr => {
+            if (tr.dataset.storageUrl && tr.dataset.uploadStatus === 'pending') {
+                tr.dataset.uploadStatus = 'done';
+            }
+        });
+    };
+
+    normalizarStatus();
+    let pendente = imagens.some(tr => tr.dataset.uploadStatus === 'pending' && !tr.dataset.storageUrl);
     if (pendente) {
-        mostrarToast('Aguarde o envio da imagem terminar antes de salvar.', 'erro');
+        mostrarToast('Enviando imagem... aguarde alguns instantes.', '');
+        const limite = Date.now() + 30000;
+        while (Date.now() < limite) {
+            await new Promise(resolve => setTimeout(resolve, 300));
+            normalizarStatus();
+            pendente = imagens.some(tr => tr.dataset.uploadStatus === 'pending' && !tr.dataset.storageUrl);
+            if (!pendente) break;
+        }
+    }
+
+    if (pendente) {
+        mostrarToast('Nao foi possivel concluir o envio da imagem. Tente adicionar a imagem novamente.', 'erro');
         return false;
     }
 
@@ -1521,9 +1541,12 @@ function validarImagensAntesDeSalvar() {
 }
 
 async function salvarOrcamento() {
+    if (!document.getElementById('campo-cliente')?.value?.trim()) {
+        mostrarToast('Informe o nome do cliente.', 'erro');
+        return;
+    }
+    if (!(await validarImagensAntesDeSalvar())) return;
     const dados = coletarDados();
-    if (!dados.cliente) { mostrarToast('Informe o nome do cliente.', 'erro'); return; }
-    if (!validarImagensAntesDeSalvar()) return;
 
     try {
         if (orcamentoEditandoId) {
