@@ -48,6 +48,7 @@ document.addEventListener('DOMContentLoaded', () => {
     adicionarLinha();
     aplicarTipoDocumento();
     atualizarNumeroDisplay();
+    renderizarOpcoesObservacao();
 });
 
 // ===== LOGO =====
@@ -573,6 +574,15 @@ const _OPCOES_MATERIAL_PADRAO = [
     'Proteção Mecânica', 'Membrana Acrilica com Prot UV', 'Cintamento Perimetral', 'Cristalização', 'Tamponamento'
 ];
 const _OPCOES_AREA_PADRAO = ['m&sup2;', 'm', 'Unid.'];
+const _OPCOES_OBS_PADRAO = [
+    { id: 'medidas_projeto', texto: 'MEDIDAS FORNECIDAS POR PROJETO, NECESSÁRIO CONFERIR IN LOCO, VALORES SUJEITOS A ALTERAÇÃO CONFORME MEDIÇÃO;' },
+    { id: 'medidas_contato', texto: 'MEDIDAS FORNECIDAS POR CONTATO, NECESSÁRIO CONFERIR IN LOCO, VALORES SUJEITOS A ALTERAÇÃO CONFORME MEDIÇÃO;' },
+    { id: 'ralos_tubos', texto: 'RALOS E TUBOS EMERGENTES SERÃO TRATADOS COM ASFALTO ELASTOMÉRICO (OU TELA DUPLA ESTRUTURANTE) AO CUSTO DE 45,00 CADA. NECESSÁRIO CONFERIR IN LOCO QUANTIDADE DE TUBOS, SALDO SERÁ COBRADO JUNTO A MEDIÇÃO MENSAL/SALDO FINAL;' },
+    { id: 'furos_cortes', texto: 'FUROS, CORTES E ALTERAÇÕES NA IMPERMEABILIZAÇÃO APÓS A CONCLUSÃO DA MESMA DEVERÁ SER COMUNICADO À EMPRESA CONTRATADA PARA EVENTUAIS REPAROS, SENDO ESTES TENDO VALOR SEPARADO DESTE ORÇAMENTO;' },
+    { id: 'paliativo_sem_garantia', texto: 'TRATAMENTO PALIATIVO, SEM GARANTIA;' },
+    { id: 'tela_poliester', texto: 'TELA DE POLIÉSTER EM PONTOS CRÍTICOS (RALOS, TUBOS, ENCONTROS PISO/PAREDE);' },
+    { id: 'andaimes_nao_cotados', texto: 'ALUGUEL DE ANDAIMES NÃO COTADOS NESTE ORÇAMENTO;' }
+];
 
 const _OPCOES_CORRECOES_TEXTO = {
     'Caixa d \u003Fgua': 'Caixa d Água',
@@ -607,6 +617,7 @@ function carregarOpcoesEditaveis(tipo, padrao) {
 let _OPCOES_DESC = carregarOpcoesEditaveis('desc', _OPCOES_DESC_PADRAO);
 let _OPCOES_MATERIAL = carregarOpcoesEditaveis('material', _OPCOES_MATERIAL_PADRAO);
 let _OPCOES_AREA = carregarOpcoesEditaveis('area', _OPCOES_AREA_PADRAO);
+let _OPCOES_OBS = carregarOpcoesObservacao();
 
 function salvarOpcoesEditaveis(tipo) {
     const lista = tipo === 'desc' ? _OPCOES_DESC : tipo === 'material' ? _OPCOES_MATERIAL : _OPCOES_AREA;
@@ -617,7 +628,9 @@ function recarregarOpcoesEditaveisUsuario() {
     _OPCOES_DESC = carregarOpcoesEditaveis('desc', _OPCOES_DESC_PADRAO);
     _OPCOES_MATERIAL = carregarOpcoesEditaveis('material', _OPCOES_MATERIAL_PADRAO);
     _OPCOES_AREA = carregarOpcoesEditaveis('area', _OPCOES_AREA_PADRAO);
+    _OPCOES_OBS = carregarOpcoesObservacao();
     atualizarDropdownsEditaveis();
+    renderizarOpcoesObservacao();
 }
 
 function getListaOpcoesEditaveis(tipo) {
@@ -1401,21 +1414,125 @@ function limparDescontoCalculo() {
 }
 
 // ===== OBSERVAÇÕES =====
+function normalizarObservacaoPreset(item) {
+    if (!item) return null;
+    if (typeof item === 'string') {
+        const texto = item.trim();
+        return texto ? { id: gerarIdObservacaoPreset(texto), texto } : null;
+    }
+    const texto = String(item.texto || item.label || item.valor || '').trim();
+    if (!texto) return null;
+    return { id: String(item.id || gerarIdObservacaoPreset(texto)), texto };
+}
+
+function getChaveObservacoesUsuario() {
+    return getChaveUsuarioLocal('confidere_opcoes_obs');
+}
+
+function gerarIdObservacaoPreset(texto) {
+    let hash = 0;
+    const limpo = String(texto || '').trim().toLowerCase();
+    for (let i = 0; i < limpo.length; i++) {
+        hash = ((hash << 5) - hash) + limpo.charCodeAt(i);
+        hash |= 0;
+    }
+    return `obs_${Math.abs(hash).toString(36)}`;
+}
+
+function carregarOpcoesObservacao() {
+    try {
+        const salvas = JSON.parse(localStorage.getItem(getChaveObservacoesUsuario()) || 'null');
+        if (Array.isArray(salvas)) {
+            const normalizadas = salvas.map(normalizarObservacaoPreset).filter(Boolean);
+            return deduplicarObservacoes(normalizadas);
+        }
+    } catch {}
+    return _OPCOES_OBS_PADRAO.map(o => ({ ...o }));
+}
+
+function deduplicarObservacoes(lista) {
+    const vistosId = new Set();
+    const vistosTexto = new Set();
+    return lista.filter(item => {
+        const textoKey = item.texto.toLowerCase();
+        if (vistosId.has(item.id) || vistosTexto.has(textoKey)) return false;
+        vistosId.add(item.id);
+        vistosTexto.add(textoKey);
+        return true;
+    });
+}
+
+function salvarOpcoesObservacao() {
+    try { localStorage.setItem(getChaveObservacoesUsuario(), JSON.stringify(_OPCOES_OBS)); } catch {}
+}
+
+function renderizarOpcoesObservacao() {
+    const container = document.getElementById('obs-opcoes');
+    if (!container) return;
+    const marcadas = new Set(getObservacoesMarcadas());
+    container.innerHTML = _OPCOES_OBS.map(opcao => `
+        <label class="obs-opcao-item" data-obs-id="${escapeAttr(opcao.id)}">
+            <input type="checkbox" name="obs-opcao" value="${escapeAttr(opcao.id)}" ${marcadas.has(opcao.id) ? 'checked' : ''}>
+            <span>${escapeHtml(opcao.texto)}</span>
+            <button type="button" class="obs-opcao-delete" title="Excluir observação" onclick="removerObservacaoPreset('${escapeJsString(opcao.id)}', event)">&times;</button>
+        </label>
+    `).join('');
+}
+
+function adicionarObservacaoPreset(texto, { silencioso = false } = {}) {
+    const limpo = String(texto || '').trim();
+    if (!limpo) {
+        if (!silencioso) mostrarToast('Digite uma observação para salvar.', 'erro');
+        return false;
+    }
+    if (_OPCOES_OBS.some(o => o.texto.toLowerCase() === limpo.toLowerCase())) {
+        if (!silencioso) mostrarToast('Essa observação já está salva.', '');
+        return false;
+    }
+    _OPCOES_OBS.push({ id: gerarIdObservacaoPreset(limpo), texto: limpo });
+    _OPCOES_OBS = deduplicarObservacoes(_OPCOES_OBS);
+    salvarOpcoesObservacao();
+    renderizarOpcoesObservacao();
+    if (!silencioso) mostrarToast('Observação salva como preset.', 'sucesso');
+    return true;
+}
+
+function salvarObservacaoManualPreset() {
+    const texto = document.getElementById('campo-obs')?.value || '';
+    adicionarObservacaoPreset(texto);
+}
+
+function removerObservacaoPreset(id, event = null) {
+    event?.stopPropagation?.();
+    event?.preventDefault?.();
+    const idx = _OPCOES_OBS.findIndex(o => o.id === id);
+    if (idx < 0) return;
+    _OPCOES_OBS.splice(idx, 1);
+    salvarOpcoesObservacao();
+    renderizarOpcoesObservacao();
+    mostrarToast('Observação removida da lista.', '');
+}
+
 function getObservacoesMarcadas() {
     return Array.from(document.querySelectorAll('input[name="obs-opcao"]:checked')).map(cb => cb.value);
 }
 
 function getTextoObservacaoOpcao(valor) {
+    const opcao = _OPCOES_OBS.find(o => o.id === valor);
+    if (opcao) return opcao.texto;
     const cb = document.querySelector(`input[name="obs-opcao"][value="${valor}"]`);
     return cb?.closest('.obs-opcao-item')?.querySelector('span')?.textContent.trim() || '';
 }
 
 function montarObservacoes() {
+    const textoLivre = document.getElementById('campo-obs').value.trim();
+    if (document.getElementById('obs-manual-salvar')?.checked) {
+        adicionarObservacaoPreset(textoLivre, { silencioso: true });
+    }
     const opcoes = getObservacoesMarcadas()
         .map(getTextoObservacaoOpcao)
         .filter(Boolean)
         .map(txt => `- ${txt}`);
-    const textoLivre = document.getElementById('campo-obs').value.trim();
     if (textoLivre) opcoes.push(textoLivre);
     return opcoes.join('\n');
 }
@@ -1423,9 +1540,12 @@ function montarObservacoes() {
 function limparObservacoes() {
     document.querySelectorAll('input[name="obs-opcao"]').forEach(cb => { cb.checked = false; });
     document.getElementById('campo-obs').value = '';
+    const salvarCb = document.getElementById('obs-manual-salvar');
+    if (salvarCb) salvarCb.checked = false;
 }
 
 function restaurarObservacoes(orc) {
+    renderizarOpcoesObservacao();
     document.querySelectorAll('input[name="obs-opcao"]').forEach(cb => {
         cb.checked = Array.isArray(orc.obsOpcoes) && orc.obsOpcoes.includes(cb.value);
     });
@@ -2950,6 +3070,8 @@ Object.assign(window, {
     setPdfOrientacao, formatarMoeda, mostrarToast, abrirModal, fecharModal,
     getHistorico, setHistorico, proximoNumero, atualizarNumeroDisplay,
     logoBase64,
+    // Observações (presets editáveis)
+    renderizarOpcoesObservacao, removerObservacaoPreset, salvarObservacaoManualPreset,
     // Descrição do serviço (dropdown + manual)
     recarregarOpcoesEditaveisUsuario, removerOpcaoEditavel, adicionarOpcaoEditavel, salvarManualSeMarcado,
     toggleDropdownDesc, selecionarDesc, toggleDescManual, atualizarDescManual, getDescLinha,

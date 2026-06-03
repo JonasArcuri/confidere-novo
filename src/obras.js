@@ -278,6 +278,7 @@ function renderizarDetalheObra(id) {
             <span>${escapeHtml(rel.funcionariosNomes || rel.funcionarioNome || 'Sem funcionário')}</span>
             <em>${moedaObra(rel.rendimento || 0)}</em>
             ${rel.obs ? `<p>${escapeHtml(rel.obs)}</p>` : ''}
+            ${Array.isArray(rel.imagens) && rel.imagens.length ? `<div class="obra-relatorio-imagens">${rel.imagens.slice(0, 6).map(img => `<img src="${escapeAttr(img.url || img.src || '')}" alt="Imagem do relatório">`).join('')}${rel.imagens.length > 6 ? `<span>+${rel.imagens.length - 6}</span>` : ''}</div>` : ''}
           </div>`).join('') : (!ags.length ? '<div class="obra-vazio">Nenhum relat&oacute;rio ou agendamento registrado para esta obra.</div>' : '')}
         </div>
       </div>

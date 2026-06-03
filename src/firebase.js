@@ -281,6 +281,14 @@ const DB = {
     return await uploadArquivo(file, "orcamentos-imagens");
   },
 
+  async salvarImagemRelatorioArquivo(file) {
+    return await uploadArquivo(file, "relatorios-imagens");
+  },
+
+  async excluirArquivoStorage(path) {
+    await removerArquivoSeExistir(path);
+  },
+
   async obterUrlArquivo(path) {
     if (!path) return '';
     return await getDownloadURL(storageRef(storage, path));

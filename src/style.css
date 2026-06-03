@@ -316,6 +316,36 @@ nav .nav-tab.ativo {
   flex: 1;
 }
 
+.obs-opcao-delete {
+  width: 24px;
+  height: 24px;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--vermelho);
+  font-size: 18px;
+  font-weight: 700;
+  line-height: 1;
+  cursor: pointer;
+  flex: 0 0 auto;
+}
+
+.obs-opcao-delete:hover {
+  background: rgba(231, 76, 60, 0.12);
+}
+
+.obs-preset-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin: -4px 0 10px;
+}
+
+.obs-manual-save-row {
+  margin: 0;
+}
+
 /* TABELA */
 .tabela-wrapper {
   overflow-x: auto;
@@ -3182,21 +3212,25 @@ table {
 
 /* ===== INÍCIO OBRAFLUX ===== */
 .nav-home-btn {
-  width: 42px;
-  min-width: 42px;
-  height: 36px;
+  width: 48px;
+  min-width: 48px;
+  height: 42px;
   padding: 0 !important;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  border-radius: 8px;
+  border-radius: 10px;
 }
 
 .nav-home-btn img {
-  width: 25px;
-  height: 25px;
+  width: 34px;
+  height: 34px;
   object-fit: contain;
   display: block;
+  border-radius: 8px;
+  background: #fff;
+  padding: 2px;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.18);
 }
 
 .inicio-wrapper {

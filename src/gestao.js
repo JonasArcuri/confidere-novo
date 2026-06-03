@@ -4,6 +4,7 @@ import { escapeHtml, escapeAttr, setOptions } from './utils.js';
 let calMes = new Date().getMonth();
 let calAno = new Date().getFullYear();
 let relFuncionariosSelected = [];
+let relImagensSelecionadas = [];
 let agendamentoArrastandoId = null;
 let agendamentoObraContextId = '';
 
@@ -506,6 +507,198 @@ function relatorioTemFuncionario(rel, funcionarioId) {
   return rel.funcionarioId === funcionarioId;
 }
 
+function normalizarImagensRelatorio(rel) {
+  return Array.isArray(rel?.imagens) ? rel.imagens.filter(img => img && (img.url || img.src)) : [];
+}
+
+function renderizarImagensRelatorioModal() {
+  const cont = document.getElementById('rel-imagens-preview');
+  if (!cont) return;
+  if (!relImagensSelecionadas.length) {
+    cont.innerHTML = '<div class="rel-imagens-vazio">Nenhuma imagem adicionada.</div>';
+    return;
+  }
+  cont.innerHTML = relImagensSelecionadas.map((img, index) => `
+    <div class="rel-imagem-thumb ${img.status === 'pending' ? 'enviando' : ''}">
+      <img src="${escapeAttr(img.preview || img.url || img.src || '')}" alt="${escapeAttr(img.nome || 'Imagem do relatório')}">
+      <button type="button" title="Remover imagem" onclick="removerImagemRelatorio(${index})">&times;</button>
+      ${img.status === 'pending' ? '<span>Enviando...</span>' : ''}
+      ${img.status === 'error' ? '<span class="erro">Falhou</span>' : ''}
+    </div>
+  `).join('');
+}
+
+function removerImagemRelatorio(index) {
+  relImagensSelecionadas.splice(index, 1);
+  renderizarImagensRelatorioModal();
+}
+
+function arquivoParaPreview(file) {
+  return new Promise((resolve) => {
+    const reader = new FileReader();
+    reader.onload = e => resolve(e.target.result || '');
+    reader.onerror = () => resolve('');
+    reader.readAsDataURL(file);
+  });
+}
+
+async function handleImagensRelatorio(input) {
+  const arquivos = Array.from(input?.files || []);
+  input.value = '';
+  if (!arquivos.length) return;
+  for (const file of arquivos) {
+    if (!['image/png', 'image/jpeg'].includes(file.type)) {
+      mostrarToast('Use apenas imagens PNG ou JPEG.', 'erro');
+      continue;
+    }
+    const item = {
+      nome: file.name,
+      tipo: file.type,
+      tamanho: file.size,
+      preview: await arquivoParaPreview(file),
+      status: 'pending'
+    };
+    relImagensSelecionadas.push(item);
+    renderizarImagensRelatorioModal();
+    try {
+      const uploaded = await DB.salvarImagemRelatorioArquivo(file);
+      item.url = uploaded.url;
+      item.path = uploaded.path;
+      item.status = 'done';
+    } catch (err) {
+      console.error('Erro ao enviar imagem do relatório:', err);
+      item.status = 'error';
+      mostrarToast('Erro ao enviar uma imagem do relatório.', 'erro');
+    }
+    renderizarImagensRelatorioModal();
+  }
+}
+
+function relatorioTemImagemPendente() {
+  return relImagensSelecionadas.some(img => img.status === 'pending');
+}
+
+function relatorioTemImagemComErro() {
+  return relImagensSelecionadas.some(img => img.status === 'error' || (!img.url && !img.src));
+}
+
+function obterImagensRelatorioParaSalvar() {
+  return relImagensSelecionadas
+    .filter(img => img.url || img.src)
+    .map(img => ({
+      url: img.url || img.src,
+      path: img.path || '',
+      nome: img.nome || '',
+      tipo: img.tipo || '',
+      tamanho: img.tamanho || 0
+    }));
+}
+
+function getRelatorioPorId(id) {
+  return relatorios.find(r => r.id === id) || null;
+}
+
+function renderizarGaleriaResumoRelatorio(rel) {
+  const imgs = normalizarImagensRelatorio(rel);
+  if (!imgs.length) return '<div class="rel-resumo-vazio">Nenhuma imagem enviada para este relatório.</div>';
+  return `<div class="rel-resumo-galeria">${imgs.map((img, index) => `
+    <figure>
+      <img src="${escapeAttr(img.url || img.src)}" alt="${escapeAttr(img.nome || 'Imagem do relatório')}">
+      <button type="button" title="Remover imagem" onclick="removerImagemResumoRelatorio('${escapeAttr(rel.id)}', ${index})">&times;</button>
+    </figure>
+  `).join('')}</div>`;
+}
+
+function abrirResumoRelatorio(id) {
+  const rel = getRelatorioPorId(id);
+  if (!rel) { mostrarToast('Relatório não encontrado.', 'erro'); return; }
+  fecharResumoRelatorio();
+  const overlay = document.createElement('div');
+  overlay.id = 'modal-resumo-relatorio';
+  overlay.className = 'modal-overlay aberto';
+  overlay.innerHTML = `<div class="modal-gestao rel-resumo-modal">
+    <div class="rel-resumo-topo">
+      <div>
+        <h3>Resumo do Relatório</h3>
+        <strong>${escapeHtml(rel.obra || 'Relatório de obra')}</strong>
+      </div>
+      <button type="button" class="rel-resumo-fechar" onclick="fecharResumoRelatorio()">&times;</button>
+    </div>
+    <div class="rel-resumo-info">
+      <div><span>Data</span><strong>${escapeHtml(formatarData(rel.data))}</strong></div>
+      <div><span>Funcionários</span><strong>${escapeHtml(rel.funcionariosNomes || rel.funcionarioNome || '-')}</strong></div>
+      <div><span>Rendimento</span><strong>${formatarMoeda(rel.rendimento || 0)}</strong></div>
+    </div>
+    ${rel.obs ? `<div class="rel-resumo-obs"><span>Observações</span><p>${escapeHtml(rel.obs)}</p></div>` : ''}
+    <div class="rel-resumo-imagens-head">
+      <h4>Imagens do relatório</h4>
+      <button type="button" class="btn-secundario" onclick="document.getElementById('rel-resumo-input').click()">+ Adicionar Imagens</button>
+      <input type="file" id="rel-resumo-input" accept="image/png,image/jpeg" multiple style="display:none" onchange="handleImagensResumoRelatorio('${escapeAttr(rel.id)}', this)">
+    </div>
+    <div id="rel-resumo-imagens">${renderizarGaleriaResumoRelatorio(rel)}</div>
+    <div class="modal-acoes">
+      <button type="button" class="btn-secundario" onclick="editarRelatorio('${escapeAttr(rel.id)}')">Editar Relatório</button>
+      <button type="button" class="btn-primario" onclick="fecharResumoRelatorio()">Fechar</button>
+    </div>
+  </div>`;
+  overlay.addEventListener('click', ev => { if (ev.target === overlay) fecharResumoRelatorio(); });
+  document.body.appendChild(overlay);
+}
+
+function fecharResumoRelatorio() {
+  document.getElementById('modal-resumo-relatorio')?.remove();
+}
+
+async function persistirImagensResumoRelatorio(rel) {
+  await DB.salvarRelatorio({ imagens: normalizarImagensRelatorio(rel) }, rel.id);
+  renderizarRelatorios();
+  renderizarCalendario();
+  window.renderizarObras?.();
+}
+
+async function handleImagensResumoRelatorio(id, input) {
+  const rel = getRelatorioPorId(id);
+  const arquivos = Array.from(input?.files || []);
+  input.value = '';
+  if (!rel || !arquivos.length) return;
+  const alvo = document.getElementById('rel-resumo-imagens');
+  if (alvo) alvo.innerHTML = '<div class="rel-resumo-vazio">Enviando imagens...</div>';
+  for (const file of arquivos) {
+    if (!['image/png', 'image/jpeg'].includes(file.type)) {
+      mostrarToast('Use apenas imagens PNG ou JPEG.', 'erro');
+      continue;
+    }
+    try {
+      const uploaded = await DB.salvarImagemRelatorioArquivo(file);
+      rel.imagens = normalizarImagensRelatorio(rel);
+      rel.imagens.push({ url: uploaded.url, path: uploaded.path, nome: file.name, tipo: file.type, tamanho: file.size });
+    } catch (err) {
+      console.error('Erro ao enviar imagem do relatório:', err);
+      mostrarToast('Erro ao enviar uma imagem.', 'erro');
+    }
+  }
+  await persistirImagensResumoRelatorio(rel);
+  abrirResumoRelatorio(id);
+  mostrarToast('Imagens atualizadas.', 'sucesso');
+}
+
+async function removerImagemResumoRelatorio(id, index) {
+  const rel = getRelatorioPorId(id);
+  if (!rel) return;
+  const imgs = normalizarImagensRelatorio(rel);
+  const [removida] = imgs.splice(index, 1);
+  rel.imagens = imgs;
+  try {
+    await persistirImagensResumoRelatorio(rel);
+    if (removida?.path) await DB.excluirArquivoStorage?.(removida.path);
+    abrirResumoRelatorio(id);
+    mostrarToast('Imagem removida.', '');
+  } catch (err) {
+    console.error('Erro ao remover imagem do relatório:', err);
+    mostrarToast('Erro ao remover imagem.', 'erro');
+  }
+}
+
 function aplicarFiltrosRelatorio() {
   const filtroFunc = document.getElementById('filtro-rel-func')?.value || '';
   const filtroMes = document.getElementById('filtro-rel-mes')?.value || '';
@@ -518,22 +711,27 @@ function aplicarFiltrosRelatorio() {
   const cont = document.getElementById('rel-lista');
   if (!cont) return;
   if (!lista.length) { cont.innerHTML = '<div class="hist-vazio"><div class="icone"></div><p>Nenhum relatório encontrado.</p></div>'; return; }
-  cont.innerHTML = lista.map(rel => `<div class="rel-card">
-    <div class="rel-card-header"><div class="rel-card-info"><div class="rel-card-obra">${escapeHtml(rel.obra || '')}</div><div class="rel-card-meta">${escapeHtml(formatarData(rel.data))}</div><div class="rel-card-meta">${escapeHtml(rel.funcionariosNomes || rel.funcionarioNome || '-')}</div>${rel.obs ? `<div class="rel-card-obs">${escapeHtml(rel.obs)}</div>` : ''}</div><div class="rel-card-valor"><div class="rel-card-valor-label">Rendimento</div><div class="rel-card-valor-num">${formatarMoeda(rel.rendimento || 0)}</div></div></div>
-    <div class="rel-card-acoes"><button class="btn-mini editar" onclick="editarRelatorio('${escapeAttr(rel.id)}')">Editar</button><button class="btn-mini excluir" onclick="confirmarExcluirRelatorio('${escapeAttr(rel.id)}')">Excluir</button></div>
-  </div>`).join('');
+  cont.innerHTML = lista.map(rel => {
+    const imgs = normalizarImagensRelatorio(rel);
+    return `<div class="rel-card" role="button" tabindex="0" onclick="abrirResumoRelatorio('${escapeAttr(rel.id)}')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();abrirResumoRelatorio('${escapeAttr(rel.id)}')}">
+    <div class="rel-card-header"><div class="rel-card-info"><div class="rel-card-obra">${escapeHtml(rel.obra || '')}</div><div class="rel-card-meta">${escapeHtml(formatarData(rel.data))}</div><div class="rel-card-meta">${escapeHtml(rel.funcionariosNomes || rel.funcionarioNome || '-')}</div>${rel.obs ? `<div class="rel-card-obs">${escapeHtml(rel.obs)}</div>` : ''}${imgs.length ? `<div class="rel-card-imagens">${imgs.slice(0, 4).map(img => `<img src="${escapeAttr(img.url || img.src)}" alt="Imagem do relatório">`).join('')}${imgs.length > 4 ? `<span>+${imgs.length - 4}</span>` : ''}</div>` : ''}</div><div class="rel-card-valor"><div class="rel-card-valor-label">Rendimento</div><div class="rel-card-valor-num">${formatarMoeda(rel.rendimento || 0)}</div></div></div>
+    <div class="rel-card-acoes"><button class="btn-mini editar" onclick="event.stopPropagation();editarRelatorio('${escapeAttr(rel.id)}')">Editar</button><button class="btn-mini excluir" onclick="event.stopPropagation();confirmarExcluirRelatorio('${escapeAttr(rel.id)}')">Excluir</button></div>
+  </div>`;
+  }).join('');
 }
 
 function abrirModalRelatorio(id = null) {
   popularSelectFuncionariosRel();
   popularSelectObrasRel();
   relFuncionariosSelected = [];
+  relImagensSelecionadas = [];
   document.getElementById('rel-id-edit').value = id || '';
   document.getElementById('rel-obra').value = '';
   document.getElementById('rel-data').value = new Date().toISOString().split('T')[0];
   document.getElementById('rel-rendimento').value = '';
   document.getElementById('rel-obs').value = '';
   document.getElementById('rel-funcionario').value = '';
+  renderizarImagensRelatorioModal();
   document.getElementById('modal-rel-titulo').textContent = id ? 'Editar Relatório' : 'Novo Relatório de Obra';
   const selObra = document.getElementById('rel-obra-select');
   if (selObra) selObra.value = '';
@@ -546,18 +744,20 @@ function abrirModalRelatorio(id = null) {
       document.getElementById('rel-obs').value = rel.obs || '';
       document.getElementById('rel-funcionario').value = rel.funcionarioId || '';
       relFuncionariosSelected = Array.isArray(rel.funcionariosIds) && rel.funcionariosIds.length ? [...rel.funcionariosIds] : (rel.funcionarioId ? [rel.funcionarioId] : []);
+      relImagensSelecionadas = normalizarImagensRelatorio(rel).map(img => ({ ...img, status: 'done', preview: img.url || img.src || '' }));
       if (selObra && rel.obraId) selObra.value = rel.obraId;
     }
   }
   sincronizarObraTexto();
   popularCheckboxFuncionariosRel();
+  renderizarImagensRelatorioModal();
   const sel = document.getElementById('rel-obra-select');
   if (sel) sel.onchange = sincronizarObraTexto;
   document.getElementById('modal-relatorio').classList.add('aberto');
 }
 
 function fecharModalRelatorio() { document.getElementById('modal-relatorio')?.classList.remove('aberto'); }
-function editarRelatorio(id) { abrirModalRelatorio(id); }
+function editarRelatorio(id) { fecharResumoRelatorio(); abrirModalRelatorio(id); }
 
 function encontrarObraPorId(obraOuId) {
   if (obraOuId && typeof obraOuId === 'object') return obraOuId;
@@ -597,8 +797,11 @@ async function salvarRelatorio() {
   const obraId = selObra?.value || '';
   const obraFinal = obraManual || (window.obras || []).find(o => o.id === obraId)?.nome || '';
   if (!obraFinal || !data) { mostrarToast('Preencha obra e data.', 'erro'); return; }
+  if (relatorioTemImagemPendente()) { mostrarToast('Aguarde o envio das imagens terminar antes de salvar.', 'erro'); return; }
+  if (relatorioTemImagemComErro()) { mostrarToast('Remova ou envie novamente as imagens com erro antes de salvar.', 'erro'); return; }
   const funcsNomes = relFuncionariosSelected.map(id => funcionarios.find(f => f.id === id)?.nome).filter(Boolean).join(', ');
-  const dados = { obra: obraFinal, obraId, data, funcionarioId: relFuncionariosSelected[0] || '', funcionarioNome: funcsNomes, funcionariosIds: relFuncionariosSelected, funcionariosNomes: funcsNomes, rendimento, obs };
+  const imagens = obterImagensRelatorioParaSalvar();
+  const dados = { obra: obraFinal, obraId, data, funcionarioId: relFuncionariosSelected[0] || '', funcionarioNome: funcsNomes, funcionariosIds: relFuncionariosSelected, funcionariosNomes: funcsNomes, rendimento, obs, imagens };
   try {
     if (idEdit) {
       await DB.salvarRelatorio(dados, idEdit);
@@ -663,5 +866,7 @@ Object.assign(window, {
   abrirAgendamentoParaObra,
   renderizarFuncionarios, abrirModalFuncionario, fecharModalFuncionario, editarFuncionario, salvarFuncionario, confirmarExcluirFuncionario,
   renderizarRelatorios, aplicarFiltrosRelatorio, popularSelectFuncionariosRel, popularSelectObrasRel, popularCheckboxFuncionariosRel, toggleFuncRel,
-  abrirModalRelatorio, fecharModalRelatorio, editarRelatorio, abrirRelatorioParaObra, salvarRelatorio, confirmarExcluirRelatorio, excluirRelatorio, limparFiltrosRel
+  abrirModalRelatorio, fecharModalRelatorio, editarRelatorio, abrirRelatorioParaObra, salvarRelatorio, confirmarExcluirRelatorio, excluirRelatorio, limparFiltrosRel,
+  handleImagensRelatorio, removerImagemRelatorio,
+  abrirResumoRelatorio, fecharResumoRelatorio, handleImagensResumoRelatorio, removerImagemResumoRelatorio
 });

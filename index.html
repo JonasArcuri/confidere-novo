@@ -8,10 +8,10 @@
   <link
     href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap"
     rel="stylesheet">
-  <link rel="stylesheet" href="src/style.css?v=20260603-plano-vigencia">
-  <link rel="stylesheet" href="src/gestao.css?v=20260602-calendario-grid-fixo">
+  <link rel="stylesheet" href="src/style.css?v=20260603-observacoes-editaveis">
+  <link rel="stylesheet" href="src/gestao.css?v=20260603-relatorio-imagens">
   <link rel="stylesheet" href="src/auth.css?v=20260602-login-logo-transparent">
-  <link rel="stylesheet" href="src/insumos_obras.css?v=20260602-login-logo-transparent">
+  <link rel="stylesheet" href="src/insumos_obras.css?v=20260603-relatorio-imagens">
   <link rel="icon" href="landing-obraflux/assets/obraflux-somentelogo-crop.png?v=20260602-login-logo-transparent" type="image/png">
   <link rel="shortcut icon" href="landing-obraflux/assets/obraflux-somentelogo-crop.png?v=20260602-login-logo-transparent" type="image/png">
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
@@ -358,35 +358,13 @@
           <!-- OBSERVAÇÕES -->
           <div class="secao">
             <div class="secao-titulo">Observações</div>
-            <div class="obs-opcoes">
-              <label class="obs-opcao-item">
-                <input type="checkbox" name="obs-opcao" value="medidas_projeto">
-                <span>MEDIDAS FORNECIDAS POR PROJETO, NECESSÁRIO CONFERIR IN LOCO, VALORES SUJEITOS A ALTERAÇÃO CONFORME MEDIÇÃO;</span>
+            <div class="obs-opcoes" id="obs-opcoes"></div>
+            <div class="obs-preset-actions">
+              <label class="manual-save-row obs-manual-save-row">
+                <input type="checkbox" id="obs-manual-salvar">
+                <span>Salvar observação como preset</span>
               </label>
-              <label class="obs-opcao-item">
-                <input type="checkbox" name="obs-opcao" value="medidas_contato">
-                <span>MEDIDAS FORNECIDAS POR CONTATO, NECESSÁRIO CONFERIR IN LOCO, VALORES SUJEITOS A ALTERAÇÃO CONFORME MEDIÇÃO;</span>
-              </label>
-              <label class="obs-opcao-item">
-                <input type="checkbox" name="obs-opcao" value="ralos_tubos">
-                <span>RALOS E TUBOS EMERGENTES SERÃO TRATADOS COM ASFALTO ELASTOMÉRICO (OU TELA DUPLA ESTRUTURANTE) AO CUSTO DE 45,00 CADA. NECESSÁRIO CONFERIR IN LOCO QUANTIDADE DE TUBOS, SALDO SERÁ COBRADO JUNTO A MEDIÇÃO MENSAL/SALDO FINAL;</span>
-              </label>
-              <label class="obs-opcao-item">
-                <input type="checkbox" name="obs-opcao" value="furos_cortes">
-                <span>FUROS, CORTES E ALTERAÇÕES NA IMPERMEABILIZAÇÃO APÓS A CONCLUSÃO DA MESMA DEVERÁ SER COMUNICADO À EMPRESA CONTRATADA PARA EVENTUAIS REPAROS, SENDO ESTES TENDO VALOR SEPARADO DESTE ORÇAMENTO;</span>
-              </label>
-              <label class="obs-opcao-item">
-                <input type="checkbox" name="obs-opcao" value="paliativo_sem_garantia">
-                <span>TRATAMENTO PALIATIVO, SEM GARANTIA;</span>
-              </label>
-              <label class="obs-opcao-item">
-                <input type="checkbox" name="obs-opcao" value="tela_poliester">
-                <span>TELA DE POLIÉSTER EM PONTOS CRÍTICOS (RALOS, TUBOS, ENCONTROS PISO/PAREDE);</span>
-              </label>
-              <label class="obs-opcao-item">
-                <input type="checkbox" name="obs-opcao" value="andaimes_nao_cotados">
-                <span>ALUGUEL DE ANDAIMES NÃO COTADOS NESTE ORÇAMENTO;</span>
-              </label>
+              <button type="button" class="btn-mini ver" onclick="salvarObservacaoManualPreset()">Salvar preset</button>
             </div>
             <div class="campo">
               <textarea id="campo-obs" rows="4"
@@ -919,6 +897,15 @@
             <label>Observações</label>
             <textarea id="rel-obs" rows="3" placeholder="Detalhes da execução, materiais usados..."></textarea>
           </div>
+          <div class="campo">
+            <label>Imagens do Relatório</label>
+            <div class="rel-imagens-box">
+              <button type="button" class="btn-secundario rel-imagem-upload-btn" onclick="document.getElementById('rel-imagens-input').click()">+ Adicionar Imagens</button>
+              <input type="file" id="rel-imagens-input" accept="image/png,image/jpeg" multiple style="display:none" onchange="handleImagensRelatorio(this)">
+              <small>Use PNG ou JPEG. As imagens ficam salvas e atreladas ao relatório.</small>
+              <div class="rel-imagens-preview" id="rel-imagens-preview"></div>
+            </div>
+          </div>
         </div>
         <div class="modal-acoes" style="margin-top:1.5rem;">
           <button class="btn-secundario" onclick="fecharModalRelatorio()">Cancelar</button>
@@ -1103,8 +1090,8 @@
       }, 7000);
     });
   </script>
-  <script type="module" src="src/script.js?v=20260603-plano-vigencia"></script>
-  <script type="module" src="src/gestao.js?v=20260602-login-logo-transparent"></script>
+  <script type="module" src="src/script.js?v=20260603-observacoes-editaveis"></script>
+  <script type="module" src="src/gestao.js?v=20260603-relatorio-imagens"></script>
   <script type="module" src="src/funcionario_status.js?v=20260602-login-logo-transparent"></script>
   <script type="module" src="src/insumos.js?v=20260602-login-logo-transparent"></script>
   <script type="module" src="src/obras.js?v=20260602-login-logo-transparent"></script>
