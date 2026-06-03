@@ -2721,7 +2721,7 @@ async function renderizarAdminMaster() {
         });
     } catch (err) {
         console.error('Erro no Admin Master:', err);
-        alvo.innerHTML = '<div class="admin-vazio">Nao foi possivel carregar os usuarios. Verifique as regras do Firestore.</div>';
+        alvo.innerHTML = '<div class="admin-vazio">As regras do Firestore ainda nao permitem listar empresas. Publique as regras com: firebase deploy --only firestore:rules</div>';
     }
 }
 
