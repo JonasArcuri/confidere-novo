@@ -18,6 +18,23 @@ let empresaConfig = {
     empresaUrl: ''
 };
 
+const MASTER_ADMIN_EMAIL = 'admin@obraflux.com.br';
+const PLANOS_MODULOS = {
+    essencial: ['inicio', 'orcamento', 'historico'],
+    profissional: ['inicio', 'orcamento', 'historico', 'gestao'],
+    completo: ['inicio', 'orcamento', 'historico', 'gestao', 'financeiro']
+};
+const MODULOS_ADMIN = [
+    { id: 'orcamento', label: 'Novo Orcamento' },
+    { id: 'historico', label: 'Historico' },
+    { id: 'gestao', label: 'Gestao de Equipe' },
+    { id: 'financeiro', label: 'Fluxo Financeiro' }
+];
+let perfilUsuarioAtual = {};
+let modulosLiberadosAtuais = new Set(['inicio', 'orcamento', 'historico', 'gestao', 'financeiro']);
+let usuarioMasterAtual = false;
+let adminUsuariosCache = [];
+
 // ===== INICIALIZAÇÃO =====
 document.addEventListener('DOMContentLoaded', () => {
     const hoje = new Date();
@@ -265,14 +282,145 @@ async function salvarConfiguracoesEmpresa() {
     }
 }
 
+
+function moedaInicio(valor) {
+    return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(Number(valor) || 0);
+}
+
+function parseValorInicio(v) {
+    if (typeof v === 'number') return Number.isFinite(v) ? v : 0;
+    if (!v) return 0;
+    const n = Number(String(v).replace(/[^\d,.-]/g, '').replace(/\.(?=\d{3}(\D|$))/g, '').replace(',', '.'));
+    return Number.isFinite(n) ? n : 0;
+}
+
+function totalDocumentoInicio(doc = {}) {
+    const direto = parseValorInicio(doc.totalComDesconto);
+    if (direto > 0) return direto;
+    return (doc.linhas || []).reduce((acc, l) => {
+        if (!l || l.tipo === 'cabecalho' || l.tipo === 'imagem' || l.tipo === 'opcao') return acc;
+        const total = parseValorInicio(l.total);
+        if (total > 0) return acc + total;
+        return acc + parseValorInicio(l.subtotalMaterial) + parseValorInicio(l.subtotalMao);
+    }, 0);
+}
+
+function mesAtualInicio() {
+    const d = new Date();
+    return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0');
+}
+
+function renderizarInicio() {
+    const perfilNome = empresaConfig?.empresaNome || 'Sua empresa';
+    const local = empresaConfig?.empresaLocal || '';
+    const contato = empresaConfig?.empresaContato || '';
+    const orcamentos = (window._orcamentosFirestore || []).filter(o => (o.tipoDocumento || 'orcamento') === 'orcamento');
+    const cobrancas = (window._orcamentosFirestore || []).filter(o => o.tipoDocumento === 'cobranca');
+    const obras = window.obras || [];
+    const funcionariosAtivos = (window.funcionarios || []).filter(f => f.status !== 'inativo' && f.ativo !== false);
+    const mes = mesAtualInicio();
+    const entradasMes = cobrancas.filter(o => (o.data || '').startsWith(mes)).reduce((s, o) => s + totalDocumentoInicio(o), 0);
+    const insumosMes = (window.insumos || []).filter(i => (i.data || '').startsWith(mes)).reduce((s, i) => s + parseValorInicio(i.valor), 0);
+    const saldoMes = entradasMes - insumosMes;
+
+    const nomeEl = document.getElementById('inicio-empresa-nome');
+    const metaEl = document.getElementById('inicio-empresa-meta');
+    const saudacaoEl = document.getElementById('inicio-saudacao');
+    if (saudacaoEl) saudacaoEl.textContent = 'Painel inicial';
+    if (nomeEl) nomeEl.textContent = perfilNome;
+    if (metaEl) metaEl.textContent = [contato, local].filter(Boolean).join(' • ');
+
+    const kpis = document.getElementById('inicio-kpis');
+    if (kpis) {
+        const dados = [
+            ['Orçamentos', orcamentos.length],
+            ['Obras em execução', obras.filter(o => o.status !== 'finalizada').length],
+            ['Funcionários ativos', funcionariosAtivos.length],
+            ['Entradas do mês', moedaInicio(entradasMes)]
+        ];
+        kpis.innerHTML = dados.map(([label, valor]) => '<div class="inicio-kpi"><span>' + escapeHtml(String(label)) + '</span><strong>' + escapeHtml(String(valor)) + '</strong></div>').join('');
+    }
+
+    const hoje = new Date().toISOString().slice(0, 10);
+    const agendaHoje = (window.agendamentos || []).filter(a => a.data === hoje).sort((a,b) => (a.hora || '').localeCompare(b.hora || '')).slice(0, 4);
+    const agendaEl = document.getElementById('inicio-agenda');
+    if (agendaEl) {
+        agendaEl.innerHTML = agendaHoje.length ? agendaHoje.map(a => '<div class="inicio-item"><strong>' + escapeHtml((a.hora ? a.hora.slice(0,5) + ' - ' : '') + (a.cliente || 'Agendamento')) + '</strong><span>' + escapeHtml(a.local || a.funcionarioNome || '') + '</span></div>').join('') : '<div class="inicio-vazio">Nenhum agendamento para hoje.</div>';
+    }
+
+    const finEl = document.getElementById('inicio-financeiro');
+    if (finEl) {
+        finEl.innerHTML = '<div class="inicio-fin-linha positivo"><span>Entradas do mês</span><strong>' + moedaInicio(entradasMes) + '</strong></div>' +
+            '<div class="inicio-fin-linha negativo"><span>Insumos / despesas</span><strong>' + moedaInicio(insumosMes) + '</strong></div>' +
+            '<div class="inicio-fin-linha ' + (saldoMes >= 0 ? 'positivo' : 'negativo') + '"><span>Saldo operacional</span><strong>' + moedaInicio(saldoMes) + '</strong></div>';
+    }
+}
+
 // ===== ABAS =====
+function normalizarModuloAba(aba) {
+    if (aba === 'admin') return 'admin';
+    return ['inicio', 'orcamento', 'historico', 'gestao', 'financeiro'].includes(aba) ? aba : 'inicio';
+}
+
+function modulosDoPlano(plano) {
+    const chave = String(plano || 'essencial').toLowerCase();
+    return PLANOS_MODULOS[chave] || PLANOS_MODULOS.essencial;
+}
+
+function getModulosPermitidos(perfil = {}) {
+    const definidos = Array.isArray(perfil.modulosLiberados) ? perfil.modulosLiberados.filter(Boolean) : [];
+    return definidos.length ? definidos : modulosDoPlano(perfil.plano);
+}
+
+function aplicarPermissoesUsuario(perfil = {}, user = {}) {
+    perfilUsuarioAtual = perfil || {};
+    usuarioMasterAtual = String(user?.email || '').toLowerCase() === MASTER_ADMIN_EMAIL;
+    const permitidos = (!usuarioMasterAtual && perfilUsuarioAtual.bloqueado)
+        ? ['inicio']
+        : usuarioMasterAtual
+        ? ['inicio', 'orcamento', 'historico', 'gestao', 'financeiro', 'admin']
+        : getModulosPermitidos(perfilUsuarioAtual);
+    modulosLiberadosAtuais = new Set(['inicio', ...permitidos]);
+
+    document.querySelectorAll('.nav-admin-tab').forEach(btn => {
+        btn.style.display = usuarioMasterAtual ? '' : 'none';
+    });
+
+    document.querySelectorAll('.nav-tab').forEach(btn => {
+        const match = (btn.getAttribute('onclick') || '').match(/mudarAba\('([^']+)'/);
+        const aba = match ? match[1] : '';
+        if (!aba || aba === 'inicio') {
+            btn.style.display = '';
+            return;
+        }
+        btn.style.display = modulosLiberadosAtuais.has(aba) ? '' : 'none';
+    });
+
+    const abaAtiva = document.querySelector('.aba.ativo')?.id?.replace('aba-', '') || 'inicio';
+    if (!modulosLiberadosAtuais.has(abaAtiva)) {
+        mudarAba('inicio', document.querySelector(".nav-tab[onclick*=\"inicio\"]") || document.querySelector('.nav-tab'));
+    }
+}
+
+function moduloPermitido(aba) {
+    const modulo = normalizarModuloAba(aba);
+    return modulo === 'inicio' || modulosLiberadosAtuais.has(modulo);
+}
+
 function mudarAba(aba, btn) {
+    if (!moduloPermitido(aba)) {
+        mostrarToast('Modulo indisponivel para este usuario.', 'erro');
+        return;
+    }
     document.querySelectorAll('.aba').forEach(a => a.classList.remove('ativo'));
     document.querySelectorAll('.nav-tab').forEach(b => b.classList.remove('ativo'));
-    document.getElementById('aba-' + aba).classList.add('ativo');
-    btn.classList.add('ativo');
+    document.getElementById('aba-' + aba)?.classList.add('ativo');
+    const botao = btn || document.querySelector('.nav-tab[data-aba=\"' + aba + '\"]') || document.querySelector('.nav-tab[onclick*=\"' + aba + '\"]');
+    botao?.classList.add('ativo');
+    if (aba === 'inicio') renderizarInicio();
     if (aba === 'historico') renderizarHistorico();
     if (aba === 'financeiro' && window.renderizarFluxoFinanceiro) window.renderizarFluxoFinanceiro();
+    if (aba === 'admin') renderizarAdminMaster();
     if (aba === 'gestao') {
         renderizarCalendario();
         popularSelectFuncionariosRel();
@@ -2494,9 +2642,107 @@ function truncarTexto(doc, texto, maxW) {
     return t + '…';
 }
 
+// ===== ADMIN MASTER =====
+function nomePlanoAdmin(plano) {
+    const chave = String(plano || 'essencial').toLowerCase();
+    if (chave === 'profissional') return 'Profissional';
+    if (chave === 'completo') return 'Completo';
+    return 'Essencial';
+}
+
+function renderizarModulosAdmin(user) {
+    const modulos = new Set(getModulosPermitidos(user));
+    return MODULOS_ADMIN.map(mod => {
+        const checked = modulos.has(mod.id) ? 'checked' : '';
+        return '<label class="admin-check"><input type="checkbox" data-admin-modulo="' + mod.id + '" ' + checked + '><span>' + escapeHtml(mod.label) + '</span></label>';
+    }).join('');
+}
+
+async function renderizarAdminMaster() {
+    const alvo = document.getElementById('admin-conteudo');
+    if (!alvo) return;
+    if (!usuarioMasterAtual) {
+        alvo.innerHTML = '<div class="admin-vazio">Acesso restrito ao administrador master.</div>';
+        return;
+    }
+
+    alvo.innerHTML = '<div class="admin-vazio">Carregando usuarios...</div>';
+    try {
+        adminUsuariosCache = await DB.listarUsuariosAdmin();
+        const usuarios = [...adminUsuariosCache].sort((a, b) => {
+            const na = (a.empresaNome || a.email || a.id || '').toLowerCase();
+            const nb = (b.empresaNome || b.email || b.id || '').toLowerCase();
+            return na.localeCompare(nb);
+        });
+
+        if (!usuarios.length) {
+            alvo.innerHTML = '<div class="admin-vazio">Nenhum usuario encontrado.</div>';
+            return;
+        }
+
+        alvo.innerHTML = usuarios.map(user => {
+            const uid = escapeAttr(user.id);
+            const email = escapeHtml(user.email || user.loginEmail || user.id || '');
+            const nome = escapeHtml(user.empresaNome || user.nomeEmpresa || 'Empresa sem nome');
+            const gestor = escapeHtml(user.empresaGestor || user.gestor || '');
+            const bloqueado = user.bloqueado ? 'checked' : '';
+            const isMaster = String(user.email || '').toLowerCase() === MASTER_ADMIN_EMAIL || user.isMasterAdmin;
+            return '<article class="admin-card" data-admin-user="' + uid + '">' +
+                '<div class="admin-card-head">' +
+                    '<div><strong>' + nome + '</strong><span>' + email + '</span>' + (gestor ? '<small>Gestor: ' + gestor + '</small>' : '') + '</div>' +
+                    '<span class="admin-plano-badge">' + (isMaster ? 'Master' : nomePlanoAdmin(user.plano)) + '</span>' +
+                '</div>' +
+                '<div class="admin-card-grid">' +
+                    '<label><span>Plano</span><select data-admin-plano ' + (isMaster ? 'disabled' : '') + '>' +
+                        '<option value="essencial" ' + (String(user.plano || 'essencial').toLowerCase() === 'essencial' ? 'selected' : '') + '>Essencial</option>' +
+                        '<option value="profissional" ' + (String(user.plano || '').toLowerCase() === 'profissional' ? 'selected' : '') + '>Profissional</option>' +
+                        '<option value="completo" ' + (String(user.plano || '').toLowerCase() === 'completo' ? 'selected' : '') + '>Completo</option>' +
+                    '</select></label>' +
+                    '<label class="admin-bloqueio"><input type="checkbox" data-admin-bloqueado ' + bloqueado + ' ' + (isMaster ? 'disabled' : '') + '><span>Usuario bloqueado</span></label>' +
+                '</div>' +
+                '<div class="admin-modulos">' + renderizarModulosAdmin(user) + '</div>' +
+                '<label class="admin-observacao"><span>Observacao interna</span><textarea data-admin-observacao rows="2" ' + (isMaster ? 'disabled' : '') + '>' + escapeHtml(user.observacaoAdmin || '') + '</textarea></label>' +
+                '<div class="admin-acoes">' +
+                    (isMaster ? '<span class="admin-master-nota">Conta master protegida.</span>' : '<button type="button" class="btn-primario" onclick="salvarPermissoesAdmin(\\'' + uid + '\\')">Salvar permissoes</button>') +
+                '</div>' +
+            '</article>';
+        }).join('');
+
+        document.querySelectorAll('[data-admin-plano]').forEach(select => {
+            select.addEventListener('change', (e) => {
+                const card = e.target.closest('.admin-card');
+                const defaults = modulosDoPlano(e.target.value);
+                card?.querySelectorAll('[data-admin-modulo]').forEach(cb => { cb.checked = defaults.includes(cb.dataset.adminModulo); });
+            });
+        });
+    } catch (err) {
+        console.error('Erro no Admin Master:', err);
+        alvo.innerHTML = '<div class="admin-vazio">Nao foi possivel carregar os usuarios. Verifique as regras do Firestore.</div>';
+    }
+}
+
+async function salvarPermissoesAdmin(userId) {
+    const card = document.querySelector('[data-admin-user="' + CSS.escape(userId) + '"]');
+    if (!card) return;
+    const plano = card.querySelector('[data-admin-plano]')?.value || 'essencial';
+    const modulosLiberados = [...card.querySelectorAll('[data-admin-modulo]:checked')].map(cb => cb.dataset.adminModulo);
+    const bloqueado = !!card.querySelector('[data-admin-bloqueado]')?.checked;
+    const observacaoAdmin = card.querySelector('[data-admin-observacao]')?.value || '';
+
+    try {
+        await DB.salvarPermissoesUsuarioAdmin(userId, { plano, modulosLiberados, bloqueado, observacaoAdmin });
+        mostrarToast('Permissoes salvas.', '');
+        await renderizarAdminMaster();
+    } catch (err) {
+        console.error('Erro ao salvar permissoes:', err);
+        mostrarToast('Erro ao salvar permissoes do usuario.', 'erro');
+    }
+}
+
 // Exportar funções para uso global (onclick no HTML)
 Object.assign(window, {
-    mudarAba, adicionarLinha, removerLinha, calcularLinha, calcularTotais,
+    mudarAba, renderizarInicio, aplicarPermissoesUsuario, renderizarAdminMaster, salvarPermissoesAdmin,
+    adicionarLinha, removerLinha, calcularLinha, calcularTotais,
     adicionarCabecalho, removerCabecalho, selecionarCabecalho, filtrarCabecalhoOpcoes, abrirDropdownCabecalho,
     toggleDesconto, aplicarDesconto, limparDesconto,
     togglePagamento, aplicarPagamento, limparPagamento, handlePgtoChange, calcularSaldo,

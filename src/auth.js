@@ -1,7 +1,7 @@
 // ===== AUTH CONTROLLER =====
 // Gerencia a tela de login, estado de autenticação e carregamento inicial dos dados
 
-import { initAuth, login, logout, DB } from './firebase.js';
+import { auth, initAuth, login, logout, DB } from './firebase.js';
 
 // ===== TELA DE LOGIN =====
 function mostrarTelaLogin() {
@@ -142,9 +142,11 @@ async function carregarDadosIniciais() {
 
     // Carregar perfil/logotipo do Firestore
     const perfil = await DB.carregarPerfilUsuario();
+    await DB.salvarMetadadosUsuario?.(auth.currentUser);
     if (window.aplicarConfiguracoesEmpresa) {
       window.aplicarConfiguracoesEmpresa(perfil || {});
     }
+    window.aplicarPermissoesUsuario?.(perfil || {}, auth.currentUser || {});
     await window.carregarLogoSalva?.(perfil || {});
 
     mostrarToast('', '');
@@ -170,6 +172,7 @@ function initAuthController() {
       popularSelectFuncionariosRel();
       atualizarNumeroDisplay();
       if (window.inicializarFluxoFinanceiro) window.inicializarFluxoFinanceiro();
+      window.renderizarInicio?.();
     },
     // Callback: usuário deslogado
     () => {

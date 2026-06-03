@@ -45,6 +45,8 @@ const auth = getAuth(app);
 const db = getFirestore(app);
 const storage = getStorage(app);
 
+const MASTER_ADMIN_EMAIL = 'admin@obraflux.com.br';
+
 // ===== ESTADO DO USUÁRIO =====
 let currentUser = null;
 
@@ -235,6 +237,14 @@ const DB = {
     return snap.exists() ? snap.data() : null;
   },
 
+  async salvarMetadadosUsuario(user) {
+    if (!user) return;
+    await setDoc(doc(db, "users", getUid()), {
+      email: user.email || '',
+      ultimoLoginEm: serverTimestamp()
+    }, { merge: true });
+  },
+
   async salvarConfiguracoesEmpresa(config) {
     await setDoc(doc(db, "users", getUid()), {
       empresaNome: config.empresaNome || '',
@@ -310,7 +320,25 @@ const DB = {
 
   async excluirObra(id) {
     await deleteDoc(userDoc("obras", id));
+  },
+
+  // — Administração Master —
+  async listarUsuariosAdmin() {
+    if (!isAdminMasterAtual()) throw new Error('Acesso restrito ao administrador master.');
+    const snap = await getDocs(collection(db, "users"));
+    return snap.docs.map(d => ({ id: d.id, ...d.data() }));
+  },
+
+  async salvarPermissoesUsuarioAdmin(userId, dados) {
+    if (!isAdminMasterAtual()) throw new Error('Acesso restrito ao administrador master.');
+    await setDoc(doc(db, "users", userId), {
+      plano: dados.plano || 'essencial',
+      modulosLiberados: Array.isArray(dados.modulosLiberados) ? dados.modulosLiberados : [],
+      bloqueado: !!dados.bloqueado,
+      observacaoAdmin: dados.observacaoAdmin || '',
+      permissoesAtualizadasEm: serverTimestamp()
+    }, { merge: true });
   }
 };
 
-export { auth, db, currentUser, initAuth, login, logout, getUid, DB };
+export { auth, db, currentUser, initAuth, login, logout, getUid, isAdminMasterAtual, MASTER_ADMIN_EMAIL, DB };

@@ -8,7 +8,7 @@
   <link
     href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap"
     rel="stylesheet">
-  <link rel="stylesheet" href="src/style.css?v=20260602-login-logo-transparent">
+  <link rel="stylesheet" href="src/style.css?v=20260603-inicio-obraflux">
   <link rel="stylesheet" href="src/gestao.css?v=20260602-calendario-grid-fixo">
   <link rel="stylesheet" href="src/auth.css?v=20260602-login-logo-transparent">
   <link rel="stylesheet" href="src/insumos_obras.css?v=20260602-login-logo-transparent">
@@ -80,10 +80,12 @@
           onchange="carregarLogo(event)">
       </div>
       <div class="nav-tabs">
-        <button class="nav-tab ativo" onclick="mudarAba('orcamento', this)">Novo Orçamento</button>
+        <button class="nav-home-btn nav-tab ativo" onclick="mudarAba('inicio', this)" title="Início ObraFlux" aria-label="Início ObraFlux"><img src="landing-obraflux/assets/obraflux-somentelogo-crop.png" alt=""></button>
+        <button class="nav-tab" onclick="mudarAba('orcamento', this)">Novo Orçamento</button>
         <button class="nav-tab" onclick="mudarAba('historico', this)">Histórico</button>
         <button class="nav-tab" onclick="mudarAba('gestao', this)">Gestão de Equipe</button>
         <button class="nav-tab" onclick="mudarAba('financeiro', this)">Fluxo Financeiro</button>
+        <button class="nav-tab nav-admin-tab" style="display:none" onclick="mudarAba('admin', this)">Admin Master</button>
       </div>
       <!-- Usuário logado + botão sair -->
       <div class="nav-usuario">
@@ -142,8 +144,48 @@
       </div>
     </nav>
 
+
+    <!-- ===== ABA: INÍCIO OBRAFLUX ===== -->
+    <div id="aba-inicio" class="aba ativo">
+      <div class="inicio-wrapper">
+        <section class="inicio-hero">
+          <div class="inicio-brand">
+            <img src="landing-obraflux/assets/obraflux-somentelogo-crop.png" alt="ObraFlux">
+            <div>
+              <span>ObraFlux</span>
+              <small>Gestão Adaptável</small>
+            </div>
+          </div>
+          <div class="inicio-empresa">
+            <p id="inicio-saudacao">Bem-vindo</p>
+            <h1 id="inicio-empresa-nome">Sua operação em campo</h1>
+            <div id="inicio-empresa-meta" class="inicio-meta"></div>
+          </div>
+        </section>
+
+        <section class="inicio-kpis" id="inicio-kpis"></section>
+
+        <section class="inicio-grid">
+          <div class="inicio-panel">
+            <div class="inicio-panel-topo">
+              <h2>Agenda de hoje</h2>
+              <button type="button" onclick="mudarAba('gestao', document.querySelector('.nav-tab[onclick*=\'gestao\']'));mudarSubAba('calendario', document.querySelector('.gestao-sub-tab[onclick*=\'calendario\']'))">Abrir agenda</button>
+            </div>
+            <div id="inicio-agenda" class="inicio-lista"></div>
+          </div>
+          <div class="inicio-panel">
+            <div class="inicio-panel-topo">
+              <h2>Resumo financeiro</h2>
+              <button type="button" onclick="mudarAba('financeiro', document.querySelector('.nav-tab[onclick*=\'financeiro\']'))">Ver fluxo</button>
+            </div>
+            <div id="inicio-financeiro" class="inicio-financeiro"></div>
+          </div>
+        </section>
+      </div>
+    </div>
+
     <!-- ===== ABA: ORÇAMENTO ===== -->
-    <div id="aba-orcamento" class="aba ativo">
+    <div id="aba-orcamento" class="aba">
       <div class="orcamento-wrapper">
         <div class="cartao" id="orca-cartao">
 
@@ -508,6 +550,25 @@
     </div>
 
     <!-- ===== ABA: GESTÃO DE EQUIPE ===== -->
+    <!-- ===== ABA: ADMIN MASTER ===== -->
+    <div id="aba-admin" class="aba">
+      <div class="admin-wrapper">
+        <div class="admin-topo">
+          <div>
+            <div class="admin-titulo">Admin Master</div>
+            <div class="admin-subtitulo">Gerencie empresas, planos e modulos liberados.</div>
+          </div>
+          <button class="btn-primario" type="button" onclick="renderizarAdminMaster()">Atualizar</button>
+        </div>
+        <div class="admin-planos-info">
+          <div><strong>Essencial</strong><span>Orcamentos e historico.</span></div>
+          <div><strong>Profissional</strong><span>Essencial + gestao de equipe.</span></div>
+          <div><strong>Completo</strong><span>Todos os modulos, incluindo fluxo financeiro.</span></div>
+        </div>
+        <div id="admin-conteudo" class="admin-conteudo"></div>
+      </div>
+    </div>
+
     <div id="aba-gestao" class="aba">
       <div class="gestao-wrapper">
 
@@ -1025,13 +1086,13 @@
   </div><!-- /#app-conteudo -->
 
   <!-- ===== SCRIPTS (ES Modules) ===== -->
-  <script type="module" src="src/script.js?v=20260603-upload-imagem-orcamento"></script>
+  <script type="module" src="src/script.js?v=20260603-inicio-obraflux"></script>
   <script type="module" src="src/gestao.js?v=20260602-login-logo-transparent"></script>
   <script type="module" src="src/funcionario_status.js?v=20260602-login-logo-transparent"></script>
   <script type="module" src="src/insumos.js?v=20260602-login-logo-transparent"></script>
   <script type="module" src="src/obras.js?v=20260602-login-logo-transparent"></script>
   <script type="module" src="src/financeiro.js?v=20260602-login-logo-transparent"></script>
-  <script type="module" src="src/auth.js?v=20260602-login-logo-transparent"></script>
+  <script type="module" src="src/auth.js?v=20260603-inicio-obraflux"></script>
 
   <footer id="footer">
     <div class="rodape">
