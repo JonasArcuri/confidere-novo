@@ -161,24 +161,42 @@ function initAuthController() {
   // Loading inicial — aguarda Firebase resolver o estado
   document.getElementById('app-loading').classList.remove('oculto');
 
-  initAuth(
-    // Callback: usuário logado
-    async (user) => {
-      mostrarAppConteudo(user);
-      await carregarDadosIniciais();
-      // Re-renderizar telas após carregar dados
-      renderizarHistorico();
-      renderizarCalendario();
-      popularSelectFuncionariosRel();
-      atualizarNumeroDisplay();
-      if (window.inicializarFluxoFinanceiro) window.inicializarFluxoFinanceiro();
-      window.renderizarInicio?.();
-    },
-    // Callback: usuário deslogado
-    () => {
+  const loadingFallback = setTimeout(() => {
+    const loadingAtivo = !document.getElementById('app-loading')?.classList.contains('oculto');
+    const loginVisivel = document.getElementById('tela-login')?.classList.contains('visivel');
+    const appVisivel = document.getElementById('app-conteudo')?.classList.contains('visivel');
+    if (loadingAtivo && !loginVisivel && !appVisivel) {
+      console.warn('Firebase demorou para responder. Exibindo login por fallback.');
       mostrarTelaLogin();
     }
-  );
+  }, 6000);
+
+  try {
+    initAuth(
+      // Callback: usuário logado
+      async (user) => {
+        clearTimeout(loadingFallback);
+        mostrarAppConteudo(user);
+        await carregarDadosIniciais();
+        // Re-renderizar telas após carregar dados
+        renderizarHistorico();
+        renderizarCalendario();
+        popularSelectFuncionariosRel();
+        atualizarNumeroDisplay();
+        if (window.inicializarFluxoFinanceiro) window.inicializarFluxoFinanceiro();
+        window.renderizarInicio?.();
+      },
+      // Callback: usuário deslogado
+      () => {
+        clearTimeout(loadingFallback);
+        mostrarTelaLogin();
+      }
+    );
+  } catch (err) {
+    clearTimeout(loadingFallback);
+    console.error('Erro ao inicializar autenticação:', err);
+    mostrarTelaLogin();
+  }
 
   // Eventos do formulário de login
   document.getElementById('btn-login').addEventListener('click', handleLogin);

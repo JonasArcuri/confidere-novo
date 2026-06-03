@@ -1086,13 +1086,30 @@
   </div><!-- /#app-conteudo -->
 
   <!-- ===== SCRIPTS (ES Modules) ===== -->
+  <script>
+    window.addEventListener('DOMContentLoaded', function () {
+      window.setTimeout(function () {
+        var loading = document.getElementById('app-loading');
+        var login = document.getElementById('tela-login');
+        var app = document.getElementById('app-conteudo');
+        if (!loading || !login || !app) return;
+        var loadingAtivo = !loading.classList.contains('oculto');
+        var loginVisivel = login.classList.contains('visivel');
+        var appVisivel = app.classList.contains('visivel');
+        if (loadingAtivo && !loginVisivel && !appVisivel) {
+          loading.classList.add('oculto');
+          login.classList.add('visivel');
+        }
+      }, 7000);
+    });
+  </script>
   <script type="module" src="src/script.js?v=20260603-inicio-obraflux"></script>
   <script type="module" src="src/gestao.js?v=20260602-login-logo-transparent"></script>
   <script type="module" src="src/funcionario_status.js?v=20260602-login-logo-transparent"></script>
   <script type="module" src="src/insumos.js?v=20260602-login-logo-transparent"></script>
   <script type="module" src="src/obras.js?v=20260602-login-logo-transparent"></script>
   <script type="module" src="src/financeiro.js?v=20260602-login-logo-transparent"></script>
-  <script type="module" src="src/auth.js?v=20260603-inicio-obraflux"></script>
+  <script type="module" src="src/auth.js?v=20260603-loading-fallback"></script>
 
   <footer id="footer">
     <div class="rodape">
