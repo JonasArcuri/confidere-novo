@@ -311,6 +311,11 @@ function mesAtualInicio() {
 }
 
 function renderizarInicio() {
+    if (usuarioMasterAtual) {
+        renderizarInicioAdminMaster();
+        return;
+    }
+
     const perfilNome = empresaConfig?.empresaNome || 'Sua empresa';
     const local = empresaConfig?.empresaLocal || '';
     const contato = empresaConfig?.empresaContato || '';
@@ -378,12 +383,13 @@ function aplicarPermissoesUsuario(perfil = {}, user = {}) {
     const permitidos = (!usuarioMasterAtual && perfilUsuarioAtual.bloqueado)
         ? ['inicio']
         : usuarioMasterAtual
-        ? ['inicio', 'orcamento', 'historico', 'gestao', 'financeiro', 'admin']
+        ? ['inicio']
         : getModulosPermitidos(perfilUsuarioAtual);
     modulosLiberadosAtuais = new Set(['inicio', ...permitidos]);
+    document.body.classList.toggle('admin-master-mode', usuarioMasterAtual);
 
     document.querySelectorAll('.nav-admin-tab').forEach(btn => {
-        btn.style.display = usuarioMasterAtual ? '' : 'none';
+        btn.style.display = 'none';
     });
 
     document.querySelectorAll('.nav-tab').forEach(btn => {
@@ -397,7 +403,7 @@ function aplicarPermissoesUsuario(perfil = {}, user = {}) {
     });
 
     const abaAtiva = document.querySelector('.aba.ativo')?.id?.replace('aba-', '') || 'inicio';
-    if (!modulosLiberadosAtuais.has(abaAtiva)) {
+    if (usuarioMasterAtual || !modulosLiberadosAtuais.has(abaAtiva)) {
         mudarAba('inicio', document.querySelector(".nav-tab[onclick*=\"inicio\"]") || document.querySelector('.nav-tab'));
     }
 }
@@ -2642,6 +2648,112 @@ function truncarTexto(doc, texto, maxW) {
     return t + '…';
 }
 
+// ===== INICIO ADMIN MASTER =====
+function renderizarModulosAdminInicio(user) {
+    const modulos = new Set(getModulosPermitidos(user));
+    return MODULOS_ADMIN.map(mod => {
+        const checked = modulos.has(mod.id) ? 'checked' : '';
+        return '<label class="admin-check"><input type="checkbox" data-admin-modulo="' + mod.id + '" ' + checked + '><span>' + escapeHtml(mod.label) + '</span></label>';
+    }).join('');
+}
+
+function renderizarUsuarioAdminInicio(user) {
+    const uid = escapeAttr(user.id);
+    const email = escapeHtml(user.email || user.loginEmail || user.id || '');
+    const nome = escapeHtml(user.empresaNome || user.nomeEmpresa || 'Empresa sem nome');
+    const gestor = escapeHtml(user.empresaGestor || user.gestor || '');
+    const planoAtual = String(user.plano || 'essencial').toLowerCase();
+    const bloqueado = user.bloqueado ? 'checked' : '';
+    const isMaster = String(user.email || '').toLowerCase() === MASTER_ADMIN_EMAIL || user.isMasterAdmin;
+
+    return '<article class="admin-user-card" data-admin-user="' + uid + '">' +
+        '<button type="button" class="admin-user-head" data-admin-toggle="' + uid + '">' +
+            '<span class="admin-user-main"><strong>' + nome + '</strong><small>' + email + (gestor ? ' · ' + gestor : '') + '</small></span>' +
+            '<span class="admin-plano-badge">' + (isMaster ? 'Master' : nomePlanoAdmin(planoAtual)) + '</span>' +
+        '</button>' +
+        '<div class="admin-user-editor">' +
+            '<div class="admin-card-grid">' +
+                '<label><span>Plano ativo</span><select data-admin-plano ' + (isMaster ? 'disabled' : '') + '>' +
+                    '<option value="essencial" ' + (planoAtual === 'essencial' ? 'selected' : '') + '>Essencial</option>' +
+                    '<option value="profissional" ' + (planoAtual === 'profissional' ? 'selected' : '') + '>Profissional</option>' +
+                    '<option value="completo" ' + (planoAtual === 'completo' ? 'selected' : '') + '>Completo</option>' +
+                '</select></label>' +
+                '<label class="admin-bloqueio"><input type="checkbox" data-admin-bloqueado ' + bloqueado + ' ' + (isMaster ? 'disabled' : '') + '><span>Usuario bloqueado</span></label>' +
+            '</div>' +
+            '<div class="admin-modulos">' + renderizarModulosAdminInicio(user) + '</div>' +
+            '<label class="admin-observacao"><span>Observacao interna</span><textarea data-admin-observacao rows="2" ' + (isMaster ? 'disabled' : '') + '>' + escapeHtml(user.observacaoAdmin || '') + '</textarea></label>' +
+            '<div class="admin-acoes">' +
+                (isMaster ? '<span class="admin-master-nota">Conta master protegida.</span>' : '<button type="button" class="btn-primario" data-admin-salvar="' + uid + '">Salvar acessos</button>') +
+            '</div>' +
+        '</div>' +
+    '</article>';
+}
+
+function vincularEventosAdminInicio() {
+    document.querySelectorAll('[data-admin-toggle]').forEach(btn => {
+        btn.addEventListener('click', () => {
+            const card = btn.closest('.admin-user-card');
+            card?.classList.toggle('aberto');
+        });
+    });
+
+    document.querySelectorAll('[data-admin-salvar]').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            salvarPermissoesAdmin(btn.dataset.adminSalvar);
+        });
+    });
+
+    document.querySelectorAll('[data-admin-plano]').forEach(select => {
+        select.addEventListener('change', (e) => {
+            const card = e.target.closest('[data-admin-user]');
+            const defaults = modulosDoPlano(e.target.value);
+            card?.querySelectorAll('[data-admin-modulo]').forEach(cb => { cb.checked = defaults.includes(cb.dataset.adminModulo); });
+        });
+    });
+}
+
+async function renderizarInicioAdminMaster() {
+    const wrapper = document.querySelector('#aba-inicio .inicio-wrapper');
+    if (!wrapper) return;
+
+    wrapper.innerHTML = '<section class="admin-home-hero">' +
+        '<div class="inicio-brand"><img src="landing-obraflux/assets/obraflux-somentelogo-crop.png" alt="ObraFlux"><div><span>ObraFlux</span><small>Gestao Adaptavel</small></div></div>' +
+        '<div class="inicio-empresa"><p>Painel inicial</p><h1>Admin Master</h1><div class="inicio-meta">Empresas, planos e acessos do sistema</div></div>' +
+    '</section>' +
+    '<section class="admin-home-panel">' +
+        '<div class="admin-home-topo"><div><h2>Usuarios / Empresas</h2><p>Clique em uma empresa para editar plano e modulos liberados.</p></div><button type="button" class="btn-primario" id="btn-admin-home-atualizar">Atualizar</button></div>' +
+        '<div id="admin-home-conteudo" class="admin-home-list"><div class="admin-vazio">Carregando usuarios...</div></div>' +
+    '</section>';
+
+    document.getElementById('btn-admin-home-atualizar')?.addEventListener('click', carregarUsuariosInicioAdmin);
+    await carregarUsuariosInicioAdmin();
+}
+
+async function carregarUsuariosInicioAdmin() {
+    const alvo = document.getElementById('admin-home-conteudo');
+    if (!alvo) return;
+    alvo.innerHTML = '<div class="admin-vazio">Carregando usuarios...</div>';
+    try {
+        adminUsuariosCache = await DB.listarUsuariosAdmin();
+        const usuarios = [...adminUsuariosCache].sort((a, b) => {
+            const ma = String(a.email || '').toLowerCase() === MASTER_ADMIN_EMAIL || a.isMasterAdmin;
+            const mb = String(b.email || '').toLowerCase() === MASTER_ADMIN_EMAIL || b.isMasterAdmin;
+            if (ma !== mb) return ma ? -1 : 1;
+            const na = (a.empresaNome || a.email || a.id || '').toLowerCase();
+            const nb = (b.empresaNome || b.email || b.id || '').toLowerCase();
+            return na.localeCompare(nb);
+        });
+        alvo.innerHTML = usuarios.length
+            ? usuarios.map(renderizarUsuarioAdminInicio).join('')
+            : '<div class="admin-vazio">Nenhum usuario encontrado.</div>';
+        vincularEventosAdminInicio();
+    } catch (err) {
+        console.error('Erro no inicio Admin Master:', err);
+        alvo.innerHTML = '<div class="admin-vazio">As regras do Firestore ainda nao permitem listar empresas. Publique as regras com: firebase deploy --only firestore:rules</div>';
+    }
+}
+
 // ===== ADMIN MASTER =====
 function nomePlanoAdmin(plano) {
     const chave = String(plano || 'essencial').toLowerCase();
@@ -2736,7 +2848,11 @@ async function salvarPermissoesAdmin(userId) {
     try {
         await DB.salvarPermissoesUsuarioAdmin(userId, { plano, modulosLiberados, bloqueado, observacaoAdmin });
         mostrarToast('Permissoes salvas.', '');
-        await renderizarAdminMaster();
+        if (usuarioMasterAtual && document.getElementById('admin-home-conteudo')) {
+            await carregarUsuariosInicioAdmin();
+        } else {
+            await renderizarAdminMaster();
+        }
     } catch (err) {
         console.error('Erro ao salvar permissoes:', err);
         mostrarToast('Erro ao salvar permissoes do usuario.', 'erro');
