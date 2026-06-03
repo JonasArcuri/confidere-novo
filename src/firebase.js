@@ -337,6 +337,8 @@ const DB = {
     if (!isAdminMasterAtual()) throw new Error('Acesso restrito ao administrador master.');
     await setDoc(doc(db, "users", userId), {
       plano: dados.plano || 'essencial',
+      planoInicio: dados.planoInicio || '',
+      planoFim: dados.planoFim || '',
       modulosLiberados: Array.isArray(dados.modulosLiberados) ? dados.modulosLiberados : [],
       bloqueado: !!dados.bloqueado,
       observacaoAdmin: dados.observacaoAdmin || '',

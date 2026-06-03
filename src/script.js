@@ -34,6 +34,8 @@ let perfilUsuarioAtual = {};
 let modulosLiberadosAtuais = new Set(['inicio', 'orcamento', 'historico', 'gestao', 'financeiro']);
 let usuarioMasterAtual = false;
 let adminUsuariosCache = [];
+let planoVencidoAtual = false;
+let observerPlanoVencido = null;
 
 // ===== INICIALIZAÇÃO =====
 document.addEventListener('DOMContentLoaded', () => {
@@ -377,9 +379,60 @@ function getModulosPermitidos(perfil = {}) {
     return definidos.length ? definidos : modulosDoPlano(perfil.plano);
 }
 
+function hojeISOPlano() {
+    return new Date().toISOString().slice(0, 10);
+}
+
+function planoEstaVencido(perfil = {}) {
+    const fim = String(perfil.planoFim || '').slice(0, 10);
+    return !!fim && fim < hojeISOPlano();
+}
+
+function configurarObserverPlanoVencido() {
+    if (observerPlanoVencido || !document.getElementById('app-conteudo')) return;
+    let agendado = false;
+    observerPlanoVencido = new MutationObserver(() => {
+        if (!planoVencidoAtual || agendado) return;
+        agendado = true;
+        setTimeout(() => {
+            agendado = false;
+            aplicarBloqueioEdicaoPlanoVencido();
+        }, 60);
+    });
+    observerPlanoVencido.observe(document.getElementById('app-conteudo'), { childList: true, subtree: true });
+}
+
+function aplicarBloqueioEdicaoPlanoVencido() {
+    document.body.classList.toggle('plano-vencido-mode', planoVencidoAtual);
+    let aviso = document.getElementById('plano-vencido-aviso');
+    if (planoVencidoAtual) {
+        if (!aviso) {
+            aviso = document.createElement('div');
+            aviso.id = 'plano-vencido-aviso';
+            aviso.className = 'plano-vencido-aviso';
+            aviso.textContent = 'Seu plano venceu. Voce pode acessar o sistema, mas nao pode editar informacoes ate a renovacao.';
+            document.body.appendChild(aviso);
+        }
+        document.querySelectorAll('#app-conteudo input, #app-conteudo select, #app-conteudo textarea, #app-conteudo button').forEach(el => {
+            if (el.closest('nav') || el.id === 'btn-logout' || el.classList.contains('nav-tab') || el.classList.contains('btn-config')) return;
+            if (!el.dataset.planoVencidoDisabled) {
+                el.dataset.planoVencidoDisabled = '1';
+                el.disabled = true;
+            }
+        });
+    } else {
+        aviso?.remove();
+        document.querySelectorAll('[data-plano-vencido-disabled="1"]').forEach(el => {
+            el.disabled = false;
+            delete el.dataset.planoVencidoDisabled;
+        });
+    }
+}
+
 function aplicarPermissoesUsuario(perfil = {}, user = {}) {
     perfilUsuarioAtual = perfil || {};
     usuarioMasterAtual = String(user?.email || '').toLowerCase() === MASTER_ADMIN_EMAIL;
+    planoVencidoAtual = !usuarioMasterAtual && planoEstaVencido(perfilUsuarioAtual);
     const permitidos = (!usuarioMasterAtual && perfilUsuarioAtual.bloqueado)
         ? ['inicio']
         : usuarioMasterAtual
@@ -406,6 +459,8 @@ function aplicarPermissoesUsuario(perfil = {}, user = {}) {
     if (usuarioMasterAtual || !modulosLiberadosAtuais.has(abaAtiva)) {
         mudarAba('inicio', document.querySelector(".nav-tab[onclick*=\"inicio\"]") || document.querySelector('.nav-tab'));
     }
+    configurarObserverPlanoVencido();
+    setTimeout(aplicarBloqueioEdicaoPlanoVencido, 0);
 }
 
 function moduloPermitido(aba) {
@@ -431,6 +486,7 @@ function mudarAba(aba, btn) {
         renderizarCalendario();
         popularSelectFuncionariosRel();
     }
+    setTimeout(aplicarBloqueioEdicaoPlanoVencido, 0);
 }
 
 // ===== TIPO E NUMERO DO DOCUMENTO =====
@@ -2663,13 +2719,16 @@ function renderizarUsuarioAdminInicio(user) {
     const nome = escapeHtml(user.empresaNome || user.nomeEmpresa || 'Empresa sem nome');
     const gestor = escapeHtml(user.empresaGestor || user.gestor || '');
     const planoAtual = String(user.plano || 'essencial').toLowerCase();
+    const planoInicio = escapeAttr(String(user.planoInicio || '').slice(0, 10));
+    const planoFim = escapeAttr(String(user.planoFim || '').slice(0, 10));
+    const vencido = planoEstaVencido(user);
     const bloqueado = user.bloqueado ? 'checked' : '';
     const isMaster = String(user.email || '').toLowerCase() === MASTER_ADMIN_EMAIL || user.isMasterAdmin;
 
     return '<article class="admin-user-card" data-admin-user="' + uid + '">' +
         '<button type="button" class="admin-user-head" data-admin-toggle="' + uid + '">' +
             '<span class="admin-user-main"><strong>' + nome + '</strong><small>' + email + (gestor ? ' · ' + gestor : '') + '</small></span>' +
-            '<span class="admin-plano-badge">' + (isMaster ? 'Master' : nomePlanoAdmin(planoAtual)) + '</span>' +
+            '<span class="admin-user-badges"><span class="admin-plano-badge">' + (isMaster ? 'Master' : nomePlanoAdmin(planoAtual)) + '</span>' + (vencido ? '<span class="admin-vencido-badge">Vencido</span>' : '') + '</span>' +
         '</button>' +
         '<div class="admin-user-editor">' +
             '<div class="admin-card-grid">' +
@@ -2679,6 +2738,10 @@ function renderizarUsuarioAdminInicio(user) {
                     '<option value="completo" ' + (planoAtual === 'completo' ? 'selected' : '') + '>Completo</option>' +
                 '</select></label>' +
                 '<label class="admin-bloqueio"><input type="checkbox" data-admin-bloqueado ' + bloqueado + ' ' + (isMaster ? 'disabled' : '') + '><span>Usuario bloqueado</span></label>' +
+            '</div>' +
+            '<div class="admin-card-grid admin-vigencia-grid">' +
+                '<label><span>Data inicio do plano</span><input type="date" data-admin-plano-inicio value="' + planoInicio + '" ' + (isMaster ? 'disabled' : '') + '></label>' +
+                '<label><span>Data fim do plano</span><input type="date" data-admin-plano-fim value="' + planoFim + '" ' + (isMaster ? 'disabled' : '') + '></label>' +
             '</div>' +
             '<div class="admin-modulos">' + renderizarModulosAdminInicio(user) + '</div>' +
             '<label class="admin-observacao"><span>Observacao interna</span><textarea data-admin-observacao rows="2" ' + (isMaster ? 'disabled' : '') + '>' + escapeHtml(user.observacaoAdmin || '') + '</textarea></label>' +
@@ -2797,6 +2860,8 @@ async function renderizarAdminMaster() {
             const email = escapeHtml(user.email || user.loginEmail || user.id || '');
             const nome = escapeHtml(user.empresaNome || user.nomeEmpresa || 'Empresa sem nome');
             const gestor = escapeHtml(user.empresaGestor || user.gestor || '');
+            const planoInicio = escapeAttr(String(user.planoInicio || '').slice(0, 10));
+            const planoFim = escapeAttr(String(user.planoFim || '').slice(0, 10));
             const bloqueado = user.bloqueado ? 'checked' : '';
             const isMaster = String(user.email || '').toLowerCase() === MASTER_ADMIN_EMAIL || user.isMasterAdmin;
             return '<article class="admin-card" data-admin-user="' + uid + '">' +
@@ -2811,6 +2876,10 @@ async function renderizarAdminMaster() {
                         '<option value="completo" ' + (String(user.plano || '').toLowerCase() === 'completo' ? 'selected' : '') + '>Completo</option>' +
                     '</select></label>' +
                     '<label class="admin-bloqueio"><input type="checkbox" data-admin-bloqueado ' + bloqueado + ' ' + (isMaster ? 'disabled' : '') + '><span>Usuario bloqueado</span></label>' +
+                '</div>' +
+                '<div class="admin-card-grid admin-vigencia-grid">' +
+                    '<label><span>Data inicio do plano</span><input type="date" data-admin-plano-inicio value="' + planoInicio + '" ' + (isMaster ? 'disabled' : '') + '></label>' +
+                    '<label><span>Data fim do plano</span><input type="date" data-admin-plano-fim value="' + planoFim + '" ' + (isMaster ? 'disabled' : '') + '></label>' +
                 '</div>' +
                 '<div class="admin-modulos">' + renderizarModulosAdmin(user) + '</div>' +
                 '<label class="admin-observacao"><span>Observacao interna</span><textarea data-admin-observacao rows="2" ' + (isMaster ? 'disabled' : '') + '>' + escapeHtml(user.observacaoAdmin || '') + '</textarea></label>' +
@@ -2841,12 +2910,14 @@ async function salvarPermissoesAdmin(userId) {
     const card = document.querySelector('[data-admin-user="' + CSS.escape(userId) + '"]');
     if (!card) return;
     const plano = card.querySelector('[data-admin-plano]')?.value || 'essencial';
+    const planoInicio = card.querySelector('[data-admin-plano-inicio]')?.value || '';
+    const planoFim = card.querySelector('[data-admin-plano-fim]')?.value || '';
     const modulosLiberados = [...card.querySelectorAll('[data-admin-modulo]:checked')].map(cb => cb.dataset.adminModulo);
     const bloqueado = !!card.querySelector('[data-admin-bloqueado]')?.checked;
     const observacaoAdmin = card.querySelector('[data-admin-observacao]')?.value || '';
 
     try {
-        await DB.salvarPermissoesUsuarioAdmin(userId, { plano, modulosLiberados, bloqueado, observacaoAdmin });
+        await DB.salvarPermissoesUsuarioAdmin(userId, { plano, planoInicio, planoFim, modulosLiberados, bloqueado, observacaoAdmin });
         mostrarToast('Permissoes salvas.', '');
         if (usuarioMasterAtual && document.getElementById('admin-home-conteudo')) {
             await carregarUsuariosInicioAdmin();
