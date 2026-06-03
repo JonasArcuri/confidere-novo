@@ -50,6 +50,10 @@ const MASTER_ADMIN_EMAIL = 'admin@obraflux.com.br';
 // ===== ESTADO DO USUÁRIO =====
 let currentUser = null;
 
+function isAdminMasterAtual() {
+  return !!currentUser && String(currentUser.email || '').toLowerCase() === MASTER_ADMIN_EMAIL;
+}
+
 // ===== AUTH: OBSERVER =====
 function initAuth(onLogin, onLogout) {
   onAuthStateChanged(auth, (user) => {

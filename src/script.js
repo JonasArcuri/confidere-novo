@@ -2703,10 +2703,14 @@ async function renderizarAdminMaster() {
                 '<div class="admin-modulos">' + renderizarModulosAdmin(user) + '</div>' +
                 '<label class="admin-observacao"><span>Observacao interna</span><textarea data-admin-observacao rows="2" ' + (isMaster ? 'disabled' : '') + '>' + escapeHtml(user.observacaoAdmin || '') + '</textarea></label>' +
                 '<div class="admin-acoes">' +
-                    (isMaster ? '<span class="admin-master-nota">Conta master protegida.</span>' : '<button type="button" class="btn-primario" onclick="salvarPermissoesAdmin(\\'' + uid + '\\')">Salvar permissoes</button>') +
+                    (isMaster ? '<span class="admin-master-nota">Conta master protegida.</span>' : '<button type="button" class="btn-primario" data-admin-salvar="' + uid + '">Salvar permissoes</button>') +
                 '</div>' +
             '</article>';
         }).join('');
+
+        document.querySelectorAll('[data-admin-salvar]').forEach(btn => {
+            btn.addEventListener('click', () => salvarPermissoesAdmin(btn.dataset.adminSalvar));
+        });
 
         document.querySelectorAll('[data-admin-plano]').forEach(select => {
             select.addEventListener('change', (e) => {
