@@ -55,6 +55,14 @@ async function handleLogin(e) {
     return;
   }
 
+  if (!emailInput.checkValidity() || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    erroEl.textContent = 'Informe um e-mail válido.';
+    erroEl.classList.add('visivel');
+    emailInput.classList.add('erro');
+    emailInput.focus();
+    return;
+  }
+
   // Mostrar loading no botão
   btnLogin.classList.add('carregando');
   btnLogin.disabled = true;

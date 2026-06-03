@@ -4,15 +4,16 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Confidere Impermeabilizações — Sistema de Orçamentos</title>
+  <title>ObraFlux — Gestão Adaptável</title>
   <link
     href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap"
     rel="stylesheet">
-  <link rel="stylesheet" href="src/style.css?v=20260602-tooltip-zindex">
-  <link rel="stylesheet" href="src/gestao.css?v=20260602-financeiro-cards-orc-cobranca">
-  <link rel="stylesheet" href="src/auth.css?v=20260602-financeiro-cards-orc-cobranca">
-  <link rel="stylesheet" href="src/insumos_obras.css?v=20260602-financeiro-cards-orc-cobranca">
-  <link rel="shortcut icon" href="src/assets/Confidere.png" type="image/x-icon">
+  <link rel="stylesheet" href="src/style.css?v=20260602-login-logo-transparent">
+  <link rel="stylesheet" href="src/gestao.css?v=20260602-calendario-grid-fixo">
+  <link rel="stylesheet" href="src/auth.css?v=20260602-login-logo-transparent">
+  <link rel="stylesheet" href="src/insumos_obras.css?v=20260602-login-logo-transparent">
+  <link rel="icon" href="landing-obraflux/assets/obraflux-somentelogo-crop.png?v=20260602-login-logo-transparent" type="image/png">
+  <link rel="shortcut icon" href="landing-obraflux/assets/obraflux-somentelogo-crop.png?v=20260602-login-logo-transparent" type="image/png">
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 </head>
 
@@ -20,36 +21,52 @@
 
   <!-- ===== LOADING INICIAL ===== -->
   <div id="app-loading">
-    <div class="loading-logo">CONFI<span>DERE</span></div>
-    <div class="loading-barra">
-      <div class="loading-barra-inner"></div>
+    <div class="loading-brand" aria-label="ObraFlux - Gestão Adaptável">
+      <img class="loading-brand-icon" src="landing-obraflux/assets/obraflux-somentelogo-crop.png" alt="">
+      <div class="loading-brand-text">
+        <strong>Obra<span>Flux</span></strong>
+        <small>Gest&atilde;o Adapt&aacute;vel</small>
+      </div>
+    </div>
+    <div class="loading-progress" aria-label="Carregando">
+      <span></span>
+      <span></span>
+      <span></span>
     </div>
   </div>
 
   <!-- ===== TELA DE LOGIN ===== -->
   <div id="tela-login">
     <div class="login-card">
-      <div class="login-logo">
-        <div class="login-logo-titulo">CONFI<span>DERE</span></div>
-        <div class="login-logo-sub">Impermeabilizações</div>
+      <div class="login-hero">
+        <div class="login-kicker">Gest&atilde;o adapt&aacute;vel para servi&ccedil;os em campo</div>
+        <img class="login-logo-img" src="src/assets/obraflux-login-logo-transparente.png" alt="ObraFlux">
+        <p class="login-descricao">Uma opera&ccedil;&atilde;o mais clara para empresas que vendem, executam e acompanham servi&ccedil;os em obras, instala&ccedil;&otilde;es e manuten&ccedil;&otilde;es.</p>
+        <div class="login-tags" aria-label="M&oacute;dulos do sistema">
+          <span>Or&ccedil;amentos</span>
+          <span>Obras</span>
+          <span>Insumos</span>
+          <span>Financeiro</span>
+        </div>
       </div>
       <div class="login-titulo">Acesse sua conta</div>
       <div id="login-erro" class="login-erro"></div>
       <div class="login-campo">
         <label for="login-email">E-mail</label>
-        <input type="email" id="login-email" placeholder="seu@email.com" autocomplete="username">
+        <input type="email" id="login-email" placeholder="seu@email.com" autocomplete="username" inputmode="email" required pattern="^[^\s@]+@[^\s@]+\.[^\s@]+$">
       </div>
       <div class="login-campo">
         <label for="login-senha">Senha</label>
-        <input type="password" id="login-senha" placeholder="••••••••" autocomplete="current-password">
+        <input type="password" id="login-senha" placeholder="********" autocomplete="current-password">
       </div>
       <button class="btn-login" id="btn-login">
         <div class="login-spinner"></div>
         <span class="login-texto">Entrar</span>
       </button>
       <div class="login-rodape">
-        Acesso somente para usuários autorizados.<br>
-        Contas são criadas pelo administrador do sistema.
+        Acesso somente para usu&aacute;rios autorizados.<br>
+        Contas s&atilde;o criadas pelo administrador do sistema.
+        <div class="login-dev">Desenvolvido por <a href="https://www.sanojsistemas.com.br" target="_blank" rel="noopener">Sanoj Sistemas</a></div>
       </div>
     </div>
   </div>
@@ -1008,13 +1025,13 @@
   </div><!-- /#app-conteudo -->
 
   <!-- ===== SCRIPTS (ES Modules) ===== -->
-  <script type="module" src="src/script.js?v=20260602-financeiro-cards-orc-cobranca"></script>
-  <script type="module" src="src/gestao.js?v=20260602-financeiro-cards-orc-cobranca"></script>
-  <script type="module" src="src/funcionario_status.js?v=20260602-financeiro-cards-orc-cobranca"></script>
-  <script type="module" src="src/insumos.js?v=20260602-financeiro-cards-orc-cobranca"></script>
-  <script type="module" src="src/obras.js?v=20260602-financeiro-cards-orc-cobranca"></script>
-  <script type="module" src="src/financeiro.js?v=20260602-financeiro-cards-orc-cobranca"></script>
-  <script type="module" src="src/auth.js?v=20260602-financeiro-cards-orc-cobranca"></script>
+  <script type="module" src="src/script.js?v=20260602-login-logo-transparent"></script>
+  <script type="module" src="src/gestao.js?v=20260602-login-logo-transparent"></script>
+  <script type="module" src="src/funcionario_status.js?v=20260602-login-logo-transparent"></script>
+  <script type="module" src="src/insumos.js?v=20260602-login-logo-transparent"></script>
+  <script type="module" src="src/obras.js?v=20260602-login-logo-transparent"></script>
+  <script type="module" src="src/financeiro.js?v=20260602-login-logo-transparent"></script>
+  <script type="module" src="src/auth.js?v=20260602-login-logo-transparent"></script>
 
   <footer id="footer">
     <div class="rodape">

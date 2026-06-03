@@ -2520,6 +2520,7 @@ table {
 .acoes-itens,
 .acoes-tabela,
 .tabela-acoes,
+.btn-add-row,
 .secao:has(.tooltip-wrap) {
   position: relative;
   overflow: visible;
@@ -2528,18 +2529,33 @@ table {
 
 .acoes-itens .tooltip-wrap::before,
 .acoes-tabela .tooltip-wrap::before,
-.tabela-acoes .tooltip-wrap::before {
+.tabela-acoes .tooltip-wrap::before,
+.btn-add-row .tooltip-wrap::before {
+  left: 0;
   top: calc(100% + 12px);
   bottom: auto;
+  width: 360px;
+  max-width: min(360px, calc(100vw - 32px));
+  transform: translate(0, 8px);
 }
 
 .acoes-itens .tooltip-wrap::after,
 .acoes-tabela .tooltip-wrap::after,
-.tabela-acoes .tooltip-wrap::after {
+.tabela-acoes .tooltip-wrap::after,
+.btn-add-row .tooltip-wrap::after {
+  left: 22px;
   top: calc(100% + 5px);
   bottom: auto;
   border-top-color: transparent;
   border-bottom-color: #1a3a5c;
+  transform: translate(0, 8px);
+}
+
+.btn-add-row .tooltip-wrap:hover::before,
+.btn-add-row .tooltip-wrap:hover::after,
+.btn-add-row .tooltip-wrap:focus-within::before,
+.btn-add-row .tooltip-wrap:focus-within::after {
+  transform: translate(0, 0);
 }
 
 .tooltip-doc-tipo::before,
