@@ -18,7 +18,7 @@ let empresaConfig = {
     empresaUrl: ''
 };
 
-const MASTER_ADMIN_EMAIL = 'admin@obraflux.com.br';
+const MASTER_ADMIN_EMAIL = 'sanojsistemas@gmail.com';
 const PLANOS_MODULOS = {
     essencial: ['inicio', 'orcamento', 'historico'],
     profissional: ['inicio', 'orcamento', 'historico', 'gestao'],

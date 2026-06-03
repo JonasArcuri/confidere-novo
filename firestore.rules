@@ -5,7 +5,7 @@ service cloud.firestore {
 
     function isMasterAdmin() {
       return request.auth != null
-             && request.auth.token.email == 'admin@obraflux.com.br';
+             && request.auth.token.email == 'sanojsistemas@gmail.com';
     }
 
     match /users/{userId} {

@@ -45,7 +45,7 @@ const auth = getAuth(app);
 const db = getFirestore(app);
 const storage = getStorage(app);
 
-const MASTER_ADMIN_EMAIL = 'admin@obraflux.com.br';
+const MASTER_ADMIN_EMAIL = 'sanojsistemas@gmail.com';
 
 // ===== ESTADO DO USUÁRIO =====
 let currentUser = null;
