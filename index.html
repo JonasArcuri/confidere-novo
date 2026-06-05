@@ -8,7 +8,7 @@
   <link
     href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap"
     rel="stylesheet">
-  <link rel="stylesheet" href="src/style.css?v=20260603-observacoes-editaveis">
+  <link rel="stylesheet" href="src/style.css?v=20260605-inicio-kpis">
   <link rel="stylesheet" href="src/gestao.css?v=20260605-etapas-obra">
   <link rel="stylesheet" href="src/auth.css?v=20260605-config-mobile">
   <link rel="stylesheet" href="src/insumos_obras.css?v=20260605-etapas-obra">
@@ -85,6 +85,7 @@
         <button class="nav-tab" onclick="mudarAba('historico', this)">Histórico</button>
         <button class="nav-tab" onclick="mudarAba('gestao', this)">Gestão de Equipe</button>
         <button class="nav-tab" onclick="mudarAba('financeiro', this)">Fluxo Financeiro</button>
+        <button class="nav-tab nav-guia-tab" onclick="mudarAba('guia', this)">Guia de Uso</button>
         <button class="nav-tab nav-admin-tab" style="display:none" onclick="mudarAba('admin', this)">Admin Master</button>
       </div>
       <!-- Usuário logado + botão sair -->
@@ -524,6 +525,107 @@
           </div>
         </div>
         <div id="financeiro-conteudo"></div>
+      </div>
+    </div>
+
+    <!-- ===== ABA: GUIA DE USO ===== -->
+    <div id="aba-guia" class="aba">
+      <div class="guia-wrapper">
+        <div class="guia-topo">
+          <div>
+            <div class="guia-kicker">Consulta rapida</div>
+            <h1>Guia de Uso</h1>
+            <p>Passo a passo para usar as principais ferramentas do ObraFlux em cada modulo.</p>
+          </div>
+        </div>
+
+        <div class="guia-grid">
+          <section class="guia-card">
+            <div class="guia-card-num">01</div>
+            <div>
+              <h2>Inicio</h2>
+              <ol>
+                <li>Abra a tela inicial para ver um resumo da operacao.</li>
+                <li>Confira os indicadores de orcamentos, obras em execucao, funcionarios ativos e entradas do mes.</li>
+                <li>Use "Abrir agenda" para ir direto ao calendario do dia.</li>
+                <li>Use "Ver fluxo" para acompanhar entradas, saidas e saldo operacional.</li>
+              </ol>
+            </div>
+          </section>
+
+          <section class="guia-card">
+            <div class="guia-card-num">02</div>
+            <div>
+              <h2>Novo Orcamento</h2>
+              <ol>
+                <li>Preencha os dados do cliente, assunto, endereco, estado, data e validade.</li>
+                <li>Use o botao "Orcamento" no cabecalho para alternar entre orcamento e relatorio de cobranca.</li>
+                <li>Adicione itens com descricao, material, area, quantidade, valores de material e mao de obra.</li>
+                <li>Use cabecalhos, imagens e opcoes quando precisar organizar a proposta.</li>
+                <li>Aplique desconto, escolha a forma de pagamento e marque observacoes importantes.</li>
+                <li>Clique em "Gerar PDF" para revisar ou baixar o documento, e em "Salvar Orcamento" para guardar no historico.</li>
+              </ol>
+            </div>
+          </section>
+
+          <section class="guia-card">
+            <div class="guia-card-num">03</div>
+            <div>
+              <h2>Historico</h2>
+              <ol>
+                <li>Escolha entre "Orcamentos" e "Relatorios de Cobranca".</li>
+                <li>Pesquise por cliente, numero ou informacao do documento.</li>
+                <li>O titulo do documento e a data serao automaticamente vinculados a obra cadastrada no menu de obras.</li>
+                <li>Abra o registro salvo para consultar, editar, gerar PDF ou reutilizar os dados para gerar relatorio de cobranca.</li>
+                <li>Mantenha relatorios de cobranca separados dos orcamentos para facilitar o acompanhamento financeiro. Os orcamentos nao sao contabilizados como entradas.</li>
+                <li>Os orcamentos salvos podem ser aprovados e depois convertidos em relatorios de cobranca, facilitando assim a comutacao entre os arquivos.</li>
+              </ol>
+            </div>
+          </section>
+
+          <section class="guia-card">
+            <div class="guia-card-num">04</div>
+            <div>
+              <h2>Gestao de Equipe</h2>
+              <ol>
+                <li>No calendario, navegue pelos meses, clique em um dia e acompanhe agendamentos, relatorios, insumos e etapas.</li>
+                <li>Em "Funcionarios", cadastre nome, admissao, telefone, custo e status de cada colaborador.</li>
+                <li>Em "Relatorio de Obra", vincule a obra, selecione funcionarios, informe data, atividades e valores do servico.</li>
+                <li>Em "Insumos/Despesas", registre gastos por tipo, funcionario, obra, data e valor.</li>
+                <li>Em "Obras", cadastre a obra, cliente, endereco, status, valor, prazo e etapas do cronograma.</li>
+                <li>Use os filtros por funcionario, mes, dia, tipo e status para localizar registros rapidamente.</li>
+              </ol>
+            </div>
+          </section>
+
+          <section class="guia-card">
+            <div class="guia-card-num">05</div>
+            <div>
+              <h2>Fluxo Financeiro</h2>
+              <ol>
+                <li>Selecione o mes principal para analisar o resultado operacional.</li>
+                <li>Use "Comparar com" para ver diferencas entre meses.</li>
+                <li>Confira entradas vindas dos relatorios de cobranca e saidas vindas de insumos, despesas e custos.</li>
+                <li>Analise tabelas e indicadores antes de tomar decisoes de pagamento, compra ou cobranca.</li>
+                <li>Clique em "Gerar relatorio PDF" para baixar um resumo financeiro do periodo.</li>
+              </ol>
+            </div>
+          </section>
+
+          <section class="guia-card">
+            <div class="guia-card-num">06</div>
+            <div>
+              <h2>Configuracoes</h2>
+              <ol>
+                <li>Clique no icone de configuracoes no topo do sistema.</li>
+                <li>Atualize nome da empresa, local, contato, WhatsApp, gestor e link publico.</li>
+                <li>Use "Logo" para enviar a marca que aparece no menu e nos documentos.</li>
+                <li>Clique em "Salvar" para aplicar as informacoes nos proximos orcamentos e relatorios.</li>
+              </ol>
+            </div>
+          </section>
+
+        </div>
       </div>
     </div>
 
@@ -1100,7 +1202,7 @@
       }, 7000);
     });
   </script>
-  <script type="module" src="src/script.js?v=20260603-observacoes-editaveis"></script>
+  <script type="module" src="src/script.js?v=20260605-inicio-kpis"></script>
   <script type="module" src="src/gestao.js?v=20260605-textos-utf8"></script>
   <script type="module" src="src/funcionario_status.js?v=20260602-login-logo-transparent"></script>
   <script type="module" src="src/insumos.js?v=20260602-login-logo-transparent"></script>

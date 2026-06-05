@@ -31,7 +31,7 @@ const MODULOS_ADMIN = [
     { id: 'financeiro', label: 'Fluxo Financeiro' }
 ];
 let perfilUsuarioAtual = {};
-let modulosLiberadosAtuais = new Set(['inicio', 'orcamento', 'historico', 'gestao', 'financeiro']);
+let modulosLiberadosAtuais = new Set(['inicio', 'orcamento', 'historico', 'gestao', 'financeiro', 'guia']);
 let usuarioMasterAtual = false;
 let adminUsuariosCache = [];
 let planoVencidoAtual = false;
@@ -341,12 +341,17 @@ function renderizarInicio() {
     const kpis = document.getElementById('inicio-kpis');
     if (kpis) {
         const dados = [
-            ['Orçamentos', orcamentos.length],
-            ['Obras em execução', obras.filter(o => o.status !== 'finalizada').length],
-            ['Funcionários ativos', funcionariosAtivos.length],
-            ['Entradas do mês', moedaInicio(entradasMes)]
+            { label: 'Orçamentos', valor: orcamentos.length, destino: 'historico-orcamentos' },
+            { label: 'Obras em execução', valor: obras.filter(o => o.status !== 'finalizada').length, destino: 'obras' },
+            { label: 'Funcionários ativos', valor: funcionariosAtivos.length, destino: 'funcionarios' },
+            { label: 'Entradas do mês', valor: moedaInicio(entradasMes) }
         ];
-        kpis.innerHTML = dados.map(([label, valor]) => '<div class="inicio-kpi"><span>' + escapeHtml(String(label)) + '</span><strong>' + escapeHtml(String(valor)) + '</strong></div>').join('');
+        kpis.innerHTML = dados.map(item => {
+            const conteudo = '<span>' + escapeHtml(String(item.label)) + '</span><strong>' + escapeHtml(String(item.valor)) + '</strong>';
+            return item.destino
+                ? '<button type="button" class="inicio-kpi inicio-kpi-btn" onclick="navegarKpiInicio(\'' + escapeAttr(item.destino) + '\')" aria-label="Abrir ' + escapeAttr(String(item.label)) + '">' + conteudo + '</button>'
+                : '<div class="inicio-kpi">' + conteudo + '</div>';
+        }).join('');
     }
 
     const hoje = new Date().toISOString().slice(0, 10);
@@ -364,10 +369,33 @@ function renderizarInicio() {
     }
 }
 
+function navegarKpiInicio(destino) {
+    if (destino === 'historico-orcamentos') {
+        if (!moduloPermitido('historico')) {
+            mudarAba('historico', document.querySelector('.nav-tab[onclick*="historico"]'));
+            return;
+        }
+        mudarAba('historico', document.querySelector('.nav-tab[onclick*="historico"]'));
+        if (typeof setTipoHistorico === 'function') setTipoHistorico('orcamento');
+        return;
+    }
+
+    if (destino === 'obras' || destino === 'funcionarios') {
+        if (!moduloPermitido('gestao')) {
+            mudarAba('gestao', document.querySelector('.nav-tab[onclick*="gestao"]'));
+            return;
+        }
+        mudarAba('gestao', document.querySelector('.nav-tab[onclick*="gestao"]'));
+        const sub = destino === 'obras' ? 'obras' : 'funcionarios';
+        const subBtn = document.querySelector('.gestao-sub-tab[onclick*="' + sub + '"]');
+        if (window.mudarSubAba) window.mudarSubAba(sub, subBtn);
+    }
+}
+
 // ===== ABAS =====
 function normalizarModuloAba(aba) {
     if (aba === 'admin') return 'admin';
-    return ['inicio', 'orcamento', 'historico', 'gestao', 'financeiro'].includes(aba) ? aba : 'inicio';
+    return ['inicio', 'orcamento', 'historico', 'gestao', 'financeiro', 'guia'].includes(aba) ? aba : 'inicio';
 }
 
 function modulosDoPlano(plano) {
@@ -439,7 +467,7 @@ function aplicarPermissoesUsuario(perfil = {}, user = {}) {
         : usuarioMasterAtual
         ? ['inicio']
         : getModulosPermitidos(perfilUsuarioAtual);
-    modulosLiberadosAtuais = new Set(['inicio', ...permitidos]);
+    modulosLiberadosAtuais = new Set(['inicio', 'guia', ...permitidos]);
     document.body.classList.toggle('admin-master-mode', usuarioMasterAtual);
 
     document.querySelectorAll('.nav-admin-tab').forEach(btn => {
@@ -466,7 +494,7 @@ function aplicarPermissoesUsuario(perfil = {}, user = {}) {
 
 function moduloPermitido(aba) {
     const modulo = normalizarModuloAba(aba);
-    return modulo === 'inicio' || modulosLiberadosAtuais.has(modulo);
+    return modulo === 'inicio' || modulo === 'guia' || modulosLiberadosAtuais.has(modulo);
 }
 
 function mudarAba(aba, btn) {
@@ -3052,7 +3080,7 @@ async function salvarPermissoesAdmin(userId) {
 
 // Exportar funções para uso global (onclick no HTML)
 Object.assign(window, {
-    mudarAba, renderizarInicio, aplicarPermissoesUsuario, renderizarAdminMaster, salvarPermissoesAdmin,
+    mudarAba, renderizarInicio, navegarKpiInicio, aplicarPermissoesUsuario, renderizarAdminMaster, salvarPermissoesAdmin,
     adicionarLinha, removerLinha, calcularLinha, calcularTotais,
     adicionarCabecalho, removerCabecalho, selecionarCabecalho, filtrarCabecalhoOpcoes, abrirDropdownCabecalho,
     toggleDesconto, aplicarDesconto, limparDesconto,
