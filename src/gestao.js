@@ -29,8 +29,8 @@ garantirArrayGlobal('agendamentos');
 garantirArrayGlobal('funcionarios');
 garantirArrayGlobal('relatorios');
 
-const MESES = ['Janeiro','Fevereiro','MarÃ§o','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
-const DIAS_SEMANA = ['Dom','Seg','Ter','Qua','Qui','Sex','SÃ¡b'];
+const MESES = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
+const DIAS_SEMANA = ['Dom','Seg','Ter','Qua','Qui','Sex','Sáb'];
 
 function formatarData(data) {
   return data ? new Date(data + 'T12:00:00').toLocaleDateString('pt-BR') : '-';
@@ -82,7 +82,7 @@ function conflitoAgendamentoHorario(id, novaData) {
 function pedirNovaHoraAgendamento(id, novaData) {
   const ag = agendamentos.find(a => a.id === id);
   if (!ag) return;
-  mostrarToast('JÃ¡ existe um agendamento nesta data e horÃ¡rio. Escolha outra hora.', 'erro');
+  mostrarToast('Já existe um agendamento nesta data e horário. Escolha outra hora.', 'erro');
   fecharDetalheDia();
   abrirModalAgendamento(id);
   document.getElementById('agend-data').value = novaData;
@@ -177,7 +177,7 @@ function renderizarCalendario() {
     relDia.slice(0, 1).forEach(rel => {
       const badge = document.createElement('div');
       badge.className = 'cal-evento relatorio';
-      badge.textContent = rel.obra || 'RelatÃ³rio';
+      badge.textContent = rel.obra || 'Relatório';
       el.appendChild(badge);
     });
     insDia.slice(0, 1).forEach(ins => {
@@ -239,7 +239,7 @@ function abrirDiaDetalhe(dataStr, dia) {
       const func = funcionarios.find(f => f.id === ev.funcionarioId);
       html += `<div class="detalhe-item agend agendamento-draggable" draggable="true" ondragstart="iniciarArrasteAgendamento(event, '${escapeAttr(ev.id)}')" ondragend="finalizarArrasteAgendamento()">
         <div class="detalhe-item-titulo">${escapeHtml(ev.cliente || ev.titulo || '')}</div>
-        <div class="detalhe-item-meta">${formatarHora(ev.hora) ? 'Hora: ' + escapeHtml(formatarHora(ev.hora)) + ' Â· ' : ''}${func ? 'FuncionÃ¡rio: ' + escapeHtml(func.nome) : ''}</div>
+        <div class="detalhe-item-meta">${formatarHora(ev.hora) ? 'Hora: ' + escapeHtml(formatarHora(ev.hora)) + ' · ' : ''}${func ? 'Funcionário: ' + escapeHtml(func.nome) : ''}</div>
         ${ev.local ? `<div class="detalhe-item-meta">Local: ${escapeHtml(ev.local)}</div>` : ''}
         ${ev.obs ? `<div class="detalhe-item-obs">${escapeHtml(ev.obs)}</div>` : ''}
         <button class="btn-mini editar" onclick="editarAgendamento('${escapeAttr(ev.id)}')">Editar</button>
@@ -264,11 +264,11 @@ function abrirDiaDetalhe(dataStr, dia) {
   }
 
   if (rels.length) {
-    html += '<div class="detalhe-secao-label">RelatÃ³rios de Obra</div>';
+    html += '<div class="detalhe-secao-label">Relatórios de Obra</div>';
     rels.forEach(rel => {
       html += `<div class="detalhe-item relat">
         <div class="detalhe-item-titulo">${escapeHtml(rel.obra || '')}</div>
-        <div class="detalhe-item-meta">FuncionÃ¡rio(s): ${escapeHtml(rel.funcionariosNomes || rel.funcionarioNome || '-')}</div>
+        <div class="detalhe-item-meta">Funcionário(s): ${escapeHtml(rel.funcionariosNomes || rel.funcionarioNome || '-')}</div>
         <div class="detalhe-item-meta">Rendimento: <strong>${formatarMoeda(rel.rendimento || 0)}</strong></div>
         ${rel.obs ? `<div class="detalhe-item-obs">${escapeHtml(rel.obs)}</div>` : ''}
         <button class="btn-mini excluir" onclick="excluirRelatorio('${escapeAttr(rel.id)}')">Excluir</button>
@@ -304,7 +304,7 @@ function popularCheckboxFuncionariosAgend() {
   const cont = document.getElementById('agend-funcionarios-check');
   if (!cont) return;
   if (!funcionarios.length) {
-    cont.innerHTML = '<div style="font-size:13px;color:var(--cinza-texto)">Nenhum funcionÃ¡rio cadastrado.</div>';
+    cont.innerHTML = '<div style="font-size:13px;color:var(--cinza-texto)">Nenhum funcionário cadastrado.</div>';
     return;
   }
   cont.innerHTML = funcionarios.map(f => `<label class="func-check-item">
@@ -325,8 +325,8 @@ function aplicarModoAgendamento(tipo = 'agendamento') {
   const isEtapa = tipo === 'etapa_obra';
   document.getElementById('agend-tipo').value = tipo;
   document.getElementById('agend-modal-titulo').textContent = isEtapa ? 'Nova Etapa / Cronograma' : 'Novo Agendamento';
-  document.getElementById('agend-cliente-label').textContent = isEtapa ? 'DescriÃ§Ã£o *' : 'Cliente / Evento *';
-  document.getElementById('agend-cliente').placeholder = isEtapa ? 'Ex: AplicaÃ§Ã£o de primeira demÃ£o, vistoria, liberaÃ§Ã£o de Ã¡rea...' : 'Nome do cliente ou descriÃ§Ã£o do evento';
+  document.getElementById('agend-cliente-label').textContent = isEtapa ? 'Descrição *' : 'Cliente / Evento *';
+  document.getElementById('agend-cliente').placeholder = isEtapa ? 'Ex: Aplicação de primeira demão, vistoria, liberação de área...' : 'Nome do cliente ou descrição do evento';
   document.getElementById('agend-funcionario').closest('.campo').style.display = isEtapa ? 'none' : '';
   document.getElementById('agend-funcionarios-multi-wrap').style.display = isEtapa ? '' : 'none';
   if (isEtapa) popularCheckboxFuncionariosAgend();
@@ -431,7 +431,7 @@ function renderizarFuncionarios() {
   const cont = document.getElementById('func-lista');
   if (!cont) return;
   if (!funcionarios.length) {
-    cont.innerHTML = '<div class="hist-vazio"><div class="icone"></div><p>Nenhum funcionÃ¡rio cadastrado.</p></div>';
+    cont.innerHTML = '<div class="hist-vazio"><div class="icone"></div><p>Nenhum funcionário cadastrado.</p></div>';
     return;
   }
   cont.innerHTML = funcionarios.map(f => {
@@ -441,8 +441,8 @@ function renderizarFuncionarios() {
       <div>
         <div class="func-card-nome">${escapeHtml(f.nome || '')}</div>
         <div class="func-card-meta"><span class="func-tipo-badge">${escapeHtml(f.tipoSalario || 'Custo Mensal')}</span> ${f.salario ? formatarMoeda(f.salario) : ''} ${status}</div>
-        <div class="func-card-meta">AdmissÃ£o: ${escapeHtml(admFmt)}</div>
-        ${f.dataDemissao ? `<div class="func-card-meta">DemissÃ£o/RescisÃ£o: ${escapeHtml(formatarData(f.dataDemissao))}</div>` : ''}
+        <div class="func-card-meta">Admissão: ${escapeHtml(admFmt)}</div>
+        ${f.dataDemissao ? `<div class="func-card-meta">Demissão/Rescisão: ${escapeHtml(formatarData(f.dataDemissao))}</div>` : ''}
         ${f.telefone ? `<div class="func-card-meta">${escapeHtml(f.telefone)}</div>` : ''}
       </div>
       <div class="func-card-acoes">
@@ -473,7 +473,7 @@ function aplicarExtrasFuncionarioModal(func = null) {
 }
 
 function abrirModalFuncionario(id = null) {
-  document.getElementById('modal-func-titulo').textContent = id ? 'Editar FuncionÃ¡rio' : 'Novo FuncionÃ¡rio';
+  document.getElementById('modal-func-titulo').textContent = id ? 'Editar Funcionário' : 'Novo Funcionário';
   document.getElementById('func-id-edit').value = id || '';
   document.getElementById('func-nome').value = '';
   document.getElementById('func-admissao').value = '';
@@ -513,18 +513,18 @@ async function salvarFuncionario() {
   const tipoSalario = document.getElementById('func-tipo-salario').value;
   const telefone = document.getElementById('func-telefone').value.trim();
   const idEdit = document.getElementById('func-id-edit').value;
-  if (!nome) { mostrarToast('Informe o nome do funcionÃ¡rio.', 'erro'); return; }
+  if (!nome) { mostrarToast('Informe o nome do funcionário.', 'erro'); return; }
   const dados = { nome, admissao, salario, tipoSalario, telefone, ...coletarDadosExtrasFuncionario() };
   try {
     if (idEdit) {
       await DB.salvarFuncionario(dados, idEdit);
       const idx = funcionarios.findIndex(f => f.id === idEdit);
       if (idx >= 0) funcionarios[idx] = { ...funcionarios[idx], ...dados };
-      mostrarToast('FuncionÃ¡rio atualizado!', 'sucesso');
+      mostrarToast('Funcionário atualizado!', 'sucesso');
     } else {
       const newId = await DB.salvarFuncionario(dados);
       funcionarios.push({ id: newId, ...dados });
-      mostrarToast('FuncionÃ¡rio cadastrado!', 'sucesso');
+      mostrarToast('Funcionário cadastrado!', 'sucesso');
     }
     fecharModalFuncionario();
     renderizarFuncionarios();
@@ -534,20 +534,20 @@ async function salvarFuncionario() {
     window.renderizarFluxoFinanceiro?.();
   } catch (err) {
     console.error(err);
-    mostrarToast('Erro ao salvar funcionÃ¡rio.', 'erro');
+    mostrarToast('Erro ao salvar funcionário.', 'erro');
   }
 }
 
 function confirmarExcluirFuncionario(id) {
   const f = funcionarios.find(x => x.id === id);
-  abrirModal('Excluir FuncionÃ¡rio', `Excluir "${f?.nome || ''}"? Esta aÃ§Ã£o nÃ£o pode ser desfeita.`, async () => {
+  abrirModal('Excluir Funcionário', `Excluir "${f?.nome || ''}"? Esta ação não pode ser desfeita.`, async () => {
     try {
       await DB.excluirFuncionario(id);
       funcionarios = funcionarios.filter(x => x.id !== id);
       renderizarFuncionarios();
       popularSelectFuncionariosRel();
-      mostrarToast('FuncionÃ¡rio removido.', '');
-    } catch { mostrarToast('Erro ao excluir funcionÃ¡rio.', 'erro'); }
+      mostrarToast('Funcionário removido.', '');
+    } catch { mostrarToast('Erro ao excluir funcionário.', 'erro'); }
   });
 }
 
@@ -556,7 +556,7 @@ function popularSelectFuncionariosRel() {
     const sel = document.getElementById(selId);
     if (!sel) return;
     const atual = sel.value;
-    const placeholder = selId === 'filtro-rel-func' ? { value: '', label: 'Todos os funcionÃ¡rios' } : selId === 'agend-funcionario' ? { value: '', label: 'Selecione (opcional)' } : { value: '', label: 'Selecione o funcionÃ¡rio' };
+    const placeholder = selId === 'filtro-rel-func' ? { value: '', label: 'Todos os funcionários' } : selId === 'agend-funcionario' ? { value: '', label: 'Selecione (opcional)' } : { value: '', label: 'Selecione o funcionário' };
     setOptions(sel, funcionarios.map(f => ({ value: f.id, label: f.nome })), placeholder, atual);
   });
   popularCheckboxFuncionariosRel();
@@ -565,7 +565,7 @@ function popularSelectFuncionariosRel() {
 function popularCheckboxFuncionariosRel() {
   const cont = document.getElementById('rel-funcionarios-check');
   if (!cont) return;
-  if (!funcionarios.length) { cont.innerHTML = '<div style="font-size:13px;color:var(--cinza-texto)">Nenhum funcionÃ¡rio cadastrado.</div>'; return; }
+  if (!funcionarios.length) { cont.innerHTML = '<div style="font-size:13px;color:var(--cinza-texto)">Nenhum funcionário cadastrado.</div>'; return; }
   cont.innerHTML = funcionarios.map(f => `<label class="func-check-item"><input type="checkbox" value="${escapeAttr(f.id)}" ${relFuncionariosSelected.includes(f.id) ? 'checked' : ''} onchange="toggleFuncRel(this)"><span>${escapeHtml(f.nome)}</span></label>`).join('');
 }
 
@@ -613,7 +613,7 @@ function renderizarImagensRelatorioModal() {
   }
   cont.innerHTML = relImagensSelecionadas.map((img, index) => `
     <div class="rel-imagem-thumb ${img.status === 'pending' ? 'enviando' : ''}">
-      <img src="${escapeAttr(img.preview || img.url || img.src || '')}" alt="${escapeAttr(img.nome || 'Imagem do relatÃ³rio')}">
+      <img src="${escapeAttr(img.preview || img.url || img.src || '')}" alt="${escapeAttr(img.nome || 'Imagem do relatório')}">
       <button type="button" title="Remover imagem" onclick="removerImagemRelatorio(${index})">&times;</button>
       ${img.status === 'pending' ? '<span>Enviando...</span>' : ''}
       ${img.status === 'error' ? '<span class="erro">Falhou</span>' : ''}
@@ -659,9 +659,9 @@ async function handleImagensRelatorio(input) {
       item.path = uploaded.path;
       item.status = 'done';
     } catch (err) {
-      console.error('Erro ao enviar imagem do relatÃ³rio:', err);
+      console.error('Erro ao enviar imagem do relatório:', err);
       item.status = 'error';
-      mostrarToast('Erro ao enviar uma imagem do relatÃ³rio.', 'erro');
+      mostrarToast('Erro ao enviar uma imagem do relatório.', 'erro');
     }
     renderizarImagensRelatorioModal();
   }
@@ -693,10 +693,10 @@ function getRelatorioPorId(id) {
 
 function renderizarGaleriaResumoRelatorio(rel) {
   const imgs = normalizarImagensRelatorio(rel);
-  if (!imgs.length) return '<div class="rel-resumo-vazio">Nenhuma imagem enviada para este relatÃ³rio.</div>';
+  if (!imgs.length) return '<div class="rel-resumo-vazio">Nenhuma imagem enviada para este relatório.</div>';
   return `<div class="rel-resumo-galeria">${imgs.map((img, index) => `
     <figure>
-      <img src="${escapeAttr(img.url || img.src)}" alt="${escapeAttr(img.nome || 'Imagem do relatÃ³rio')}">
+      <img src="${escapeAttr(img.url || img.src)}" alt="${escapeAttr(img.nome || 'Imagem do relatório')}">
       <button type="button" title="Remover imagem" onclick="removerImagemResumoRelatorio('${escapeAttr(rel.id)}', ${index})">&times;</button>
     </figure>
   `).join('')}</div>`;
@@ -704,7 +704,7 @@ function renderizarGaleriaResumoRelatorio(rel) {
 
 function abrirResumoRelatorio(id) {
   const rel = getRelatorioPorId(id);
-  if (!rel) { mostrarToast('RelatÃ³rio nÃ£o encontrado.', 'erro'); return; }
+  if (!rel) { mostrarToast('Relatório não encontrado.', 'erro'); return; }
   fecharResumoRelatorio();
   const overlay = document.createElement('div');
   overlay.id = 'modal-resumo-relatorio';
@@ -712,25 +712,25 @@ function abrirResumoRelatorio(id) {
   overlay.innerHTML = `<div class="modal-gestao rel-resumo-modal">
     <div class="rel-resumo-topo">
       <div>
-        <h3>Resumo do RelatÃ³rio</h3>
-        <strong>${escapeHtml(rel.obra || 'RelatÃ³rio de obra')}</strong>
+        <h3>Resumo do Relatório</h3>
+        <strong>${escapeHtml(rel.obra || 'Relatório de obra')}</strong>
       </div>
       <button type="button" class="rel-resumo-fechar" onclick="fecharResumoRelatorio()">&times;</button>
     </div>
     <div class="rel-resumo-info">
       <div><span>Data</span><strong>${escapeHtml(formatarData(rel.data))}</strong></div>
-      <div><span>FuncionÃ¡rios</span><strong>${escapeHtml(rel.funcionariosNomes || rel.funcionarioNome || '-')}</strong></div>
+      <div><span>Funcionários</span><strong>${escapeHtml(rel.funcionariosNomes || rel.funcionarioNome || '-')}</strong></div>
       <div><span>Rendimento</span><strong>${formatarMoeda(rel.rendimento || 0)}</strong></div>
     </div>
-    ${rel.obs ? `<div class="rel-resumo-obs"><span>ObservaÃ§Ãµes</span><p>${escapeHtml(rel.obs)}</p></div>` : ''}
+    ${rel.obs ? `<div class="rel-resumo-obs"><span>Observações</span><p>${escapeHtml(rel.obs)}</p></div>` : ''}
     <div class="rel-resumo-imagens-head">
-      <h4>Imagens do relatÃ³rio</h4>
+      <h4>Imagens do relatório</h4>
       <button type="button" class="btn-secundario" onclick="document.getElementById('rel-resumo-input').click()">+ Adicionar Imagens</button>
       <input type="file" id="rel-resumo-input" accept="image/png,image/jpeg" multiple style="display:none" onchange="handleImagensResumoRelatorio('${escapeAttr(rel.id)}', this)">
     </div>
     <div id="rel-resumo-imagens">${renderizarGaleriaResumoRelatorio(rel)}</div>
     <div class="modal-acoes">
-      <button type="button" class="btn-secundario" onclick="editarRelatorio('${escapeAttr(rel.id)}')">Editar RelatÃ³rio</button>
+      <button type="button" class="btn-secundario" onclick="editarRelatorio('${escapeAttr(rel.id)}')">Editar Relatório</button>
       <button type="button" class="btn-primario" onclick="fecharResumoRelatorio()">Fechar</button>
     </div>
   </div>`;
@@ -766,7 +766,7 @@ async function handleImagensResumoRelatorio(id, input) {
       rel.imagens = normalizarImagensRelatorio(rel);
       rel.imagens.push({ url: uploaded.url, path: uploaded.path, nome: file.name, tipo: file.type, tamanho: file.size });
     } catch (err) {
-      console.error('Erro ao enviar imagem do relatÃ³rio:', err);
+      console.error('Erro ao enviar imagem do relatório:', err);
       mostrarToast('Erro ao enviar uma imagem.', 'erro');
     }
   }
@@ -787,7 +787,7 @@ async function removerImagemResumoRelatorio(id, index) {
     abrirResumoRelatorio(id);
     mostrarToast('Imagem removida.', '');
   } catch (err) {
-    console.error('Erro ao remover imagem do relatÃ³rio:', err);
+    console.error('Erro ao remover imagem do relatório:', err);
     mostrarToast('Erro ao remover imagem.', 'erro');
   }
 }
@@ -803,11 +803,11 @@ function aplicarFiltrosRelatorio() {
   lista.sort((a, b) => (b.data || '').localeCompare(a.data || ''));
   const cont = document.getElementById('rel-lista');
   if (!cont) return;
-  if (!lista.length) { cont.innerHTML = '<div class="hist-vazio"><div class="icone"></div><p>Nenhum relatÃ³rio encontrado.</p></div>'; return; }
+  if (!lista.length) { cont.innerHTML = '<div class="hist-vazio"><div class="icone"></div><p>Nenhum relatório encontrado.</p></div>'; return; }
   cont.innerHTML = lista.map(rel => {
     const imgs = normalizarImagensRelatorio(rel);
     return `<div class="rel-card" role="button" tabindex="0" onclick="abrirResumoRelatorio('${escapeAttr(rel.id)}')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();abrirResumoRelatorio('${escapeAttr(rel.id)}')}">
-    <div class="rel-card-header"><div class="rel-card-info"><div class="rel-card-obra">${escapeHtml(rel.obra || '')}</div><div class="rel-card-meta">${escapeHtml(formatarData(rel.data))}</div><div class="rel-card-meta">${escapeHtml(rel.funcionariosNomes || rel.funcionarioNome || '-')}</div>${rel.obs ? `<div class="rel-card-obs">${escapeHtml(rel.obs)}</div>` : ''}${imgs.length ? `<div class="rel-card-imagens">${imgs.slice(0, 4).map(img => `<img src="${escapeAttr(img.url || img.src)}" alt="Imagem do relatÃ³rio">`).join('')}${imgs.length > 4 ? `<span>+${imgs.length - 4}</span>` : ''}</div>` : ''}</div><div class="rel-card-valor"><div class="rel-card-valor-label">Rendimento</div><div class="rel-card-valor-num">${formatarMoeda(rel.rendimento || 0)}</div></div></div>
+    <div class="rel-card-header"><div class="rel-card-info"><div class="rel-card-obra">${escapeHtml(rel.obra || '')}</div><div class="rel-card-meta">${escapeHtml(formatarData(rel.data))}</div><div class="rel-card-meta">${escapeHtml(rel.funcionariosNomes || rel.funcionarioNome || '-')}</div>${rel.obs ? `<div class="rel-card-obs">${escapeHtml(rel.obs)}</div>` : ''}${imgs.length ? `<div class="rel-card-imagens">${imgs.slice(0, 4).map(img => `<img src="${escapeAttr(img.url || img.src)}" alt="Imagem do relatório">`).join('')}${imgs.length > 4 ? `<span>+${imgs.length - 4}</span>` : ''}</div>` : ''}</div><div class="rel-card-valor"><div class="rel-card-valor-label">Rendimento</div><div class="rel-card-valor-num">${formatarMoeda(rel.rendimento || 0)}</div></div></div>
     <div class="rel-card-acoes"><button class="btn-mini editar" onclick="event.stopPropagation();editarRelatorio('${escapeAttr(rel.id)}')">Editar</button><button class="btn-mini excluir" onclick="event.stopPropagation();confirmarExcluirRelatorio('${escapeAttr(rel.id)}')">Excluir</button></div>
   </div>`;
   }).join('');
@@ -825,7 +825,7 @@ function abrirModalRelatorio(id = null) {
   document.getElementById('rel-obs').value = '';
   document.getElementById('rel-funcionario').value = '';
   renderizarImagensRelatorioModal();
-  document.getElementById('modal-rel-titulo').textContent = id ? 'Editar RelatÃ³rio' : 'Novo RelatÃ³rio de Obra';
+  document.getElementById('modal-rel-titulo').textContent = id ? 'Editar Relatório' : 'Novo Relatório de Obra';
   const selObra = document.getElementById('rel-obra-select');
   if (selObra) selObra.value = '';
   if (id) {
@@ -859,7 +859,7 @@ function encontrarObraPorId(obraOuId) {
 
 function abrirAgendamentoParaObra(obraOuId, data = '') {
   const obra = encontrarObraPorId(obraOuId);
-  if (!obra) { mostrarToast('Obra nÃ£o encontrada.', 'erro'); return; }
+  if (!obra) { mostrarToast('Obra não encontrada.', 'erro'); return; }
   abrirModalAgendamento();
   agendamentoObraContextId = obra.id || '';
   document.getElementById('agend-cliente').value = obra.nome || obra.construtora || '';
@@ -870,7 +870,7 @@ function abrirAgendamentoParaObra(obraOuId, data = '') {
 
 function abrirRelatorioParaObra(obraOuId, data = '') {
   const obra = encontrarObraPorId(obraOuId);
-  if (!obra) { mostrarToast('Obra nÃ£o encontrada.', 'erro'); return; }
+  if (!obra) { mostrarToast('Obra não encontrada.', 'erro'); return; }
   abrirModalRelatorio();
   const selObra = document.getElementById('rel-obra-select');
   if (selObra) selObra.value = obra.id || '';
@@ -912,30 +912,30 @@ async function salvarRelatorio() {
       await DB.salvarRelatorio(dados, idEdit);
       const idx = relatorios.findIndex(r => r.id === idEdit);
       if (idx >= 0) relatorios[idx] = { ...relatorios[idx], ...dados };
-      mostrarToast('RelatÃ³rio atualizado!', 'sucesso');
+      mostrarToast('Relatório atualizado!', 'sucesso');
     } else {
       const newId = await DB.salvarRelatorio(dados);
       relatorios.push({ id: newId, ...dados, criadoEm: new Date().toISOString() });
-      mostrarToast('RelatÃ³rio salvo!', 'sucesso');
+      mostrarToast('Relatório salvo!', 'sucesso');
     }
     fecharModalRelatorio();
     renderizarRelatorios();
     renderizarCalendario();
     window.renderizarObras?.();
     window.renderizarFluxoFinanceiro?.();
-  } catch (err) { console.error(err); mostrarToast('Erro ao salvar relatÃ³rio.', 'erro'); }
+  } catch (err) { console.error(err); mostrarToast('Erro ao salvar relatório.', 'erro'); }
 }
 
 function confirmarExcluirRelatorio(id) {
   const rel = relatorios.find(r => r.id === id);
-  abrirModal('Excluir RelatÃ³rio', `Excluir relatÃ³rio "${rel?.obra || ''}"?`, async () => {
+  abrirModal('Excluir Relatório', `Excluir relatório "${rel?.obra || ''}"?`, async () => {
     try {
       await DB.excluirRelatorio(id);
       relatorios = relatorios.filter(r => r.id !== id);
       renderizarRelatorios();
       renderizarCalendario();
-      mostrarToast('RelatÃ³rio excluÃ­do.', '');
-    } catch { mostrarToast('Erro ao excluir relatÃ³rio.', 'erro'); }
+      mostrarToast('Relatório excluído.', '');
+    } catch { mostrarToast('Erro ao excluir relatório.', 'erro'); }
   });
 }
 
@@ -946,8 +946,8 @@ async function excluirRelatorio(id) {
     fecharDetalheDia();
     renderizarCalendario();
     renderizarRelatorios();
-    mostrarToast('RelatÃ³rio removido.', '');
-  } catch { mostrarToast('Erro ao excluir relatÃ³rio.', 'erro'); }
+    mostrarToast('Relatório removido.', '');
+  } catch { mostrarToast('Erro ao excluir relatório.', 'erro'); }
 }
 
 function limparFiltrosRel() {
