@@ -9,9 +9,9 @@
     href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap"
     rel="stylesheet">
   <link rel="stylesheet" href="src/style.css?v=20260603-observacoes-editaveis">
-  <link rel="stylesheet" href="src/gestao.css?v=20260603-relatorio-imagens">
+  <link rel="stylesheet" href="src/gestao.css?v=20260605-etapas-obra">
   <link rel="stylesheet" href="src/auth.css?v=20260602-login-logo-transparent">
-  <link rel="stylesheet" href="src/insumos_obras.css?v=20260603-relatorio-imagens">
+  <link rel="stylesheet" href="src/insumos_obras.css?v=20260605-etapas-obra">
   <link rel="icon" href="landing-obraflux/assets/obraflux-somentelogo-crop.png?v=20260602-login-logo-transparent" type="image/png">
   <link rel="shortcut icon" href="landing-obraflux/assets/obraflux-somentelogo-crop.png?v=20260602-login-logo-transparent" type="image/png">
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
@@ -627,6 +627,9 @@
               <div class="cal-legenda-item">
                 <div class="cal-legenda-dot insumo"></div> Insumo / Despesa
               </div>
+              <div class="cal-legenda-item">
+                <div class="cal-legenda-dot etapa"></div> Etapa / Cronograma
+              </div>
             </div>
           </div>
         </div>
@@ -783,11 +786,12 @@
     <!-- MODAL NOVO AGENDAMENTO -->
     <div class="modal-overlay" id="modal-agendamento" onclick="if(event.target===this)fecharModalAgendamento()">
       <div class="modal-gestao">
-        <h3>Novo Agendamento</h3>
+        <h3 id="agend-modal-titulo">Novo Agendamento</h3>
         <input type="hidden" id="agend-id-edit">
+        <input type="hidden" id="agend-tipo" value="agendamento">
         <div style="display:flex;flex-direction:column;gap:1rem;">
           <div class="campo">
-            <label>Cliente / Evento *</label>
+            <label id="agend-cliente-label">Cliente / Evento *</label>
             <input type="text" id="agend-cliente" placeholder="Nome do cliente ou descrição do evento">
           </div>
           <div class="grid-3">
@@ -802,6 +806,12 @@
             <div class="campo">
               <label>Funcionário (opcional)</label>
               <select id="agend-funcionario"></select>
+            </div>
+          </div>
+          <div class="campo" id="agend-funcionarios-multi-wrap" style="display:none;">
+            <label>Funcionários (selecione um ou mais)</label>
+            <div class="func-check-group" id="agend-funcionarios-check">
+              <div style="font-size:13px;color:var(--cinza-texto)">Carregando...</div>
             </div>
           </div>
           <div class="campo">
@@ -1091,10 +1101,10 @@
     });
   </script>
   <script type="module" src="src/script.js?v=20260603-observacoes-editaveis"></script>
-  <script type="module" src="src/gestao.js?v=20260603-relatorio-imagens"></script>
+  <script type="module" src="src/gestao.js?v=20260605-etapas-obra"></script>
   <script type="module" src="src/funcionario_status.js?v=20260602-login-logo-transparent"></script>
   <script type="module" src="src/insumos.js?v=20260602-login-logo-transparent"></script>
-  <script type="module" src="src/obras.js?v=20260602-login-logo-transparent"></script>
+  <script type="module" src="src/obras.js?v=20260605-etapas-obra"></script>
   <script type="module" src="src/financeiro.js?v=20260602-login-logo-transparent"></script>
   <script type="module" src="src/auth.js?v=20260603-loading-fallback"></script>
 

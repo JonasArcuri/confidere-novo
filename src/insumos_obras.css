@@ -406,12 +406,30 @@
   gap: 8px;
 }
 
+.obra-section-topo {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 12px;
+}
+
+.obra-section-topo h4 {
+  margin: 0;
+}
+
 .obra-orc-item,
 .obra-relatorio-item {
   border: 1px solid var(--cinza-borda);
   border-radius: 8px;
   padding: 10px 12px;
   background: #fafafa;
+}
+
+.obra-relatorio-item.etapa {
+  border-left: 4px solid #22a05a;
+  background: #f1fbf5;
 }
 
 .obra-orc-item {
@@ -621,6 +639,40 @@
 
 .obra-cal-dia span.agendamento {
   color: #6a1b9a;
+}
+
+.obra-cal-dia span.etapa {
+  color: #166534;
+}
+
+.obra-cal-dia span.etapa::before {
+  content: '';
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  border-radius: 999px;
+  background: #22a05a;
+  margin-right: 4px;
+}
+
+.obra-cal-dia span.relatorio::before {
+  content: '';
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  border-radius: 999px;
+  background: var(--laranja);
+  margin-right: 4px;
+}
+
+.obra-cal-dia span.agendamento::before {
+  content: '';
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  border-radius: 999px;
+  background: var(--azul-claro);
+  margin-right: 4px;
 }
 
 .obra-relatorio-item.agendamento {

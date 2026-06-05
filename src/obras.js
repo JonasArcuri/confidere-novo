@@ -64,6 +64,10 @@ function getAgendamentosDaObra(obra) {
   }).sort((a, b) => (a.data || '').localeCompare(b.data || '') || (a.hora || '').localeCompare(b.hora || ''));
 }
 
+function isEtapaObra(ag) {
+  return ag?.tipo === 'etapa_obra';
+}
+
 function getOrcamentosDaObra(obra) {
   const nome = normalizarTexto(obra?.nome);
   const construtora = normalizarTexto(obra?.construtora);
@@ -114,7 +118,7 @@ function renderMiniCalendarioObra(obra, rels, agendamentosObra = []) {
     if (!ag.data || !ag.data.startsWith(`${ano}-${mesStr}`)) return;
     const dia = Number(ag.data.slice(8, 10));
     eventosPorDia[dia] = eventosPorDia[dia] || [];
-    eventosPorDia[dia].push({ tipo: 'agendamento', label: `${ag.hora ? ag.hora.slice(0, 5) + ' ' : ''}${ag.cliente || 'Agendamento'}` });
+    eventosPorDia[dia].push({ tipo: isEtapaObra(ag) ? 'etapa' : 'agendamento', label: `${ag.hora ? ag.hora.slice(0, 5) + ' ' : ''}${ag.cliente || (isEtapaObra(ag) ? 'Etapa' : 'Agendamento')}` });
   });
 
   const vazios = Array.from({ length: primeiroDia }, () => '<div class="obra-cal-dia vazio"></div>').join('');
@@ -253,21 +257,24 @@ function renderizarDetalheObra(id) {
     </div>
 
     <section class="obra-detalhe-section">
-      <h4>Or?amentos atrelados</h4>
+      <h4>Orçamentos atrelados</h4>
       ${orcs.length ? `<div class="obra-orc-lista">${orcs.map(orc => `<button type="button" class="obra-orc-item" onclick="abrirOrcamentoAtrelado('${escapeAttr(orc.id)}')">
         <div class="obra-orc-main">
-          <div><strong>#${String(orc.numero || '').padStart(3, '0')}</strong> ${escapeHtml(orc.cliente || 'Or?amento')}</div>
+          <div><strong>#${String(orc.numero || '').padStart(3, '0')}</strong> ${escapeHtml(orc.cliente || 'Orçamento')}</div>
           <small>${escapeHtml(orc.assunto || orc.obra || 'Sem assunto informado')}</small>
         </div>
-        <span>${formatarDataObra(orc.data)} ? ${moedaObra(totalOrcamentoObra(orc))}</span>
-      </button>`).join('')}</div>` : '<div class="obra-vazio">Nenhum or?amento relacionado a esta obra.</div>'}
+        <span>${formatarDataObra(orc.data)} · ${moedaObra(totalOrcamentoObra(orc))}</span>
+      </button>`).join('')}</div>` : '<div class="obra-vazio">Nenhum orçamento relacionado a esta obra.</div>'}
     </section>
     <section class="obra-detalhe-section">
-      <h4>Cronograma da obra</h4>
+      <div class="obra-section-topo">
+        <h4>Cronograma da obra</h4>
+        <button type="button" class="btn-primario" onclick="abrirEtapaCronogramaObra('${escapeAttr(obra.id)}')">+ Nova Etapa / Cronograma</button>
+      </div>
       <div class="obra-cronograma-grid">
         ${renderMiniCalendarioObra(obra, rels, ags)}
         <div class="obra-relatorios-lista">
-          ${ags.length ? ags.map(ag => `<div class="obra-relatorio-item agendamento">
+          ${ags.filter(ag => !isEtapaObra(ag)).length ? ags.filter(ag => !isEtapaObra(ag)).map(ag => `<div class="obra-relatorio-item agendamento">
             <strong>${formatarDataObra(ag.data)}${ag.hora ? ' - ' + escapeHtml(ag.hora.slice(0, 5)) : ''}</strong>
             <span>${escapeHtml(ag.cliente || 'Agendamento')}</span>
             ${ag.local ? `<p>${escapeHtml(ag.local)}</p>` : ''}
@@ -279,7 +286,15 @@ function renderizarDetalheObra(id) {
             <em>${moedaObra(rel.rendimento || 0)}</em>
             ${rel.obs ? `<p>${escapeHtml(rel.obs)}</p>` : ''}
             ${Array.isArray(rel.imagens) && rel.imagens.length ? `<div class="obra-relatorio-imagens">${rel.imagens.slice(0, 6).map(img => `<img src="${escapeAttr(img.url || img.src || '')}" alt="Imagem do relatório">`).join('')}${rel.imagens.length > 6 ? `<span>+${rel.imagens.length - 6}</span>` : ''}</div>` : ''}
-          </div>`).join('') : (!ags.length ? '<div class="obra-vazio">Nenhum relat&oacute;rio ou agendamento registrado para esta obra.</div>' : '')}
+          </div>`).join('') : ''}
+          ${ags.filter(isEtapaObra).length ? ags.filter(isEtapaObra).map(ag => `<div class="obra-relatorio-item etapa">
+            <strong>${formatarDataObra(ag.data)}${ag.hora ? ' - ' + escapeHtml(ag.hora.slice(0, 5)) : ''}</strong>
+            <span>${escapeHtml(ag.cliente || 'Etapa de obra')}</span>
+            ${ag.funcionariosNomes ? `<p>Funcionários: ${escapeHtml(ag.funcionariosNomes)}</p>` : ''}
+            ${ag.local ? `<p>${escapeHtml(ag.local)}</p>` : ''}
+            ${ag.obs ? `<p>${escapeHtml(ag.obs)}</p>` : ''}
+          </div>`).join('') : ''}
+          ${(!ags.length && !rels.length) ? '<div class="obra-vazio">Nenhum relatório, agendamento ou etapa registrado para esta obra.</div>' : ''}
         </div>
       </div>
     </section>
@@ -304,6 +319,7 @@ function abrirMenuDiaObra(obraId, dataStr) {
     <div class="obra-dia-opcoes">
       <button type="button" onclick="criarRelatorioObraDia('${escapeAttr(obraId)}', '${escapeAttr(dataStr)}')">Relatório de Obra</button>
       <button type="button" onclick="criarAgendamentoObraDia('${escapeAttr(obraId)}', '${escapeAttr(dataStr)}')">Agendamento</button>
+      <button type="button" onclick="criarEtapaObraDia('${escapeAttr(obraId)}', '${escapeAttr(dataStr)}')">Etapa / Cronograma</button>
       <button type="button" onclick="criarOrcamentoObraDia('${escapeAttr(obraId)}', '${escapeAttr(dataStr)}')">Orçamento</button>
     </div>
     <div class="modal-acoes">
@@ -324,6 +340,17 @@ function criarAgendamentoObraDia(obraId, dataStr) {
   const obra = obras.find(o => o.id === obraId);
   fecharMenuDiaObra();
   window.abrirAgendamentoParaObra?.(obra, dataStr);
+}
+
+function abrirEtapaCronogramaObra(obraId) {
+  const obra = obras.find(o => o.id === obraId);
+  window.abrirEtapaParaObra?.(obra, obra?.data || '');
+}
+
+function criarEtapaObraDia(obraId, dataStr) {
+  const obra = obras.find(o => o.id === obraId);
+  fecharMenuDiaObra();
+  window.abrirEtapaParaObra?.(obra, dataStr);
 }
 
 function criarOrcamentoObraDia(obraId, dataStr) {
@@ -459,7 +486,7 @@ function popularSelectObrasRel() {
 // Exportar para escopo global
 Object.assign(window, {
   renderizarObras, setFiltroObras, abrirDetalheObra, voltarListaObras, renderizarDetalheObra, mudarMesCronogramaObra,
-  abrirMenuDiaObra, fecharMenuDiaObra, criarRelatorioObraDia, criarAgendamentoObraDia, criarOrcamentoObraDia, abrirOrcamentoAtrelado,
+  abrirMenuDiaObra, fecharMenuDiaObra, criarRelatorioObraDia, criarAgendamentoObraDia, abrirEtapaCronogramaObra, criarEtapaObraDia, criarOrcamentoObraDia, abrirOrcamentoAtrelado,
   abrirModalObra, fecharModalObra, editarObra, salvarObra,
   marcarObraFinalizada, marcarObraExecucao, confirmarExcluirObra
 });

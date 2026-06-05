@@ -239,11 +239,56 @@
   border-left: 3px solid var(--laranja);
 }
 
+.cal-evento.etapa {
+  background: #e9f8ef;
+  color: #166534;
+  border-left: 3px solid #22a05a;
+}
+
 .cal-mais {
   font-size: 10px;
   color: var(--cinza-texto);
   font-weight: 600;
   line-height: 1.2;
+}
+
+.cal-indicadores {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-wrap: wrap;
+  margin-top: auto;
+  min-height: 10px;
+}
+
+.cal-ponto {
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  flex: 0 0 auto;
+}
+
+.cal-ponto.agendamento {
+  background: var(--azul-claro);
+}
+
+.cal-ponto.relatorio {
+  background: var(--laranja);
+}
+
+.cal-ponto.insumo {
+  background: #8b5cf6;
+}
+
+.cal-ponto.etapa {
+  background: #22a05a;
+}
+
+.cal-ponto-extra {
+  color: var(--azul);
+  font-size: 9px;
+  font-weight: 800;
+  line-height: 1;
 }
 
 /* Legenda */
@@ -270,6 +315,11 @@
 
 .cal-legenda-dot.agendamento { background: var(--azul-claro); }
 .cal-legenda-dot.relatorio { background: var(--laranja); }
+.cal-legenda-dot.etapa { background: #22a05a; }
+
+.detalhe-item.etapa {
+  border-left-color: #22a05a;
+}
 
 .rel-imagens-box {
   display: flex;
@@ -873,6 +923,11 @@ body.arrastando-agendamento #modal-detalhe-dia .modal-gestao {
     padding: 4px;
   }
 
+  .cal-indicadores {
+    gap: 3px;
+    margin-top: auto;
+  }
+
   .cal-evento {
     font-size: 9px;
     padding: 2px 4px;
@@ -975,6 +1030,15 @@ body.arrastando-agendamento #modal-detalhe-dia .modal-gestao {
 
   .cal-evento {
     display: none;
+  }
+
+  .cal-mais {
+    display: none;
+  }
+
+  .cal-ponto {
+    width: 7px;
+    height: 7px;
   }
 
   .cal-legenda {

@@ -1,10 +1,11 @@
-import { DB } from './firebase.js';
+﻿import { DB } from './firebase.js';
 import { escapeHtml, escapeAttr, setOptions } from './utils.js';
 
 let calMes = new Date().getMonth();
 let calAno = new Date().getFullYear();
 let relFuncionariosSelected = [];
 let relImagensSelecionadas = [];
+let etapaFuncionariosSelected = [];
 let agendamentoArrastandoId = null;
 let agendamentoObraContextId = '';
 
@@ -28,8 +29,8 @@ garantirArrayGlobal('agendamentos');
 garantirArrayGlobal('funcionarios');
 garantirArrayGlobal('relatorios');
 
-const MESES = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
-const DIAS_SEMANA = ['Dom','Seg','Ter','Qua','Qui','Sex','Sáb'];
+const MESES = ['Janeiro','Fevereiro','MarÃ§o','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
+const DIAS_SEMANA = ['Dom','Seg','Ter','Qua','Qui','Sex','SÃ¡b'];
 
 function formatarData(data) {
   return data ? new Date(data + 'T12:00:00').toLocaleDateString('pt-BR') : '-';
@@ -55,6 +56,10 @@ function getEventosDia(dataStr) {
   return agendamentos.filter(a => a.data === dataStr).sort((a, b) => (a.hora || '').localeCompare(b.hora || ''));
 }
 
+function isEtapaObra(ag) {
+  return ag?.tipo === 'etapa_obra';
+}
+
 function iniciarArrasteAgendamento(event, id) {
   agendamentoArrastandoId = id;
   document.body.classList.add('arrastando-agendamento');
@@ -77,7 +82,7 @@ function conflitoAgendamentoHorario(id, novaData) {
 function pedirNovaHoraAgendamento(id, novaData) {
   const ag = agendamentos.find(a => a.id === id);
   if (!ag) return;
-  mostrarToast('Já existe um agendamento nesta data e horário. Escolha outra hora.', 'erro');
+  mostrarToast('JÃ¡ existe um agendamento nesta data e horÃ¡rio. Escolha outra hora.', 'erro');
   fecharDetalheDia();
   abrirModalAgendamento(id);
   document.getElementById('agend-data').value = novaData;
@@ -161,10 +166,10 @@ function renderizarCalendario() {
 
     eventos.slice(0, 2).forEach(ev => {
       const badge = document.createElement('div');
-      badge.className = 'cal-evento agendamento';
+      badge.className = `cal-evento ${isEtapaObra(ev) ? 'etapa' : 'agendamento'}`;
       badge.draggable = true;
       badge.dataset.agendamentoId = ev.id;
-      badge.textContent = `${formatarHora(ev.hora) ? formatarHora(ev.hora) + ' ' : ''}${ev.cliente || ev.titulo || 'Agendamento'}`;
+      badge.textContent = `${formatarHora(ev.hora) ? formatarHora(ev.hora) + ' ' : ''}${isEtapaObra(ev) ? 'Etapa: ' : ''}${ev.cliente || ev.titulo || 'Agendamento'}`;
       badge.addEventListener('dragstart', (event) => iniciarArrasteAgendamento(event, ev.id));
       badge.addEventListener('dragend', finalizarArrasteAgendamento);
       el.appendChild(badge);
@@ -172,7 +177,7 @@ function renderizarCalendario() {
     relDia.slice(0, 1).forEach(rel => {
       const badge = document.createElement('div');
       badge.className = 'cal-evento relatorio';
-      badge.textContent = rel.obra || 'Relatório';
+      badge.textContent = rel.obra || 'RelatÃ³rio';
       el.appendChild(badge);
     });
     insDia.slice(0, 1).forEach(ins => {
@@ -183,6 +188,27 @@ function renderizarCalendario() {
     });
 
     const totalEventos = eventos.length + relDia.length + insDia.length;
+    if (totalEventos > 0) {
+      const indicadores = document.createElement('div');
+      indicadores.className = 'cal-indicadores';
+      const pontos = [
+        ...eventos.map(ev => isEtapaObra(ev) ? 'etapa' : 'agendamento'),
+        ...relDia.map(() => 'relatorio'),
+        ...insDia.map(() => 'insumo')
+      ].slice(0, 5);
+      pontos.forEach(tipo => {
+        const ponto = document.createElement('span');
+        ponto.className = `cal-ponto ${tipo}`;
+        indicadores.appendChild(ponto);
+      });
+      if (totalEventos > 5) {
+        const extra = document.createElement('span');
+        extra.className = 'cal-ponto-extra';
+        extra.textContent = `+${totalEventos - 5}`;
+        indicadores.appendChild(extra);
+      }
+      el.appendChild(indicadores);
+    }
     if (totalEventos > 3) {
       const more = document.createElement('div');
       more.className = 'cal-mais';
@@ -200,18 +226,20 @@ function calHoje() { const h = new Date(); calMes = h.getMonth(); calAno = h.get
 
 function abrirDiaDetalhe(dataStr, dia) {
   const eventos = getEventosDia(dataStr);
+  const etapas = eventos.filter(isEtapaObra);
+  const agsComuns = eventos.filter(ev => !isEtapaObra(ev));
   const rels = relatorios.filter(r => r.data === dataStr);
   const ins = (window.insumos || []).filter(i => i.data === dataStr);
   let html = `<div class="detalhe-data-titulo">${dia} de ${escapeHtml(MESES[calMes])}, ${calAno}</div>`;
   if (!eventos.length && !rels.length && !ins.length) html += '<p class="detalhe-vazio">Nenhum evento neste dia.</p>';
 
-  if (eventos.length) {
+  if (agsComuns.length) {
     html += '<div class="detalhe-secao-label">Agendamentos</div>';
-    eventos.forEach(ev => {
+    agsComuns.forEach(ev => {
       const func = funcionarios.find(f => f.id === ev.funcionarioId);
       html += `<div class="detalhe-item agend agendamento-draggable" draggable="true" ondragstart="iniciarArrasteAgendamento(event, '${escapeAttr(ev.id)}')" ondragend="finalizarArrasteAgendamento()">
         <div class="detalhe-item-titulo">${escapeHtml(ev.cliente || ev.titulo || '')}</div>
-        <div class="detalhe-item-meta">${formatarHora(ev.hora) ? 'Hora: ' + escapeHtml(formatarHora(ev.hora)) + ' · ' : ''}${func ? 'Funcionário: ' + escapeHtml(func.nome) : ''}</div>
+        <div class="detalhe-item-meta">${formatarHora(ev.hora) ? 'Hora: ' + escapeHtml(formatarHora(ev.hora)) + ' Â· ' : ''}${func ? 'FuncionÃ¡rio: ' + escapeHtml(func.nome) : ''}</div>
         ${ev.local ? `<div class="detalhe-item-meta">Local: ${escapeHtml(ev.local)}</div>` : ''}
         ${ev.obs ? `<div class="detalhe-item-obs">${escapeHtml(ev.obs)}</div>` : ''}
         <button class="btn-mini editar" onclick="editarAgendamento('${escapeAttr(ev.id)}')">Editar</button>
@@ -220,12 +248,27 @@ function abrirDiaDetalhe(dataStr, dia) {
     });
   }
 
+  if (etapas.length) {
+    html += '<div class="detalhe-secao-label">Etapas / Cronograma</div>';
+    etapas.forEach(ev => {
+      const obra = (window.obras || []).find(o => o.id === ev.obraId);
+      html += `<div class="detalhe-item etapa agendamento-draggable" draggable="true" ondragstart="iniciarArrasteAgendamento(event, '${escapeAttr(ev.id)}')" ondragend="finalizarArrasteAgendamento()">
+        <div class="detalhe-item-titulo">${escapeHtml(ev.cliente || 'Etapa de obra')}</div>
+        <div class="detalhe-item-meta">${formatarHora(ev.hora) ? 'Hora: ' + escapeHtml(formatarHora(ev.hora)) + ' · ' : ''}${obra ? 'Obra: ' + escapeHtml(obra.nome) : 'Obra vinculada'}</div>
+        ${ev.funcionariosNomes ? `<div class="detalhe-item-meta">Funcionários: ${escapeHtml(ev.funcionariosNomes)}</div>` : ''}
+        ${ev.local ? `<div class="detalhe-item-meta">Local: ${escapeHtml(ev.local)}</div>` : ''}
+        ${ev.obs ? `<div class="detalhe-item-obs">${escapeHtml(ev.obs)}</div>` : ''}
+        <div class="detalhe-item-acoes"><button class="btn-mini editar" onclick="editarAgendamento('${escapeAttr(ev.id)}')">Editar</button><button class="btn-mini excluir" onclick="excluirAgendamento('${escapeAttr(ev.id)}')">Excluir</button></div>
+      </div>`;
+    });
+  }
+
   if (rels.length) {
-    html += '<div class="detalhe-secao-label">Relatórios de Obra</div>';
+    html += '<div class="detalhe-secao-label">RelatÃ³rios de Obra</div>';
     rels.forEach(rel => {
       html += `<div class="detalhe-item relat">
         <div class="detalhe-item-titulo">${escapeHtml(rel.obra || '')}</div>
-        <div class="detalhe-item-meta">Funcionário(s): ${escapeHtml(rel.funcionariosNomes || rel.funcionarioNome || '-')}</div>
+        <div class="detalhe-item-meta">FuncionÃ¡rio(s): ${escapeHtml(rel.funcionariosNomes || rel.funcionarioNome || '-')}</div>
         <div class="detalhe-item-meta">Rendimento: <strong>${formatarMoeda(rel.rendimento || 0)}</strong></div>
         ${rel.obs ? `<div class="detalhe-item-obs">${escapeHtml(rel.obs)}</div>` : ''}
         <button class="btn-mini excluir" onclick="excluirRelatorio('${escapeAttr(rel.id)}')">Excluir</button>
@@ -257,9 +300,42 @@ function popularSelectFuncionariosAgend() {
   setOptions(sel, funcionarios.map(f => ({ value: f.id, label: f.nome })), { value: '', label: 'Selecione (opcional)' }, sel.value || '');
 }
 
-function abrirModalAgendamento(id = null) {
+function popularCheckboxFuncionariosAgend() {
+  const cont = document.getElementById('agend-funcionarios-check');
+  if (!cont) return;
+  if (!funcionarios.length) {
+    cont.innerHTML = '<div style="font-size:13px;color:var(--cinza-texto)">Nenhum funcionÃ¡rio cadastrado.</div>';
+    return;
+  }
+  cont.innerHTML = funcionarios.map(f => `<label class="func-check-item">
+    <input type="checkbox" value="${escapeAttr(f.id)}" ${etapaFuncionariosSelected.includes(f.id) ? 'checked' : ''} onchange="toggleFuncEtapa('${escapeAttr(f.id)}', this)">
+    <span>${escapeHtml(f.nome || '')}</span>
+  </label>`).join('');
+}
+
+function toggleFuncEtapa(id, cb) {
+  if (cb.checked) {
+    if (!etapaFuncionariosSelected.includes(id)) etapaFuncionariosSelected.push(id);
+  } else {
+    etapaFuncionariosSelected = etapaFuncionariosSelected.filter(v => v !== id);
+  }
+}
+
+function aplicarModoAgendamento(tipo = 'agendamento') {
+  const isEtapa = tipo === 'etapa_obra';
+  document.getElementById('agend-tipo').value = tipo;
+  document.getElementById('agend-modal-titulo').textContent = isEtapa ? 'Nova Etapa / Cronograma' : 'Novo Agendamento';
+  document.getElementById('agend-cliente-label').textContent = isEtapa ? 'DescriÃ§Ã£o *' : 'Cliente / Evento *';
+  document.getElementById('agend-cliente').placeholder = isEtapa ? 'Ex: AplicaÃ§Ã£o de primeira demÃ£o, vistoria, liberaÃ§Ã£o de Ã¡rea...' : 'Nome do cliente ou descriÃ§Ã£o do evento';
+  document.getElementById('agend-funcionario').closest('.campo').style.display = isEtapa ? 'none' : '';
+  document.getElementById('agend-funcionarios-multi-wrap').style.display = isEtapa ? '' : 'none';
+  if (isEtapa) popularCheckboxFuncionariosAgend();
+}
+
+function abrirModalAgendamento(id = null, tipo = 'agendamento') {
   popularSelectFuncionariosAgend();
   agendamentoObraContextId = '';
+  etapaFuncionariosSelected = [];
   document.getElementById('agend-id-edit').value = id || '';
   document.getElementById('agend-cliente').value = '';
   document.getElementById('agend-data').value = new Date().toISOString().split('T')[0];
@@ -267,16 +343,20 @@ function abrirModalAgendamento(id = null) {
   document.getElementById('agend-local').value = '';
   document.getElementById('agend-obs').value = '';
   document.getElementById('agend-funcionario').value = '';
+  aplicarModoAgendamento(tipo);
   if (id) {
     const ag = agendamentos.find(a => a.id === id);
     if (ag) {
+      aplicarModoAgendamento(ag.tipo || 'agendamento');
       document.getElementById('agend-cliente').value = ag.cliente || '';
       document.getElementById('agend-data').value = ag.data || '';
       document.getElementById('agend-hora').value = ag.hora || '';
       document.getElementById('agend-local').value = ag.local || '';
       document.getElementById('agend-obs').value = ag.obs || '';
       document.getElementById('agend-funcionario').value = ag.funcionarioId || '';
+      etapaFuncionariosSelected = Array.isArray(ag.funcionariosIds) ? [...ag.funcionariosIds] : (ag.funcionarioId ? [ag.funcionarioId] : []);
       agendamentoObraContextId = ag.obraId || '';
+      popularCheckboxFuncionariosAgend();
     }
   }
   document.getElementById('modal-agendamento').classList.add('aberto');
@@ -296,24 +376,38 @@ async function salvarAgendamento() {
   const local = document.getElementById('agend-local').value.trim();
   const obs = document.getElementById('agend-obs').value.trim();
   const funcionarioId = document.getElementById('agend-funcionario').value;
+  const tipo = document.getElementById('agend-tipo')?.value || 'agendamento';
   const idEdit = document.getElementById('agend-id-edit').value;
-  if (!cliente || !data) { mostrarToast('Informe cliente e data.', 'erro'); return; }
+  if (!cliente || !data) { mostrarToast(tipo === 'etapa_obra' ? 'Informe descrição e data.' : 'Informe cliente e data.', 'erro'); return; }
   if (hora && agendamentos.some(a => a.id !== idEdit && a.data === data && a.hora === hora)) {
     mostrarToast('Já existe um agendamento nesta data e horário. Escolha outra hora.', 'erro');
     document.getElementById('agend-hora')?.focus();
     return;
   }
-  const dados = { cliente, data, hora, local, obs, funcionarioId, obraId: agendamentoObraContextId || '' };
+  const funcionariosIds = tipo === 'etapa_obra' ? [...etapaFuncionariosSelected] : (funcionarioId ? [funcionarioId] : []);
+  const funcionariosNomes = funcionariosIds.map(id => funcionarios.find(f => f.id === id)?.nome).filter(Boolean).join(', ');
+  const dados = {
+    cliente,
+    data,
+    hora,
+    local,
+    obs,
+    tipo,
+    funcionarioId: tipo === 'etapa_obra' ? (funcionariosIds[0] || '') : funcionarioId,
+    funcionariosIds,
+    funcionariosNomes,
+    obraId: agendamentoObraContextId || ''
+  };
   try {
     if (idEdit) {
       await DB.salvarAgendamento(dados, idEdit);
       const idx = agendamentos.findIndex(a => a.id === idEdit);
       if (idx >= 0) agendamentos[idx] = { ...agendamentos[idx], ...dados };
-      mostrarToast('Agendamento atualizado!', 'sucesso');
+      mostrarToast(tipo === 'etapa_obra' ? 'Etapa atualizada!' : 'Agendamento atualizado!', 'sucesso');
     } else {
       const newId = await DB.salvarAgendamento(dados);
       agendamentos.push({ id: newId, ...dados });
-      mostrarToast('Agendamento salvo!', 'sucesso');
+      mostrarToast(tipo === 'etapa_obra' ? 'Etapa salva!' : 'Agendamento salvo!', 'sucesso');
     }
     fecharModalAgendamento();
     renderizarCalendario();
@@ -323,7 +417,6 @@ async function salvarAgendamento() {
     mostrarToast('Erro ao salvar agendamento.', 'erro');
   }
 }
-
 async function excluirAgendamento(id) {
   try {
     await DB.excluirAgendamento(id);
@@ -338,7 +431,7 @@ function renderizarFuncionarios() {
   const cont = document.getElementById('func-lista');
   if (!cont) return;
   if (!funcionarios.length) {
-    cont.innerHTML = '<div class="hist-vazio"><div class="icone"></div><p>Nenhum funcionário cadastrado.</p></div>';
+    cont.innerHTML = '<div class="hist-vazio"><div class="icone"></div><p>Nenhum funcionÃ¡rio cadastrado.</p></div>';
     return;
   }
   cont.innerHTML = funcionarios.map(f => {
@@ -348,8 +441,8 @@ function renderizarFuncionarios() {
       <div>
         <div class="func-card-nome">${escapeHtml(f.nome || '')}</div>
         <div class="func-card-meta"><span class="func-tipo-badge">${escapeHtml(f.tipoSalario || 'Custo Mensal')}</span> ${f.salario ? formatarMoeda(f.salario) : ''} ${status}</div>
-        <div class="func-card-meta">Admissão: ${escapeHtml(admFmt)}</div>
-        ${f.dataDemissao ? `<div class="func-card-meta">Demissão/Rescisão: ${escapeHtml(formatarData(f.dataDemissao))}</div>` : ''}
+        <div class="func-card-meta">AdmissÃ£o: ${escapeHtml(admFmt)}</div>
+        ${f.dataDemissao ? `<div class="func-card-meta">DemissÃ£o/RescisÃ£o: ${escapeHtml(formatarData(f.dataDemissao))}</div>` : ''}
         ${f.telefone ? `<div class="func-card-meta">${escapeHtml(f.telefone)}</div>` : ''}
       </div>
       <div class="func-card-acoes">
@@ -380,7 +473,7 @@ function aplicarExtrasFuncionarioModal(func = null) {
 }
 
 function abrirModalFuncionario(id = null) {
-  document.getElementById('modal-func-titulo').textContent = id ? 'Editar Funcionário' : 'Novo Funcionário';
+  document.getElementById('modal-func-titulo').textContent = id ? 'Editar FuncionÃ¡rio' : 'Novo FuncionÃ¡rio';
   document.getElementById('func-id-edit').value = id || '';
   document.getElementById('func-nome').value = '';
   document.getElementById('func-admissao').value = '';
@@ -420,18 +513,18 @@ async function salvarFuncionario() {
   const tipoSalario = document.getElementById('func-tipo-salario').value;
   const telefone = document.getElementById('func-telefone').value.trim();
   const idEdit = document.getElementById('func-id-edit').value;
-  if (!nome) { mostrarToast('Informe o nome do funcionário.', 'erro'); return; }
+  if (!nome) { mostrarToast('Informe o nome do funcionÃ¡rio.', 'erro'); return; }
   const dados = { nome, admissao, salario, tipoSalario, telefone, ...coletarDadosExtrasFuncionario() };
   try {
     if (idEdit) {
       await DB.salvarFuncionario(dados, idEdit);
       const idx = funcionarios.findIndex(f => f.id === idEdit);
       if (idx >= 0) funcionarios[idx] = { ...funcionarios[idx], ...dados };
-      mostrarToast('Funcionário atualizado!', 'sucesso');
+      mostrarToast('FuncionÃ¡rio atualizado!', 'sucesso');
     } else {
       const newId = await DB.salvarFuncionario(dados);
       funcionarios.push({ id: newId, ...dados });
-      mostrarToast('Funcionário cadastrado!', 'sucesso');
+      mostrarToast('FuncionÃ¡rio cadastrado!', 'sucesso');
     }
     fecharModalFuncionario();
     renderizarFuncionarios();
@@ -441,20 +534,20 @@ async function salvarFuncionario() {
     window.renderizarFluxoFinanceiro?.();
   } catch (err) {
     console.error(err);
-    mostrarToast('Erro ao salvar funcionário.', 'erro');
+    mostrarToast('Erro ao salvar funcionÃ¡rio.', 'erro');
   }
 }
 
 function confirmarExcluirFuncionario(id) {
   const f = funcionarios.find(x => x.id === id);
-  abrirModal('Excluir Funcionário', `Excluir "${f?.nome || ''}"? Esta ação não pode ser desfeita.`, async () => {
+  abrirModal('Excluir FuncionÃ¡rio', `Excluir "${f?.nome || ''}"? Esta aÃ§Ã£o nÃ£o pode ser desfeita.`, async () => {
     try {
       await DB.excluirFuncionario(id);
       funcionarios = funcionarios.filter(x => x.id !== id);
       renderizarFuncionarios();
       popularSelectFuncionariosRel();
-      mostrarToast('Funcionário removido.', '');
-    } catch { mostrarToast('Erro ao excluir funcionário.', 'erro'); }
+      mostrarToast('FuncionÃ¡rio removido.', '');
+    } catch { mostrarToast('Erro ao excluir funcionÃ¡rio.', 'erro'); }
   });
 }
 
@@ -463,7 +556,7 @@ function popularSelectFuncionariosRel() {
     const sel = document.getElementById(selId);
     if (!sel) return;
     const atual = sel.value;
-    const placeholder = selId === 'filtro-rel-func' ? { value: '', label: 'Todos os funcionários' } : selId === 'agend-funcionario' ? { value: '', label: 'Selecione (opcional)' } : { value: '', label: 'Selecione o funcionário' };
+    const placeholder = selId === 'filtro-rel-func' ? { value: '', label: 'Todos os funcionÃ¡rios' } : selId === 'agend-funcionario' ? { value: '', label: 'Selecione (opcional)' } : { value: '', label: 'Selecione o funcionÃ¡rio' };
     setOptions(sel, funcionarios.map(f => ({ value: f.id, label: f.nome })), placeholder, atual);
   });
   popularCheckboxFuncionariosRel();
@@ -472,7 +565,7 @@ function popularSelectFuncionariosRel() {
 function popularCheckboxFuncionariosRel() {
   const cont = document.getElementById('rel-funcionarios-check');
   if (!cont) return;
-  if (!funcionarios.length) { cont.innerHTML = '<div style="font-size:13px;color:var(--cinza-texto)">Nenhum funcionário cadastrado.</div>'; return; }
+  if (!funcionarios.length) { cont.innerHTML = '<div style="font-size:13px;color:var(--cinza-texto)">Nenhum funcionÃ¡rio cadastrado.</div>'; return; }
   cont.innerHTML = funcionarios.map(f => `<label class="func-check-item"><input type="checkbox" value="${escapeAttr(f.id)}" ${relFuncionariosSelected.includes(f.id) ? 'checked' : ''} onchange="toggleFuncRel(this)"><span>${escapeHtml(f.nome)}</span></label>`).join('');
 }
 
@@ -520,7 +613,7 @@ function renderizarImagensRelatorioModal() {
   }
   cont.innerHTML = relImagensSelecionadas.map((img, index) => `
     <div class="rel-imagem-thumb ${img.status === 'pending' ? 'enviando' : ''}">
-      <img src="${escapeAttr(img.preview || img.url || img.src || '')}" alt="${escapeAttr(img.nome || 'Imagem do relatório')}">
+      <img src="${escapeAttr(img.preview || img.url || img.src || '')}" alt="${escapeAttr(img.nome || 'Imagem do relatÃ³rio')}">
       <button type="button" title="Remover imagem" onclick="removerImagemRelatorio(${index})">&times;</button>
       ${img.status === 'pending' ? '<span>Enviando...</span>' : ''}
       ${img.status === 'error' ? '<span class="erro">Falhou</span>' : ''}
@@ -566,9 +659,9 @@ async function handleImagensRelatorio(input) {
       item.path = uploaded.path;
       item.status = 'done';
     } catch (err) {
-      console.error('Erro ao enviar imagem do relatório:', err);
+      console.error('Erro ao enviar imagem do relatÃ³rio:', err);
       item.status = 'error';
-      mostrarToast('Erro ao enviar uma imagem do relatório.', 'erro');
+      mostrarToast('Erro ao enviar uma imagem do relatÃ³rio.', 'erro');
     }
     renderizarImagensRelatorioModal();
   }
@@ -600,10 +693,10 @@ function getRelatorioPorId(id) {
 
 function renderizarGaleriaResumoRelatorio(rel) {
   const imgs = normalizarImagensRelatorio(rel);
-  if (!imgs.length) return '<div class="rel-resumo-vazio">Nenhuma imagem enviada para este relatório.</div>';
+  if (!imgs.length) return '<div class="rel-resumo-vazio">Nenhuma imagem enviada para este relatÃ³rio.</div>';
   return `<div class="rel-resumo-galeria">${imgs.map((img, index) => `
     <figure>
-      <img src="${escapeAttr(img.url || img.src)}" alt="${escapeAttr(img.nome || 'Imagem do relatório')}">
+      <img src="${escapeAttr(img.url || img.src)}" alt="${escapeAttr(img.nome || 'Imagem do relatÃ³rio')}">
       <button type="button" title="Remover imagem" onclick="removerImagemResumoRelatorio('${escapeAttr(rel.id)}', ${index})">&times;</button>
     </figure>
   `).join('')}</div>`;
@@ -611,7 +704,7 @@ function renderizarGaleriaResumoRelatorio(rel) {
 
 function abrirResumoRelatorio(id) {
   const rel = getRelatorioPorId(id);
-  if (!rel) { mostrarToast('Relatório não encontrado.', 'erro'); return; }
+  if (!rel) { mostrarToast('RelatÃ³rio nÃ£o encontrado.', 'erro'); return; }
   fecharResumoRelatorio();
   const overlay = document.createElement('div');
   overlay.id = 'modal-resumo-relatorio';
@@ -619,25 +712,25 @@ function abrirResumoRelatorio(id) {
   overlay.innerHTML = `<div class="modal-gestao rel-resumo-modal">
     <div class="rel-resumo-topo">
       <div>
-        <h3>Resumo do Relatório</h3>
-        <strong>${escapeHtml(rel.obra || 'Relatório de obra')}</strong>
+        <h3>Resumo do RelatÃ³rio</h3>
+        <strong>${escapeHtml(rel.obra || 'RelatÃ³rio de obra')}</strong>
       </div>
       <button type="button" class="rel-resumo-fechar" onclick="fecharResumoRelatorio()">&times;</button>
     </div>
     <div class="rel-resumo-info">
       <div><span>Data</span><strong>${escapeHtml(formatarData(rel.data))}</strong></div>
-      <div><span>Funcionários</span><strong>${escapeHtml(rel.funcionariosNomes || rel.funcionarioNome || '-')}</strong></div>
+      <div><span>FuncionÃ¡rios</span><strong>${escapeHtml(rel.funcionariosNomes || rel.funcionarioNome || '-')}</strong></div>
       <div><span>Rendimento</span><strong>${formatarMoeda(rel.rendimento || 0)}</strong></div>
     </div>
-    ${rel.obs ? `<div class="rel-resumo-obs"><span>Observações</span><p>${escapeHtml(rel.obs)}</p></div>` : ''}
+    ${rel.obs ? `<div class="rel-resumo-obs"><span>ObservaÃ§Ãµes</span><p>${escapeHtml(rel.obs)}</p></div>` : ''}
     <div class="rel-resumo-imagens-head">
-      <h4>Imagens do relatório</h4>
+      <h4>Imagens do relatÃ³rio</h4>
       <button type="button" class="btn-secundario" onclick="document.getElementById('rel-resumo-input').click()">+ Adicionar Imagens</button>
       <input type="file" id="rel-resumo-input" accept="image/png,image/jpeg" multiple style="display:none" onchange="handleImagensResumoRelatorio('${escapeAttr(rel.id)}', this)">
     </div>
     <div id="rel-resumo-imagens">${renderizarGaleriaResumoRelatorio(rel)}</div>
     <div class="modal-acoes">
-      <button type="button" class="btn-secundario" onclick="editarRelatorio('${escapeAttr(rel.id)}')">Editar Relatório</button>
+      <button type="button" class="btn-secundario" onclick="editarRelatorio('${escapeAttr(rel.id)}')">Editar RelatÃ³rio</button>
       <button type="button" class="btn-primario" onclick="fecharResumoRelatorio()">Fechar</button>
     </div>
   </div>`;
@@ -673,7 +766,7 @@ async function handleImagensResumoRelatorio(id, input) {
       rel.imagens = normalizarImagensRelatorio(rel);
       rel.imagens.push({ url: uploaded.url, path: uploaded.path, nome: file.name, tipo: file.type, tamanho: file.size });
     } catch (err) {
-      console.error('Erro ao enviar imagem do relatório:', err);
+      console.error('Erro ao enviar imagem do relatÃ³rio:', err);
       mostrarToast('Erro ao enviar uma imagem.', 'erro');
     }
   }
@@ -694,7 +787,7 @@ async function removerImagemResumoRelatorio(id, index) {
     abrirResumoRelatorio(id);
     mostrarToast('Imagem removida.', '');
   } catch (err) {
-    console.error('Erro ao remover imagem do relatório:', err);
+    console.error('Erro ao remover imagem do relatÃ³rio:', err);
     mostrarToast('Erro ao remover imagem.', 'erro');
   }
 }
@@ -710,11 +803,11 @@ function aplicarFiltrosRelatorio() {
   lista.sort((a, b) => (b.data || '').localeCompare(a.data || ''));
   const cont = document.getElementById('rel-lista');
   if (!cont) return;
-  if (!lista.length) { cont.innerHTML = '<div class="hist-vazio"><div class="icone"></div><p>Nenhum relatório encontrado.</p></div>'; return; }
+  if (!lista.length) { cont.innerHTML = '<div class="hist-vazio"><div class="icone"></div><p>Nenhum relatÃ³rio encontrado.</p></div>'; return; }
   cont.innerHTML = lista.map(rel => {
     const imgs = normalizarImagensRelatorio(rel);
     return `<div class="rel-card" role="button" tabindex="0" onclick="abrirResumoRelatorio('${escapeAttr(rel.id)}')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();abrirResumoRelatorio('${escapeAttr(rel.id)}')}">
-    <div class="rel-card-header"><div class="rel-card-info"><div class="rel-card-obra">${escapeHtml(rel.obra || '')}</div><div class="rel-card-meta">${escapeHtml(formatarData(rel.data))}</div><div class="rel-card-meta">${escapeHtml(rel.funcionariosNomes || rel.funcionarioNome || '-')}</div>${rel.obs ? `<div class="rel-card-obs">${escapeHtml(rel.obs)}</div>` : ''}${imgs.length ? `<div class="rel-card-imagens">${imgs.slice(0, 4).map(img => `<img src="${escapeAttr(img.url || img.src)}" alt="Imagem do relatório">`).join('')}${imgs.length > 4 ? `<span>+${imgs.length - 4}</span>` : ''}</div>` : ''}</div><div class="rel-card-valor"><div class="rel-card-valor-label">Rendimento</div><div class="rel-card-valor-num">${formatarMoeda(rel.rendimento || 0)}</div></div></div>
+    <div class="rel-card-header"><div class="rel-card-info"><div class="rel-card-obra">${escapeHtml(rel.obra || '')}</div><div class="rel-card-meta">${escapeHtml(formatarData(rel.data))}</div><div class="rel-card-meta">${escapeHtml(rel.funcionariosNomes || rel.funcionarioNome || '-')}</div>${rel.obs ? `<div class="rel-card-obs">${escapeHtml(rel.obs)}</div>` : ''}${imgs.length ? `<div class="rel-card-imagens">${imgs.slice(0, 4).map(img => `<img src="${escapeAttr(img.url || img.src)}" alt="Imagem do relatÃ³rio">`).join('')}${imgs.length > 4 ? `<span>+${imgs.length - 4}</span>` : ''}</div>` : ''}</div><div class="rel-card-valor"><div class="rel-card-valor-label">Rendimento</div><div class="rel-card-valor-num">${formatarMoeda(rel.rendimento || 0)}</div></div></div>
     <div class="rel-card-acoes"><button class="btn-mini editar" onclick="event.stopPropagation();editarRelatorio('${escapeAttr(rel.id)}')">Editar</button><button class="btn-mini excluir" onclick="event.stopPropagation();confirmarExcluirRelatorio('${escapeAttr(rel.id)}')">Excluir</button></div>
   </div>`;
   }).join('');
@@ -732,7 +825,7 @@ function abrirModalRelatorio(id = null) {
   document.getElementById('rel-obs').value = '';
   document.getElementById('rel-funcionario').value = '';
   renderizarImagensRelatorioModal();
-  document.getElementById('modal-rel-titulo').textContent = id ? 'Editar Relatório' : 'Novo Relatório de Obra';
+  document.getElementById('modal-rel-titulo').textContent = id ? 'Editar RelatÃ³rio' : 'Novo RelatÃ³rio de Obra';
   const selObra = document.getElementById('rel-obra-select');
   if (selObra) selObra.value = '';
   if (id) {
@@ -766,7 +859,7 @@ function encontrarObraPorId(obraOuId) {
 
 function abrirAgendamentoParaObra(obraOuId, data = '') {
   const obra = encontrarObraPorId(obraOuId);
-  if (!obra) { mostrarToast('Obra não encontrada.', 'erro'); return; }
+  if (!obra) { mostrarToast('Obra nÃ£o encontrada.', 'erro'); return; }
   abrirModalAgendamento();
   agendamentoObraContextId = obra.id || '';
   document.getElementById('agend-cliente').value = obra.nome || obra.construtora || '';
@@ -777,7 +870,7 @@ function abrirAgendamentoParaObra(obraOuId, data = '') {
 
 function abrirRelatorioParaObra(obraOuId, data = '') {
   const obra = encontrarObraPorId(obraOuId);
-  if (!obra) { mostrarToast('Obra não encontrada.', 'erro'); return; }
+  if (!obra) { mostrarToast('Obra nÃ£o encontrada.', 'erro'); return; }
   abrirModalRelatorio();
   const selObra = document.getElementById('rel-obra-select');
   if (selObra) selObra.value = obra.id || '';
@@ -785,6 +878,18 @@ function abrirRelatorioParaObra(obraOuId, data = '') {
   document.getElementById('rel-data').value = data || obra.data || new Date().toISOString().slice(0, 10);
   sincronizarObraTexto();
   popularCheckboxFuncionariosRel();
+}
+
+function abrirEtapaParaObra(obraOuId, data = '') {
+  const obra = encontrarObraPorId(obraOuId);
+  if (!obra) { mostrarToast('Obra não encontrada.', 'erro'); return; }
+  abrirModalAgendamento(null, 'etapa_obra');
+  agendamentoObraContextId = obra.id || '';
+  document.getElementById('agend-cliente').value = '';
+  document.getElementById('agend-data').value = data || obra.data || new Date().toISOString().slice(0, 10);
+  document.getElementById('agend-local').value = obra.local || '';
+  document.getElementById('agend-obs').value = obra.construtora ? `Obra: ${obra.nome} - ${obra.construtora}` : `Obra: ${obra.nome}`;
+  aplicarModoAgendamento('etapa_obra');
 }
 
 async function salvarRelatorio() {
@@ -807,30 +912,30 @@ async function salvarRelatorio() {
       await DB.salvarRelatorio(dados, idEdit);
       const idx = relatorios.findIndex(r => r.id === idEdit);
       if (idx >= 0) relatorios[idx] = { ...relatorios[idx], ...dados };
-      mostrarToast('Relatório atualizado!', 'sucesso');
+      mostrarToast('RelatÃ³rio atualizado!', 'sucesso');
     } else {
       const newId = await DB.salvarRelatorio(dados);
       relatorios.push({ id: newId, ...dados, criadoEm: new Date().toISOString() });
-      mostrarToast('Relatório salvo!', 'sucesso');
+      mostrarToast('RelatÃ³rio salvo!', 'sucesso');
     }
     fecharModalRelatorio();
     renderizarRelatorios();
     renderizarCalendario();
     window.renderizarObras?.();
     window.renderizarFluxoFinanceiro?.();
-  } catch (err) { console.error(err); mostrarToast('Erro ao salvar relatório.', 'erro'); }
+  } catch (err) { console.error(err); mostrarToast('Erro ao salvar relatÃ³rio.', 'erro'); }
 }
 
 function confirmarExcluirRelatorio(id) {
   const rel = relatorios.find(r => r.id === id);
-  abrirModal('Excluir Relatório', `Excluir relatório "${rel?.obra || ''}"?`, async () => {
+  abrirModal('Excluir RelatÃ³rio', `Excluir relatÃ³rio "${rel?.obra || ''}"?`, async () => {
     try {
       await DB.excluirRelatorio(id);
       relatorios = relatorios.filter(r => r.id !== id);
       renderizarRelatorios();
       renderizarCalendario();
-      mostrarToast('Relatório excluído.', '');
-    } catch { mostrarToast('Erro ao excluir relatório.', 'erro'); }
+      mostrarToast('RelatÃ³rio excluÃ­do.', '');
+    } catch { mostrarToast('Erro ao excluir relatÃ³rio.', 'erro'); }
   });
 }
 
@@ -841,8 +946,8 @@ async function excluirRelatorio(id) {
     fecharDetalheDia();
     renderizarCalendario();
     renderizarRelatorios();
-    mostrarToast('Relatório removido.', '');
-  } catch { mostrarToast('Erro ao excluir relatório.', 'erro'); }
+    mostrarToast('RelatÃ³rio removido.', '');
+  } catch { mostrarToast('Erro ao excluir relatÃ³rio.', 'erro'); }
 }
 
 function limparFiltrosRel() {
@@ -862,10 +967,10 @@ Object.assign(window, {
   renderizarCalendario, calAnterior, calProximo, calHoje,
   iniciarArrasteAgendamento, finalizarArrasteAgendamento, moverAgendamentoParaDia,
   abrirDiaDetalhe, fecharDetalheDia, getEventosDia,
-  abrirModalAgendamento, fecharModalAgendamento, editarAgendamento, salvarAgendamento, excluirAgendamento,
+  abrirModalAgendamento, fecharModalAgendamento, editarAgendamento, salvarAgendamento, excluirAgendamento, abrirEtapaParaObra,
   abrirAgendamentoParaObra,
   renderizarFuncionarios, abrirModalFuncionario, fecharModalFuncionario, editarFuncionario, salvarFuncionario, confirmarExcluirFuncionario,
-  renderizarRelatorios, aplicarFiltrosRelatorio, popularSelectFuncionariosRel, popularSelectObrasRel, popularCheckboxFuncionariosRel, toggleFuncRel,
+  renderizarRelatorios, aplicarFiltrosRelatorio, popularSelectFuncionariosRel, popularSelectObrasRel, popularCheckboxFuncionariosRel, toggleFuncRel, toggleFuncEtapa,
   abrirModalRelatorio, fecharModalRelatorio, editarRelatorio, abrirRelatorioParaObra, salvarRelatorio, confirmarExcluirRelatorio, excluirRelatorio, limparFiltrosRel,
   handleImagensRelatorio, removerImagemRelatorio,
   abrirResumoRelatorio, fecharResumoRelatorio, handleImagensResumoRelatorio, removerImagemResumoRelatorio
