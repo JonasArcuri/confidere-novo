@@ -342,6 +342,11 @@
   z-index: 1000;
 }
 
+.config-menu,
+.config-menu * {
+  box-sizing: border-box;
+}
+
 .config-menu-wrap:hover .config-menu,
 .config-menu-wrap:focus-within .config-menu {
   display: block;
@@ -614,5 +619,121 @@
 
   .nav-usuario-email {
     display: none;
+  }
+}
+
+@media (max-width: 768px) {
+  .nav-usuario {
+    width: 100%;
+    margin-left: 0;
+    padding: 8px 0 12px;
+    justify-content: center;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .nav-logo-direita {
+    max-width: min(230px, calc(100vw - 150px));
+    justify-content: center;
+  }
+
+  .nav-logo-direita .nav-brand {
+    justify-content: center;
+  }
+
+  .nav-logo-direita .logo-nav {
+    max-width: 190px;
+    text-align: center;
+  }
+
+  .config-menu-wrap {
+    position: static;
+  }
+
+  .btn-config {
+    width: 42px;
+    height: 42px;
+    border-radius: 10px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 18px;
+  }
+
+  .config-menu {
+    position: fixed;
+    top: 136px;
+    left: 12px;
+    right: 12px;
+    width: auto;
+    max-width: calc(100vw - 24px);
+    max-height: calc(100dvh - 148px);
+    overflow-y: auto;
+    padding: 16px;
+    border-radius: 12px;
+    z-index: 5000;
+  }
+}
+
+@media (max-width: 520px) {
+  .nav-usuario {
+    gap: 8px;
+  }
+
+  .nav-logo-direita {
+    max-width: min(210px, calc(100vw - 142px));
+  }
+
+  .nav-logo-direita .logo-nav {
+    max-width: 175px;
+    font-size: 1rem;
+    letter-spacing: 1.2px;
+  }
+
+  .nav-logo-direita .nav-marca-sub {
+    text-align: center;
+  }
+
+  .config-menu {
+    top: 132px;
+    left: 10px;
+    right: 10px;
+    max-width: calc(100vw - 20px);
+    max-height: calc(100dvh - 144px);
+  }
+
+  .config-menu-titulo {
+    font-size: 1.55rem;
+    line-height: 1;
+  }
+
+  .config-contato-row {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+
+  .config-whatsapp {
+    min-height: 42px;
+    justify-content: center;
+  }
+
+  .btn-logout {
+    min-height: 42px;
+    padding: 6px 13px;
+  }
+}
+
+@media (max-width: 380px) {
+  .nav-logo-direita {
+    max-width: 160px;
+  }
+
+  .nav-logo-direita .logo-nav {
+    max-width: 145px;
+    font-size: 0.9rem;
+  }
+
+  .config-contato-row {
+    grid-template-columns: 1fr;
   }
 }
