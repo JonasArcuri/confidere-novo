@@ -711,13 +711,27 @@ function gerarRelatorioFinanceiroPDF() {
       ['Insumos', atual.totalInsumos, comparar.totalInsumos],
       ['Funcion\u00E1rios', atual.totalFuncionarios, comparar.totalFuncionarios]
     ];
+
+    y = garantirEspacoPdf(doc, y, 12 + rows.length * 7 + 6);
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(8);
+    doc.setFillColor(26, 58, 92);
+    doc.setTextColor(255, 255, 255);
+    doc.rect(14, y - 2, 182, 8, 'F');
+    textoPdf(doc, 'Indicador', 16, y + 3);
+    textoPdf(doc, nomeMes(mes), 88, y + 3, { align: 'right' });
+    textoPdf(doc, nomeMes(comp), 134, y + 3, { align: 'right' });
+    textoPdf(doc, 'Variação', 194, y + 3, { align: 'right' });
+    y += 12;
+
     doc.setFont('helvetica', 'normal');
     doc.setFontSize(9);
+    doc.setTextColor(26, 58, 92);
     rows.forEach(([label, a, b]) => {
       y = garantirEspacoPdf(doc, y, 7);
       textoPdf(doc, label, 16, y);
-      textoPdf(doc, moeda.format(a), 74, y);
-      textoPdf(doc, moeda.format(b), 120, y);
+      textoPdf(doc, moeda.format(a), 88, y, { align: 'right' });
+      textoPdf(doc, moeda.format(b), 134, y, { align: 'right' });
       textoPdf(doc, `${moeda.format(a - b)} (${pctDiff(a, b)})`, 194, y, { align: 'right' });
       y += 7;
     });
