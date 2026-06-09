@@ -613,6 +613,20 @@ table tbody td select:focus {
   gap: 8px;
 }
 
+.desconto-campo {
+  display: inline-flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.desconto-campo > span {
+  color: var(--cinza-texto);
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
 .desconto-input-wrap input {
   width: 90px;
   padding: 9px 12px;
@@ -1521,6 +1535,12 @@ table tbody td select:focus {
   .desconto-form {
     flex-direction: column;
     align-items: stretch;
+  }
+
+  .desconto-campo,
+  .desconto-input-wrap,
+  .desconto-input-wrap input {
+    width: 100%;
   }
 
   .desconto-form .btn-aplicar-desc,

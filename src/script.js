@@ -4,7 +4,7 @@ import { escapeHtml, escapeAttr } from './utils.js';
 
 let linhaId = 0;
 let orcamentoEditandoId = null;
-let descontoAplicado = 0;
+let descontoAplicado = { material: 0, maoObra: 0 };
 let logoBase64 = null;
 let pagamentoSelecionado = null; // { forma, parcelas, entrada }
 let tipoDocumentoAtual = 'orcamento'; // 'orcamento' | 'cobranca'
@@ -1399,7 +1399,7 @@ function calcularTotais() {
     document.getElementById('disp-subtotal-material').textContent = formatarMoeda(subtotalMaterial);
     document.getElementById('disp-subtotal-mao').textContent = formatarMoeda(subtotalMaoObra);
     document.getElementById('disp-total').textContent = formatarMoeda(totalGeral);
-    limparDescontoCalculo();
+    atualizarDescontoCalculo({ subtotalMaterial, subtotalMaoObra, totalGeral });
     const opcoes = coletarTotaisOpcoesDaTabela();
     renderizarTotaisOpcoes(opcoes);
     return { subtotalMaterial, subtotalMaoObra, totalGeral, opcoes };
@@ -1408,36 +1408,105 @@ function calcularTotais() {
 // ===== DESCONTO =====
 function toggleDesconto() { document.getElementById('form-desconto').classList.toggle('visivel'); }
 
+function normalizarDesconto(valor = {}) {
+    if (typeof valor === 'number') {
+        const pct = Number.isFinite(valor) ? Math.max(0, Math.min(99.99, valor)) : 0;
+        return { material: pct, maoObra: pct };
+    }
+    const material = parseFloat(valor.material ?? valor.descontoMaterial ?? valor.mat ?? 0) || 0;
+    const maoObra = parseFloat(valor.maoObra ?? valor.descontoMaoObra ?? valor.mao ?? 0) || 0;
+    return {
+        material: Math.max(0, Math.min(99.99, material)),
+        maoObra: Math.max(0, Math.min(99.99, maoObra))
+    };
+}
+
+function normalizarDescontoOrcamento(orc = {}) {
+    if (orc.desconto && typeof orc.desconto === 'object') return normalizarDesconto(orc.desconto);
+    if (orc.descontoMaterial || orc.descontoMaoObra) {
+        return normalizarDesconto({ material: orc.descontoMaterial, maoObra: orc.descontoMaoObra });
+    }
+    return normalizarDesconto(Number(orc.desconto) || 0);
+}
+
+function temDesconto(desc = descontoAplicado) {
+    const d = normalizarDesconto(desc);
+    return d.material > 0 || d.maoObra > 0;
+}
+
+function calcularDescontoValores(subtotalMaterial, subtotalMaoObra, desc = descontoAplicado) {
+    const d = normalizarDesconto(desc);
+    const descontoMaterialValor = subtotalMaterial * d.material / 100;
+    const descontoMaoValor = subtotalMaoObra * d.maoObra / 100;
+    const totalDesconto = descontoMaterialValor + descontoMaoValor;
+    return {
+        ...d,
+        descontoMaterialValor,
+        descontoMaoValor,
+        totalDesconto,
+        totalOriginal: subtotalMaterial + subtotalMaoObra,
+        totalComDesconto: subtotalMaterial + subtotalMaoObra - totalDesconto
+    };
+}
+
 function aplicarDesconto() {
-    const pct = parseFloat(document.getElementById('input-desconto').value);
-    if (isNaN(pct) || pct <= 0 || pct >= 100) { mostrarToast('Informe um percentual entre 0 e 100.', 'erro'); return; }
-    const { totalGeral } = calcularTotais();
-    descontoAplicado = pct;
-    const descValor = totalGeral * pct / 100;
-    const comDesc = totalGeral - descValor;
+    const pctMaterial = parseFloat(document.getElementById('input-desconto-material').value) || 0;
+    const pctMao = parseFloat(document.getElementById('input-desconto-mao').value) || 0;
+    if (pctMaterial < 0 || pctMaterial >= 100 || pctMao < 0 || pctMao >= 100) {
+        mostrarToast('Informe percentuais entre 0 e 100.', 'erro');
+        return;
+    }
+    if (pctMaterial <= 0 && pctMao <= 0) {
+        mostrarToast('Informe desconto para material ou mão de obra.', 'erro');
+        return;
+    }
+    descontoAplicado = normalizarDesconto({ material: pctMaterial, maoObra: pctMao });
+    const totais = calcularTotais();
+    renderizarDescontoCalculo(totais);
+}
+
+function renderizarDescontoCalculo({ subtotalMaterial, subtotalMaoObra }) {
+    const d = calcularDescontoValores(subtotalMaterial, subtotalMaoObra);
+    const partes = [
+        d.material > 0 ? `Material ${d.material}%` : '',
+        d.maoObra > 0 ? `Mão de obra ${d.maoObra}%` : ''
+    ].filter(Boolean).join(' • ');
     document.getElementById('desc-cartoes').innerHTML = `
     <div class="desc-cartao" style="background:#2563a8">
-      <span class="dc-label">Total com ${pct}% desconto</span>
-      <span class="dc-valor">${formatarMoeda(comDesc)}</span>
-      <span class="dc-economia">Economia de ${formatarMoeda(descValor)}</span>
+      <span class="dc-label">Total com desconto</span>
+      <span class="dc-valor">${formatarMoeda(d.totalComDesconto)}</span>
+      <span class="dc-economia">${escapeHtml(partes)} • Economia de ${formatarMoeda(d.totalDesconto)}</span>
     </div>
     <div class="desc-cartao" style="background:#e05c20">
       <span class="dc-label">Valor do desconto</span>
-      <span class="dc-valor">${formatarMoeda(descValor)}</span>
-      <span class="dc-economia">Sobre ${formatarMoeda(totalGeral)}</span>
+      <span class="dc-valor">${formatarMoeda(d.totalDesconto)}</span>
+      <span class="dc-economia">Material: ${formatarMoeda(d.descontoMaterialValor)} • M.O.: ${formatarMoeda(d.descontoMaoValor)}</span>
     </div>`;
     document.getElementById('resultados-desconto').classList.add('visivel');
 }
 
+function atualizarDescontoCalculo(totais) {
+    if (temDesconto()) {
+        renderizarDescontoCalculo(totais);
+    } else {
+        ocultarDescontoCalculo();
+    }
+}
+
 function limparDesconto() {
-    descontoAplicado = 0;
-    limparDescontoCalculo();
+    descontoAplicado = { material: 0, maoObra: 0 };
+    ocultarDescontoCalculo();
     document.getElementById('form-desconto').classList.remove('visivel');
-    document.getElementById('input-desconto').value = '';
+    document.getElementById('input-desconto-material').value = '';
+    document.getElementById('input-desconto-mao').value = '';
 }
 
 function limparDescontoCalculo() {
-    descontoAplicado = 0;
+    descontoAplicado = { material: 0, maoObra: 0 };
+    ocultarDescontoCalculo();
+}
+
+function ocultarDescontoCalculo() {
     document.getElementById('resultados-desconto').classList.remove('visivel');
 }
 
@@ -1754,7 +1823,11 @@ function coletarDados() {
         }
         if (linha) linhas.push(linha);
     });
-    const subtotal = linhas.reduce((a, l) => a + (l.tipo === 'item' ? (Number(l.total) || 0) : 0), 0);
+    const subtotalMaterial = linhas.reduce((a, l) => a + (l.tipo === 'item' ? (Number(l.subtotalMaterial) || 0) : 0), 0);
+    const subtotalMaoObra = linhas.reduce((a, l) => a + (l.tipo === 'item' ? (Number(l.subtotalMao) || 0) : 0), 0);
+    const subtotal = subtotalMaterial + subtotalMaoObra;
+    const descontoNormalizado = normalizarDesconto(descontoAplicado);
+    const totaisComDesconto = calcularDescontoValores(subtotalMaterial, subtotalMaoObra, descontoNormalizado);
     const obsTextoLivre = document.getElementById('campo-obs').value;
     const obsOpcoes = getObservacoesMarcadas();
     const totaisOpcoes = coletarTotaisOpcoesDaTabela();
@@ -1772,9 +1845,14 @@ function coletarDados() {
         obsTextoLivre,
         obsOpcoes,
         totaisOpcoes,
-        linhas, subtotal,
-        desconto: descontoAplicado,
-        totalComDesconto: descontoAplicado ? subtotal * (1 - descontoAplicado / 100) : subtotal,
+        linhas,
+        subtotal,
+        subtotalMaterial,
+        subtotalMaoObra,
+        desconto: descontoNormalizado,
+        descontoMaterial: descontoNormalizado.material,
+        descontoMaoObra: descontoNormalizado.maoObra,
+        totalComDesconto: temDesconto(descontoNormalizado) ? totaisComDesconto.totalComDesconto : subtotal,
         pagamento: pagamentoSelecionado
     };
 }
@@ -2040,8 +2118,11 @@ async function editarOrcamento(id) {
             adicionarLinha(l.desc, l.area, l.materialArr || (l.material ? [l.material] : []), l.custoMaterial, l.custoMao, l.total, l.areaLabel || '');
         }
     }
-    descontoAplicado = orc.desconto || 0;
-    limparDescontoCalculo();
+    descontoAplicado = normalizarDescontoOrcamento(orc);
+    const inputDescMaterial = document.getElementById('input-desconto-material');
+    const inputDescMao = document.getElementById('input-desconto-mao');
+    if (inputDescMaterial) inputDescMaterial.value = descontoAplicado.material || '';
+    if (inputDescMao) inputDescMao.value = descontoAplicado.maoObra || '';
     restaurarPagamento(orc.pagamento);
     calcularTotais();
     document.getElementById('display-numero').textContent = '#' + String(orc.numero).padStart(3, '0');
@@ -2289,27 +2370,39 @@ function calcularTotalHistorico(o) {
     const totalSalvo = Number(o.totalComDesconto);
     if (Number.isFinite(totalSalvo) && totalSalvo > 0) return totalSalvo;
 
+    const desconto = normalizarDescontoOrcamento(o);
+    const subtotalMaterialSalvo = Number(o.subtotalMaterial);
+    const subtotalMaoSalvo = Number(o.subtotalMaoObra);
+    if (Number.isFinite(subtotalMaterialSalvo) || Number.isFinite(subtotalMaoSalvo)) {
+        const total = calcularDescontoValores(subtotalMaterialSalvo || 0, subtotalMaoSalvo || 0, desconto);
+        return temDesconto(desconto) ? total.totalComDesconto : total.totalOriginal;
+    }
+
     const subtotalSalvo = Number(o.subtotal);
     if (Number.isFinite(subtotalSalvo) && subtotalSalvo > 0) {
-        return o.desconto ? subtotalSalvo * (1 - Number(o.desconto) / 100) : subtotalSalvo;
+        if (typeof o.desconto === 'number') return o.desconto ? subtotalSalvo * (1 - Number(o.desconto) / 100) : subtotalSalvo;
+        return subtotalSalvo;
     }
 
     const subtotalLinhas = (o.linhas || []).reduce((acc, linha) => {
         if (!linha || linha.tipo === 'cabecalho' || linha.tipo === 'imagem' || linha.tipo === 'opcao') return acc;
-        const totalLinha = Number(linha.total);
-        if (Number.isFinite(totalLinha)) return acc + totalLinha;
         const subtotalMaterial = Number(linha.subtotalMaterial);
         const subtotalMao = Number(linha.subtotalMao);
         if (Number.isFinite(subtotalMaterial) || Number.isFinite(subtotalMao)) {
-            return acc + (subtotalMaterial || 0) + (subtotalMao || 0);
+            acc.material += subtotalMaterial || 0;
+            acc.maoObra += subtotalMao || 0;
+            return acc;
         }
         const area = Number(linha.area) || 0;
         const custoMaterial = Number(linha.custoMaterial) || 0;
         const custoMao = Number(linha.custoMao) || 0;
-        return acc + area * (custoMaterial + custoMao);
-    }, 0);
+        acc.material += area * custoMaterial;
+        acc.maoObra += area * custoMao;
+        return acc;
+    }, { material: 0, maoObra: 0 });
 
-    return o.desconto ? subtotalLinhas * (1 - Number(o.desconto) / 100) : subtotalLinhas;
+    const total = calcularDescontoValores(subtotalLinhas.material, subtotalLinhas.maoObra, desconto);
+    return temDesconto(desconto) ? total.totalComDesconto : total.totalOriginal;
 }
 
 // ===== UTILITÁRIOS =====
@@ -2659,7 +2752,9 @@ function gerarPDF(baixar = true) {
     doc.setDrawColor(...C_AZUL_ESC); doc.setLineWidth(0.5); doc.line(ML, y, ML + CW, y); y += 1;
     const totais = calcularTotais();
     const totalGeral = totais.subtotalMaterial + totais.subtotalMaoObra;
-    const totalComDesconto = dados.desconto ? totalGeral * (1 - dados.desconto / 100) : totalGeral;
+    const descontoPdf = normalizarDescontoOrcamento(dados);
+    const totaisDescontoPdf = calcularDescontoValores(totais.subtotalMaterial, totais.subtotalMaoObra, descontoPdf);
+    const totalComDesconto = temDesconto(descontoPdf) ? totaisDescontoPdf.totalComDesconto : totalGeral;
     [
         ['Subtotal Material', totais.subtotalMaterial],
         ['Subtotal Mão de Obra', totais.subtotalMaoObra],
@@ -2670,11 +2765,17 @@ function gerarPDF(baixar = true) {
         doc.setTextColor(...C_TEXTO); doc.text(formatarMoeda(val), ML + CW - 2, y + 6, { align: 'right' }); y += 6;
     });
     y += 2;
-    if (dados.desconto) {
+    if (descontoPdf.material > 0) {
         if (y + 7 > PH - 27) { doc.addPage(); y = 14; }
         doc.setFont('helvetica', 'normal'); doc.setFontSize(9); doc.setTextColor(...C_LARANJA);
-        doc.text(`Desconto (${dados.desconto}%)`, ML + CW - COL_TMAO - 30, y + 6, { align: 'right' });
-        doc.text(`- ${formatarMoeda(totalGeral * dados.desconto / 100)}`, ML + CW - 2, y + 6, { align: 'right' }); y += 7;
+        doc.text(`Desconto Material (${descontoPdf.material}%)`, ML + CW - COL_TMAO - 30, y + 6, { align: 'right' });
+        doc.text(`- ${formatarMoeda(totaisDescontoPdf.descontoMaterialValor)}`, ML + CW - 2, y + 6, { align: 'right' }); y += 7;
+    }
+    if (descontoPdf.maoObra > 0) {
+        if (y + 7 > PH - 27) { doc.addPage(); y = 14; }
+        doc.setFont('helvetica', 'normal'); doc.setFontSize(9); doc.setTextColor(...C_LARANJA);
+        doc.text(`Desconto Mão de Obra (${descontoPdf.maoObra}%)`, ML + CW - COL_TMAO - 30, y + 6, { align: 'right' });
+        doc.text(`- ${formatarMoeda(totaisDescontoPdf.descontoMaoValor)}`, ML + CW - 2, y + 6, { align: 'right' }); y += 7;
     }
     if (y + 10 > PH - 27) { doc.addPage(); y = 14; }
     doc.setFillColor(...C_AZUL_ESC); doc.rect(ML, y, CW, 12, 'F');

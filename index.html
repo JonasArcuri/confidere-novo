@@ -8,7 +8,7 @@
   <link
     href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap"
     rel="stylesheet">
-  <link rel="stylesheet" href="src/style.css?v=20260605-inicio-kpis">
+  <link rel="stylesheet" href="src/style.css?v=20260609-desconto-individual">
   <link rel="stylesheet" href="src/gestao.css?v=20260605-etapas-obra">
   <link rel="stylesheet" href="src/auth.css?v=20260605-config-mobile">
   <link rel="stylesheet" href="src/insumos_obras.css?v=20260605-etapas-obra">
@@ -344,10 +344,20 @@
               <span>%</span> Aplicar Desconto
             </button>
             <div class="desconto-form" id="form-desconto">
-              <div class="desconto-input-wrap">
-                <input type="number" id="input-desconto" min="0" max="100" step="0.5" placeholder="0">
-                <span class="pct">%</span>
-              </div>
+              <label class="desconto-campo">
+                <span>Material</span>
+                <div class="desconto-input-wrap">
+                  <input type="number" id="input-desconto-material" min="0" max="100" step="0.5" placeholder="0">
+                  <span class="pct">%</span>
+                </div>
+              </label>
+              <label class="desconto-campo">
+                <span>Mão de Obra</span>
+                <div class="desconto-input-wrap">
+                  <input type="number" id="input-desconto-mao" min="0" max="100" step="0.5" placeholder="0">
+                  <span class="pct">%</span>
+                </div>
+              </label>
               <button class="btn-aplicar-desc" onclick="aplicarDesconto()">Calcular Desconto</button>
               <button class="btn-mini ver" onclick="limparDesconto()">Limpar</button>
             </div>
@@ -1202,7 +1212,7 @@
       }, 7000);
     });
   </script>
-  <script type="module" src="src/script.js?v=20260605-inicio-kpis"></script>
+  <script type="module" src="src/script.js?v=20260609-desconto-individual"></script>
   <script type="module" src="src/gestao.js?v=20260605-textos-utf8"></script>
   <script type="module" src="src/funcionario_status.js?v=20260602-login-logo-transparent"></script>
   <script type="module" src="src/insumos.js?v=20260602-login-logo-transparent"></script>
