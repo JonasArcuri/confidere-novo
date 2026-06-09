@@ -8,7 +8,7 @@
   <link
     href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap"
     rel="stylesheet">
-  <link rel="stylesheet" href="src/style.css?v=20260609-desconto-individual">
+  <link rel="stylesheet" href="src/style.css?v=20260609-tabela-desconto">
   <link rel="stylesheet" href="src/gestao.css?v=20260605-etapas-obra">
   <link rel="stylesheet" href="src/auth.css?v=20260605-config-mobile">
   <link rel="stylesheet" href="src/insumos_obras.css?v=20260605-etapas-obra">
@@ -343,23 +343,64 @@
             <button class="btn-desconto" onclick="toggleDesconto()">
               <span>%</span> Aplicar Desconto
             </button>
-            <div class="desconto-form" id="form-desconto">
-              <label class="desconto-campo">
-                <span>Material</span>
-                <div class="desconto-input-wrap">
-                  <input type="number" id="input-desconto-material" min="0" max="100" step="0.5" placeholder="0">
-                  <span class="pct">%</span>
-                </div>
-              </label>
-              <label class="desconto-campo">
-                <span>Mão de Obra</span>
-                <div class="desconto-input-wrap">
-                  <input type="number" id="input-desconto-mao" min="0" max="100" step="0.5" placeholder="0">
-                  <span class="pct">%</span>
-                </div>
-              </label>
-              <button class="btn-aplicar-desc" onclick="aplicarDesconto()">Calcular Desconto</button>
-              <button class="btn-mini ver" onclick="limparDesconto()">Limpar</button>
+            <div class="desconto-form desconto-form-tabela" id="form-desconto">
+              <div class="desconto-tabela-wrap">
+                <table class="desconto-tabela">
+                  <thead>
+                    <tr>
+                      <th>Item</th>
+                      <th>Valor atual</th>
+                      <th>Valor desejado</th>
+                      <th>Desconto em R$</th>
+                      <th>Desconto %</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr>
+                      <td>Subtotal Material</td>
+                      <td id="desc-atual-material">R$ 0,00</td>
+                      <td>
+                        <div class="desconto-moeda-input">
+                          <span>R$</span>
+                          <input type="number" id="input-desconto-material-valor" min="0" step="0.01" placeholder="0,00"
+                            oninput="atualizarDescontoPorValor('material')">
+                        </div>
+                      </td>
+                      <td id="desc-valor-material">R$ 0,00</td>
+                      <td>
+                        <div class="desconto-percent-input">
+                          <input type="number" id="input-desconto-material" min="0" max="99.99" step="0.01" placeholder="0"
+                            oninput="atualizarDescontoPorPercentual('material')">
+                          <span>%</span>
+                        </div>
+                      </td>
+                    </tr>
+                    <tr>
+                      <td>Subtotal Mão de Obra</td>
+                      <td id="desc-atual-mao">R$ 0,00</td>
+                      <td>
+                        <div class="desconto-moeda-input">
+                          <span>R$</span>
+                          <input type="number" id="input-desconto-mao-valor" min="0" step="0.01" placeholder="0,00"
+                            oninput="atualizarDescontoPorValor('maoObra')">
+                        </div>
+                      </td>
+                      <td id="desc-valor-mao">R$ 0,00</td>
+                      <td>
+                        <div class="desconto-percent-input">
+                          <input type="number" id="input-desconto-mao" min="0" max="99.99" step="0.01" placeholder="0"
+                            oninput="atualizarDescontoPorPercentual('maoObra')">
+                          <span>%</span>
+                        </div>
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+              <div class="desconto-acoes">
+                <button class="btn-aplicar-desc" onclick="aplicarDesconto()">Calcular Desconto</button>
+                <button class="btn-mini ver" onclick="limparDesconto()">Limpar</button>
+              </div>
             </div>
             <div class="desconto-resultados" id="resultados-desconto">
               <div class="desc-cartoes" id="desc-cartoes"></div>
@@ -1212,7 +1253,7 @@
       }, 7000);
     });
   </script>
-  <script type="module" src="src/script.js?v=20260609-pdf-desconto-liquido"></script>
+  <script type="module" src="src/script.js?v=20260609-pdf-ordem-desconto"></script>
   <script type="module" src="src/gestao.js?v=20260605-textos-utf8"></script>
   <script type="module" src="src/funcionario_status.js?v=20260602-login-logo-transparent"></script>
   <script type="module" src="src/insumos.js?v=20260602-login-logo-transparent"></script>

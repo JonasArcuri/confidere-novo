@@ -607,6 +607,102 @@ table tbody td select:focus {
   display: flex;
 }
 
+.desconto-form-tabela {
+  align-items: stretch;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.desconto-form-tabela.visivel {
+  display: flex;
+}
+
+.desconto-tabela-wrap {
+  width: 100%;
+  overflow-x: auto;
+  border: 1px solid var(--cinza-borda);
+  border-radius: var(--radius);
+  background: #fff;
+}
+
+.desconto-tabela {
+  width: 100%;
+  min-width: 760px;
+  border-collapse: collapse;
+  font-family: 'DM Sans', sans-serif;
+}
+
+.desconto-tabela th {
+  background: var(--azul);
+  color: #fff;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  padding: 12px 14px;
+  text-align: left;
+}
+
+.desconto-tabela td {
+  border-top: 1px solid var(--cinza-borda);
+  color: var(--azul);
+  font-size: 14px;
+  font-weight: 600;
+  padding: 11px 14px;
+  vertical-align: middle;
+}
+
+.desconto-tabela td:nth-child(2),
+.desconto-tabela td:nth-child(4) {
+  font-family: 'DM Mono', monospace;
+  white-space: nowrap;
+}
+
+.desconto-moeda-input,
+.desconto-percent-input {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  max-width: 170px;
+  border: 1.5px solid var(--cinza-borda);
+  border-radius: var(--radius);
+  background: #fff;
+  padding: 0 10px;
+}
+
+.desconto-moeda-input:focus-within,
+.desconto-percent-input:focus-within {
+  border-color: var(--azul-claro);
+  box-shadow: 0 0 0 3px rgba(75, 151, 224, 0.13);
+}
+
+.desconto-moeda-input span,
+.desconto-percent-input span {
+  color: var(--cinza-texto);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.desconto-moeda-input input,
+.desconto-percent-input input {
+  border: 0;
+  outline: 0;
+  min-width: 0;
+  width: 100%;
+  padding: 9px 0;
+  font-family: 'DM Mono', monospace;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--azul);
+}
+
+.desconto-acoes {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
 .desconto-input-wrap {
   display: flex;
   align-items: center;

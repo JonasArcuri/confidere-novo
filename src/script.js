@@ -1399,14 +1399,21 @@ function calcularTotais() {
     document.getElementById('disp-subtotal-material').textContent = formatarMoeda(subtotalMaterial);
     document.getElementById('disp-subtotal-mao').textContent = formatarMoeda(subtotalMaoObra);
     document.getElementById('disp-total').textContent = formatarMoeda(totalGeral);
-    atualizarDescontoCalculo({ subtotalMaterial, subtotalMaoObra, totalGeral });
+    const totaisAtuais = { subtotalMaterial, subtotalMaoObra, totalGeral };
+    const editandoTabelaDesconto = !!document.activeElement?.closest?.('#form-desconto');
+    atualizarTabelaDesconto(totaisAtuais, { preservarInputs: editandoTabelaDesconto });
+    atualizarDescontoCalculo(totaisAtuais);
     const opcoes = coletarTotaisOpcoesDaTabela();
     renderizarTotaisOpcoes(opcoes);
     return { subtotalMaterial, subtotalMaoObra, totalGeral, opcoes };
 }
 
 // ===== DESCONTO =====
-function toggleDesconto() { document.getElementById('form-desconto').classList.toggle('visivel'); }
+function toggleDesconto() {
+    const form = document.getElementById('form-desconto');
+    form.classList.toggle('visivel');
+    if (form.classList.contains('visivel')) atualizarTabelaDesconto(calcularTotais(), { preservarInputs: true });
+}
 
 function normalizarDesconto(valor = {}) {
     if (typeof valor === 'number') {
@@ -1449,9 +1456,108 @@ function calcularDescontoValores(subtotalMaterial, subtotalMaoObra, desc = desco
     };
 }
 
+function getConfigLinhaDesconto(tipo) {
+    return tipo === 'maoObra'
+        ? {
+            subtotal: 'subtotalMaoObra',
+            atual: 'desc-atual-mao',
+            valorDesejado: 'input-desconto-mao-valor',
+            valorDesconto: 'desc-valor-mao',
+            percentual: 'input-desconto-mao'
+        }
+        : {
+            subtotal: 'subtotalMaterial',
+            atual: 'desc-atual-material',
+            valorDesejado: 'input-desconto-material-valor',
+            valorDesconto: 'desc-valor-material',
+            percentual: 'input-desconto-material'
+        };
+}
+
+function normalizarNumeroInput(valor) {
+    if (typeof valor === 'number') return Number.isFinite(valor) ? valor : 0;
+    if (!valor) return 0;
+    const n = Number(String(valor).replace(/[^\d,.-]/g, '').replace(/\.(?=\d{3}(\D|$))/g, '').replace(',', '.'));
+    return Number.isFinite(n) ? n : 0;
+}
+
+function formatarNumeroCampo(valor) {
+    const n = Number(valor) || 0;
+    return n > 0 ? n.toFixed(2) : '';
+}
+
+function atualizarLinhaTabelaDesconto(tipo, subtotal, percentual, { atualizarPercentual = true, atualizarValorDesejado = true } = {}) {
+    const cfg = getConfigLinhaDesconto(tipo);
+    const atualEl = document.getElementById(cfg.atual);
+    const valorDesejadoEl = document.getElementById(cfg.valorDesejado);
+    const valorDescontoEl = document.getElementById(cfg.valorDesconto);
+    const percentualEl = document.getElementById(cfg.percentual);
+    if (!atualEl || !valorDesejadoEl || !valorDescontoEl || !percentualEl) return;
+
+    const pct = Math.max(0, Math.min(99.99, Number(percentual) || 0));
+    const descontoValor = subtotal * pct / 100;
+    const valorDesejado = Math.max(0, subtotal - descontoValor);
+    atualEl.textContent = formatarMoeda(subtotal);
+    valorDescontoEl.textContent = formatarMoeda(descontoValor);
+    if (atualizarPercentual) percentualEl.value = formatarNumeroCampo(pct);
+    if (atualizarValorDesejado) valorDesejadoEl.value = formatarNumeroCampo(valorDesejado);
+}
+
+function atualizarTabelaDesconto(totais = null, opcoes = {}) {
+    const subtotalMaterial = Number(totais?.subtotalMaterial) || 0;
+    const subtotalMaoObra = Number(totais?.subtotalMaoObra) || 0;
+    atualizarLinhaTabelaDesconto('material', subtotalMaterial, descontoAplicado.material, {
+        atualizarPercentual: !opcoes.preservarInputs,
+        atualizarValorDesejado: !opcoes.preservarInputs
+    });
+    atualizarLinhaTabelaDesconto('maoObra', subtotalMaoObra, descontoAplicado.maoObra, {
+        atualizarPercentual: !opcoes.preservarInputs,
+        atualizarValorDesejado: !opcoes.preservarInputs
+    });
+}
+
+function atualizarDescontoPorPercentual(tipo) {
+    const totais = calcularTotais();
+    const cfg = getConfigLinhaDesconto(tipo);
+    const subtotal = Number(totais[cfg.subtotal]) || 0;
+    const percentualEl = document.getElementById(cfg.percentual);
+    const pct = Math.max(0, Math.min(99.99, normalizarNumeroInput(percentualEl?.value)));
+    if (tipo === 'maoObra') descontoAplicado.maoObra = pct;
+    else descontoAplicado.material = pct;
+    atualizarLinhaTabelaDesconto(tipo, subtotal, pct, { atualizarPercentual: false, atualizarValorDesejado: true });
+    if (temDesconto()) renderizarDescontoCalculo(totais);
+    else ocultarDescontoCalculo();
+}
+
+function atualizarDescontoPorValor(tipo) {
+    const totais = calcularTotais();
+    const cfg = getConfigLinhaDesconto(tipo);
+    const subtotal = Number(totais[cfg.subtotal]) || 0;
+    const valorDesejadoEl = document.getElementById(cfg.valorDesejado);
+    const valorDigitado = String(valorDesejadoEl?.value || '').trim();
+    if (!valorDigitado) {
+        if (tipo === 'maoObra') descontoAplicado.maoObra = 0;
+        else descontoAplicado.material = 0;
+        atualizarLinhaTabelaDesconto(tipo, subtotal, 0, { atualizarPercentual: true, atualizarValorDesejado: false });
+        if (temDesconto()) renderizarDescontoCalculo(totais);
+        else ocultarDescontoCalculo();
+        return;
+    }
+    const valorDesejado = Math.max(0, Math.min(subtotal, normalizarNumeroInput(valorDigitado)));
+    if (valorDesejadoEl && normalizarNumeroInput(valorDigitado) !== valorDesejado) {
+        valorDesejadoEl.value = formatarNumeroCampo(valorDesejado);
+    }
+    const pct = subtotal > 0 ? ((subtotal - valorDesejado) / subtotal) * 100 : 0;
+    if (tipo === 'maoObra') descontoAplicado.maoObra = pct;
+    else descontoAplicado.material = pct;
+    atualizarLinhaTabelaDesconto(tipo, subtotal, pct, { atualizarPercentual: true, atualizarValorDesejado: false });
+    if (temDesconto()) renderizarDescontoCalculo(totais);
+    else ocultarDescontoCalculo();
+}
+
 function aplicarDesconto() {
-    const pctMaterial = parseFloat(document.getElementById('input-desconto-material').value) || 0;
-    const pctMao = parseFloat(document.getElementById('input-desconto-mao').value) || 0;
+    const pctMaterial = normalizarNumeroInput(document.getElementById('input-desconto-material').value);
+    const pctMao = normalizarNumeroInput(document.getElementById('input-desconto-mao').value);
     if (pctMaterial < 0 || pctMaterial >= 100 || pctMao < 0 || pctMao >= 100) {
         mostrarToast('Informe percentuais entre 0 e 100.', 'erro');
         return;
@@ -1497,6 +1603,11 @@ function limparDesconto() {
     document.getElementById('form-desconto').classList.remove('visivel');
     document.getElementById('input-desconto-material').value = '';
     document.getElementById('input-desconto-mao').value = '';
+    const inputDescMaterialValor = document.getElementById('input-desconto-material-valor');
+    const inputDescMaoValor = document.getElementById('input-desconto-mao-valor');
+    if (inputDescMaterialValor) inputDescMaterialValor.value = '';
+    if (inputDescMaoValor) inputDescMaoValor.value = '';
+    atualizarTabelaDesconto(calcularTotais());
 }
 
 function limparDescontoCalculo() {
@@ -2756,32 +2867,40 @@ function gerarPDF(baixar = true) {
     const totalComDesconto = temDescontoPdf ? totaisDescontoPdf.totalComDesconto : totalGeral;
     const subtotalMaterialFinal = temDescontoPdf ? totais.subtotalMaterial - totaisDescontoPdf.descontoMaterialValor : totais.subtotalMaterial;
     const subtotalMaoFinal = temDescontoPdf ? totais.subtotalMaoObra - totaisDescontoPdf.descontoMaoValor : totais.subtotalMaoObra;
-    [
-        [temDescontoPdf ? 'Subtotal Material c/ Desconto' : 'Subtotal Material', subtotalMaterialFinal],
-        [temDescontoPdf ? 'Subtotal Mão de Obra c/ Desconto' : 'Subtotal Mão de Obra', subtotalMaoFinal],
-    ].forEach(([label, val]) => {
+
+    const renderLinhaTotalPdf = (label, val, { cor = C_CINZA, negativo = false, bold = false } = {}) => {
         if (y + 7 > PH - 27) { doc.addPage(); y = 14; }
-        doc.setFont('helvetica', 'normal'); doc.setFontSize(9); doc.setTextColor(...C_CINZA);
+        doc.setFont('helvetica', bold ? 'bold' : 'normal');
+        doc.setFontSize(9);
+        doc.setTextColor(...cor);
         doc.text(label, ML + CW - COL_TMAO - 30, y + 6, { align: 'right' });
-        doc.setTextColor(...C_TEXTO); doc.text(formatarMoeda(val), ML + CW - 2, y + 6, { align: 'right' }); y += 6;
-    });
+        doc.setTextColor(...(negativo ? C_LARANJA : C_TEXTO));
+        doc.text(`${negativo ? '- ' : ''}${formatarMoeda(val)}`, ML + CW - 2, y + 6, { align: 'right' });
+        y += 6;
+    };
+
+    renderLinhaTotalPdf('Subtotal Material', totais.subtotalMaterial);
+    renderLinhaTotalPdf('Subtotal Mão de Obra', totais.subtotalMaoObra);
+    renderLinhaTotalPdf('Total geral', totalGeral, { bold: true });
     y += 2;
-    if (descontoPdf.material > 0) {
-        if (y + 7 > PH - 27) { doc.addPage(); y = 14; }
-        doc.setFont('helvetica', 'normal'); doc.setFontSize(9); doc.setTextColor(...C_LARANJA);
-        doc.text(`Desconto Material (${descontoPdf.material}%)`, ML + CW - COL_TMAO - 30, y + 6, { align: 'right' });
-        doc.text(`- ${formatarMoeda(totaisDescontoPdf.descontoMaterialValor)}`, ML + CW - 2, y + 6, { align: 'right' }); y += 7;
+
+    if (temDescontoPdf) {
+        if (descontoPdf.material > 0) {
+            renderLinhaTotalPdf(`Desconto Material (${descontoPdf.material}%)`, totaisDescontoPdf.descontoMaterialValor, { cor: C_LARANJA, negativo: true });
+        }
+        if (descontoPdf.maoObra > 0) {
+            renderLinhaTotalPdf(`Desconto Mão de Obra (${descontoPdf.maoObra}%)`, totaisDescontoPdf.descontoMaoValor, { cor: C_LARANJA, negativo: true });
+        }
+        y += 2;
+        renderLinhaTotalPdf('Subtotal Material com desconto', subtotalMaterialFinal);
+        renderLinhaTotalPdf('Subtotal Mão de Obra com desconto', subtotalMaoFinal);
+        y += 2;
     }
-    if (descontoPdf.maoObra > 0) {
-        if (y + 7 > PH - 27) { doc.addPage(); y = 14; }
-        doc.setFont('helvetica', 'normal'); doc.setFontSize(9); doc.setTextColor(...C_LARANJA);
-        doc.text(`Desconto Mão de Obra (${descontoPdf.maoObra}%)`, ML + CW - COL_TMAO - 30, y + 6, { align: 'right' });
-        doc.text(`- ${formatarMoeda(totaisDescontoPdf.descontoMaoValor)}`, ML + CW - 2, y + 6, { align: 'right' }); y += 7;
-    }
+
     if (y + 10 > PH - 27) { doc.addPage(); y = 14; }
     doc.setFillColor(...C_AZUL_ESC); doc.rect(ML, y, CW, 12, 'F');
     doc.setFont('helvetica', 'bold'); doc.setFontSize(10); doc.setTextColor(...C_BRANCO);
-    doc.text('TOTAL GERAL', ML + CW - COL_TMAO - 30, y + 8, { align: 'right' });
+    doc.text(temDescontoPdf ? 'TOTAL GERAL com DESCONTO' : 'TOTAL GERAL', ML + CW - COL_TMAO - 30, y + 8, { align: 'right' });
     doc.setFontSize(13); doc.setTextColor(...C_AZUL_CLA);
     doc.text(formatarMoeda(totalComDesconto), ML + CW - 2, y + 8.5, { align: 'right' }); y += 16;
 
@@ -3185,7 +3304,7 @@ Object.assign(window, {
     mudarAba, renderizarInicio, navegarKpiInicio, aplicarPermissoesUsuario, renderizarAdminMaster, salvarPermissoesAdmin,
     adicionarLinha, removerLinha, calcularLinha, calcularTotais,
     adicionarCabecalho, removerCabecalho, selecionarCabecalho, filtrarCabecalhoOpcoes, abrirDropdownCabecalho,
-    toggleDesconto, aplicarDesconto, limparDesconto,
+    toggleDesconto, aplicarDesconto, limparDesconto, atualizarDescontoPorPercentual, atualizarDescontoPorValor,
     togglePagamento, aplicarPagamento, limparPagamento, handlePgtoChange, calcularSaldo,
     salvarOrcamento, novoOrcamento, editarOrcamento, confirmarExcluir,
     iniciarOrcamentoParaObra,
