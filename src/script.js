@@ -327,7 +327,9 @@ function renderizarInicio() {
     const obras = window.obras || [];
     const funcionariosAtivos = (window.funcionarios || []).filter(f => f.status !== 'inativo' && f.ativo !== false);
     const mes = mesAtualInicio();
-    const entradasMes = cobrancas.filter(o => (o.data || '').startsWith(mes)).reduce((s, o) => s + totalDocumentoInicio(o), 0);
+    const entradasMes = cobrancas
+        .filter(o => (o.statusPagamento === 'pago' || o.pago === true) && (o.dataPagamento || '').startsWith(mes))
+        .reduce((s, o) => s + totalDocumentoInicio(o), 0);
     const insumosMes = (window.insumos || []).filter(i => (i.data || '').startsWith(mes)).reduce((s, i) => s + parseValorInicio(i.valor), 0);
     const saldoMes = entradasMes - insumosMes;
 
@@ -2363,9 +2365,16 @@ function renderItemHistorico(o) {
     const dataAprovacaoFmt = o.dataAprovacao ? new Date(o.dataAprovacao + 'T12:00:00').toLocaleDateString('pt-BR') : '';
     const tipoDoc = getTipoDocumento(o);
     const isOrcamento = tipoDoc === 'orcamento';
+    const isCobranca = tipoDoc === 'cobranca';
+    const cobrancaPaga = o.statusPagamento === 'pago' || o.pago === true;
+    const dataPagamento = o.dataPagamento || '';
+    const dataPagamentoFmt = dataPagamento ? new Date(dataPagamento + 'T12:00:00').toLocaleDateString('pt-BR') : '';
     const tipoBadge = `<span class="hist-rev-badge" style="background:${tipoDoc === 'cobranca' ? '#2563a8' : '#6b6660'}">${escapeHtml(getLabelTipoDocumento(tipoDoc))}</span>`;
     const aprovacaoBadge = isOrcamento
         ? (aprovado ? `<span class="hist-status-badge aprovado">Aprovado${dataAprovacaoFmt ? ' em ' + escapeHtml(dataAprovacaoFmt) : ''}</span>` : `<span class="hist-status-badge pendente">Pendente</span>`)
+        : '';
+    const pagamentoBadge = isCobranca
+        ? (cobrancaPaga ? `<span class="hist-status-badge aprovado">Pago${dataPagamentoFmt ? ' em ' + escapeHtml(dataPagamentoFmt) : ''}</span>` : `<span class="hist-status-badge pendente">Pendente</span>`)
         : '';
     const revBadge = o.revisao ? `<span class="hist-rev-badge">${escapeHtml(o.revisao)}</span>` : '';
     const nRevBadge = nRevs > 0 ? `<span class="hist-rev-badge" style="background:#6b6660">${nRevs} rev.</span>` : '';
@@ -2376,7 +2385,7 @@ function renderItemHistorico(o) {
     <div class="hist-item ${o.revisao ? 'rev' : ''}">
       <div class="hist-item-header">
         <div class="hist-item-info">
-          <div class="hist-item-num">#${String(o.numero).padStart(3, '0')} ${tipoBadge} ${aprovacaoBadge} ${revBadge} ${nRevBadge}</div>
+          <div class="hist-item-num">#${String(o.numero).padStart(3, '0')} ${tipoBadge} ${aprovacaoBadge} ${pagamentoBadge} ${revBadge} ${nRevBadge}</div>
           <div class="hist-item-cliente">${escapeHtml(o.cliente || '(sem nome)')}</div>
           <div class="hist-item-meta">${assuntoHtml} ${o.estado ? ' - ' + escapeHtml(o.estado) : ''} ${dataFmt ? ' - ' + escapeHtml(dataFmt) : ''} ${savedFmt ? ' - Salvo em ' + escapeHtml(savedFmt) : ''}</div>
         </div>
@@ -2400,6 +2409,19 @@ function renderItemHistorico(o) {
           </div>
           ${aprovado ? `<button type="button" class="btn-cobranca-hist" onclick="gerarRelatorioCobrancaDeOrcamento('${escapeAttr(o.id)}')">Gerar relat&oacute;rio de cobran&ccedil;a</button>` : ''}
           ` : ''}
+          ${isCobranca ? `
+          <div class="hist-aprovacao-wrap">
+            <button class="btn-aprovacao ${cobrancaPaga ? 'aprovado' : 'pendente'}" onclick="togglePagamentoCobrancaHistorico('${escapeAttr(o.id)}')">${cobrancaPaga ? 'Pago' : 'Pendente'}</button>
+            <div class="aprovacao-menu" id="pagamento-menu-${escapeAttr(o.id)}">
+              <label>Data do pagamento</label>
+              <input type="date" id="pagamento-data-${escapeAttr(o.id)}" value="${escapeAttr(dataPagamento || new Date().toISOString().slice(0, 10))}">
+              <div class="aprovacao-menu-acoes">
+                <button type="button" class="btn-mini editar" onclick="confirmarPagamentoCobrancaHistorico('${escapeAttr(o.id)}')">Registrar</button>
+                <button type="button" class="btn-mini excluir" onclick="fecharMenuPagamentoCobranca('${escapeAttr(o.id)}')">Cancelar</button>
+              </div>
+            </div>
+          </div>
+          ` : ''}
         </div>
       </div>
     </div>`;
@@ -2410,8 +2432,18 @@ function fecharMenusAprovacao() {
     document.querySelectorAll('.hist-item.menu-aprovacao-aberto').forEach(item => item.classList.remove('menu-aprovacao-aberto'));
 }
 
+function fecharMenusPagamentoCobranca() {
+    fecharMenusAprovacao();
+}
+
 function fecharMenuAprovacao(id) {
     const menu = document.getElementById(`aprovacao-menu-${id}`);
+    menu?.classList.remove('aberto');
+    menu?.closest('.hist-item')?.classList.remove('menu-aprovacao-aberto');
+}
+
+function fecharMenuPagamentoCobranca(id) {
+    const menu = document.getElementById(`pagamento-menu-${id}`);
     menu?.classList.remove('aberto');
     menu?.closest('.hist-item')?.classList.remove('menu-aprovacao-aberto');
 }
@@ -2445,30 +2477,122 @@ async function confirmarAprovacaoHistorico(id) {
     await atualizarAprovacaoHistorico(id, 'aprovado', data);
 }
 
+function togglePagamentoCobrancaHistorico(id) {
+    const doc = getHistorico().find(o => o.id === id);
+    if (!doc) return;
+    const pago = doc.statusPagamento === 'pago' || doc.pago === true;
+
+    if (pago) {
+        abrirModal('Marcar como pendente', 'Deseja voltar este relatório de cobrança para pendente?', () => atualizarPagamentoCobrancaHistorico(id, 'pendente', ''));
+        return;
+    }
+
+    const menu = document.getElementById(`pagamento-menu-${id}`);
+    if (!menu) return;
+    const estavaAberto = menu.classList.contains('aberto');
+    fecharMenusPagamentoCobranca();
+    if (!estavaAberto) {
+        menu.classList.add('aberto');
+        menu.closest('.hist-item')?.classList.add('menu-aprovacao-aberto');
+    }
+}
+
+async function confirmarPagamentoCobrancaHistorico(id) {
+    const data = document.getElementById(`pagamento-data-${id}`)?.value;
+    if (!data) {
+        mostrarToast('Informe a data do pagamento.', 'erro');
+        return;
+    }
+    await atualizarPagamentoCobrancaHistorico(id, 'pago', data);
+}
+
+async function atualizarPagamentoCobrancaHistorico(id, status, dataPagamento) {
+    const hist = getHistorico();
+    const idx = hist.findIndex(o => o.id === id);
+    if (idx < 0) return;
+
+    const pago = status === 'pago';
+    const atualizado = {
+        ...hist[idx],
+        statusPagamento: status,
+        pago,
+        dataPagamento: pago ? dataPagamento : ''
+    };
+
+    try {
+        await DB.salvarOrcamento({
+            statusPagamento: atualizado.statusPagamento,
+            pago: atualizado.pago,
+            dataPagamento: atualizado.dataPagamento
+        }, id);
+        hist[idx] = atualizado;
+        setHistorico(hist);
+        renderizarHistorico();
+        window.renderizarFluxoFinanceiro?.();
+        window.renderizarInicio?.();
+        mostrarToast(pago ? 'Relatório de cobrança marcado como pago.' : 'Relatório de cobrança marcado como pendente.', 'sucesso');
+    } catch (err) {
+        console.error(err);
+        mostrarToast('Erro ao atualizar pagamento.', 'erro');
+    }
+}
+
+async function criarObraAoAprovarOrcamento(orc, dataAprovacao) {
+    if (!orc || getTipoDocumento(orc) !== 'orcamento') return '';
+    if (orc.obraId && (window.obras || []).some(o => o.id === orc.obraId)) return orc.obraId;
+    const nomeObra = (orc.assunto || orc.obra || orc.cliente || '').trim();
+    if (!nomeObra) return '';
+    const normalizar = v => String(v || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim();
+    const nomeNorm = normalizar(nomeObra);
+    const existente = (window.obras || []).find(o => normalizar(o.nome) === nomeNorm);
+    if (existente?.id) return existente.id;
+
+    const localPartes = [orc.endereco, orc.estado].filter(Boolean);
+    const dadosObra = {
+        nome: nomeObra,
+        construtora: orc.cliente || '',
+        responsavel: '',
+        contatoResponsavel: '',
+        data: dataAprovacao || orc.data || new Date().toISOString().slice(0, 10),
+        local: localPartes.join(' - '),
+        status: 'execucao',
+        origemOrcamentoId: orc.id || '',
+        origemOrcamentoNumero: orc.numero || '',
+        valorOrcado: calcularTotalHistorico(orc),
+        assuntoOriginal: orc.assunto || orc.obra || ''
+    };
+    const obraId = await DB.salvarObra(dadosObra);
+    window.obras = [...(window.obras || []), { id: obraId, ...dadosObra }];
+    return obraId;
+}
+
 async function atualizarAprovacaoHistorico(id, status, dataAprovacao) {
     const hist = getHistorico();
     const idx = hist.findIndex(o => o.id === id);
     if (idx < 0) return;
 
     const aprovado = status === 'aprovado';
-    const atualizado = {
-        ...hist[idx],
-        statusAprovacao: status,
-        aprovado,
-        dataAprovacao: aprovado ? dataAprovacao : ''
-    };
-
     try {
+        const obraIdCriada = aprovado ? await criarObraAoAprovarOrcamento(hist[idx], dataAprovacao) : '';
+        const atualizado = {
+            ...hist[idx],
+            statusAprovacao: status,
+            aprovado,
+            dataAprovacao: aprovado ? dataAprovacao : '',
+            obraId: aprovado ? (hist[idx].obraId || obraIdCriada) : hist[idx].obraId
+        };
         await DB.salvarOrcamento({
             statusAprovacao: atualizado.statusAprovacao,
             aprovado: atualizado.aprovado,
-            dataAprovacao: atualizado.dataAprovacao
+            dataAprovacao: atualizado.dataAprovacao,
+            obraId: atualizado.obraId || ''
         }, id);
         hist[idx] = atualizado;
         setHistorico(hist);
         renderizarHistorico();
+        window.renderizarObras?.();
         window.renderizarFluxoFinanceiro?.();
-        mostrarToast(aprovado ? 'Orçamento aprovado.' : 'Orçamento marcado como pendente.', 'sucesso');
+        mostrarToast(aprovado ? 'Orçamento aprovado e obra criada em execução.' : 'Orçamento marcado como pendente.', 'sucesso');
     } catch (err) {
         console.error(err);
         mostrarToast('Erro ao atualizar aprovação.', 'erro');
@@ -2498,6 +2622,9 @@ async function gerarRelatorioCobrancaDeOrcamento(id) {
         statusAprovacao: '',
         aprovado: false,
         dataAprovacao: '',
+        statusPagamento: 'pendente',
+        pago: false,
+        dataPagamento: '',
         orcamentoOrigemId: origem.id,
         orcamentoOrigemNumero: origem.numero || ''
     };
@@ -3367,6 +3494,7 @@ Object.assign(window, {
     iniciarOrcamentoParaObra,
     filtrarHistorico, renderizarHistorico, setTipoHistorico,
     toggleAprovacaoHistorico, confirmarAprovacaoHistorico, fecharMenuAprovacao, gerarRelatorioCobrancaDeOrcamento,
+    togglePagamentoCobrancaHistorico, confirmarPagamentoCobrancaHistorico, fecharMenuPagamentoCobranca,
     handleImagemOrcamento, adicionarImagemOrcamento, removerImagemOrcamento,
     toggleMenuOpcao, adicionarOpcaoSelecionada,
     toggleTipoDocumento, aplicarTipoDocumento,

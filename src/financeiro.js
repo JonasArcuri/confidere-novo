@@ -137,6 +137,24 @@ function isRelatorioCobrancaFinanceiro(doc) {
   return getTipoDocumentoFinanceiro(doc) === 'cobranca';
 }
 
+function isRelatorioCobrancaPago(doc) {
+  return isRelatorioCobrancaFinanceiro(doc) && (doc?.statusPagamento === 'pago' || doc?.pago === true);
+}
+
+function dataPagamentoCobranca(doc) {
+  const valor = doc?.dataPagamento || doc?.pagoEm || doc?.dataPago;
+  if (!valor) return null;
+  if (valor?.toDate) return valor.toDate();
+  if (typeof valor === 'string' && /^\d{4}-\d{2}/.test(valor)) return new Date(valor + 'T12:00:00');
+  const d = new Date(valor);
+  return Number.isNaN(d.getTime()) ? null : d;
+}
+
+function cobrancaPagaNoMes(doc, mes) {
+  const data = dataPagamentoCobranca(doc);
+  return isRelatorioCobrancaPago(doc) && data ? mesChave(data) === mes : false;
+}
+
 function orcamentoRealizadoNoMes(orc, mes) {
   if (!isOrcamentoFinanceiro(orc)) return false;
   const data = dataItem(orc);
@@ -239,7 +257,7 @@ function montarAnaliseOrcamentos(mes) {
 }
 
 function montarAnaliseCobrancas(mes) {
-  const cobrancas = getOrcamentos().filter(o => isRelatorioCobrancaFinanceiro(o) && noMes(o, mes));
+  const cobrancas = getOrcamentos().filter(o => cobrancaPagaNoMes(o, mes));
   const totais = cobrancas.reduce((acc, doc) => {
     const t = totaisMaterialMaoObraOrcamento(doc);
     acc.material += t.material;
@@ -257,11 +275,11 @@ function montarAnaliseCobrancas(mes) {
 
 function montarMovimentos(mes) {
   const entradas = getOrcamentos()
-    .filter(o => isRelatorioCobrancaFinanceiro(o) && noMes(o, mes))
+    .filter(o => cobrancaPagaNoMes(o, mes))
     .map(o => ({
       tipo: 'entrada',
       grupo: 'Relat\u00F3rio de cobran\u00E7a',
-      data: dataItem(o),
+      data: dataPagamentoCobranca(o),
       descricao: descricao(o, `Relat\u00F3rio de cobran\u00E7a #${String(o.numero || '').padStart(3, '0')}`),
       valor: entradaOrcamento(o)
     }))
