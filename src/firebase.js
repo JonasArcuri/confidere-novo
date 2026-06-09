@@ -285,6 +285,10 @@ const DB = {
     return await uploadArquivo(file, "relatorios-imagens");
   },
 
+  async salvarDocumentoObraArquivo(file) {
+    return await uploadArquivo(file, "obras-documentos");
+  },
+
   async excluirArquivoStorage(path) {
     await removerArquivoSeExistir(path);
   },
@@ -332,6 +336,25 @@ const DB = {
 
   async excluirObra(id) {
     await deleteDoc(userDoc("obras", id));
+  },
+
+  async listarDocumentosObra() {
+    const snap = await getDocs(query(userCol("obraDocumentos"), orderBy("data", "desc")));
+    return snap.docs.map(d => ({ id: d.id, ...d.data() }));
+  },
+
+  async salvarDocumentoObra(dados, id = null) {
+    const dadosLimpos = sanitizar(dados);
+    if (id) {
+      await setDoc(userDoc("obraDocumentos", id), { ...dadosLimpos, atualizadoEm: serverTimestamp() }, { merge: true });
+      return id;
+    }
+    const ref = await addDoc(userCol("obraDocumentos"), { ...dadosLimpos, criadoEm: serverTimestamp() });
+    return ref.id;
+  },
+
+  async excluirDocumentoObra(id) {
+    await deleteDoc(userDoc("obraDocumentos", id));
   },
 
   // — Administração Master —

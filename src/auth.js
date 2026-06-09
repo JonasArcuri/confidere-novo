@@ -105,6 +105,7 @@ async function handleLogout() {
     window.relatorios = [];
     window.insumos = [];
     window.obras = [];
+    window.obraDocumentos = [];
     window._orcamentosFirestore = [];
     await logout();
     mostrarToast('Sessão encerrada.', '');
@@ -124,12 +125,14 @@ async function carregarDadosIniciais() {
     ]);
 
     // Carregar insumos e obras
-    const [insumosData, obrasData] = await Promise.all([
+    const [insumosData, obrasData, obraDocumentosData] = await Promise.all([
       DB.listarInsumos(),
-      DB.listarObras()
+      DB.listarObras(),
+      DB.listarDocumentosObra ? DB.listarDocumentosObra().catch(() => []) : Promise.resolve([])
     ]);
     window.insumos = insumosData;
     window.obras   = obrasData;
+    window.obraDocumentos = obraDocumentosData || [];
     window.agendamentos = agendamentos;
     window.funcionarios = funcionarios;
     window.relatorios   = relatorios;

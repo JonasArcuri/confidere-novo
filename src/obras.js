@@ -4,15 +4,26 @@ import { escapeHtml, escapeAttr, setOptions } from './utils.js';
 
 // Estado global
 window.obras = window.obras || [];
+window.obraDocumentos = window.obraDocumentos || [];
 Object.defineProperty(window, 'obras', {
   get() { return this._obras || []; },
   set(v) { this._obras = v; }
+});
+Object.defineProperty(window, 'obraDocumentos', {
+  get() { return this._obraDocumentos || []; },
+  set(v) { this._obraDocumentos = Array.isArray(v) ? v : []; }
 });
 
 // ===== FILTRO ATUAL =====
 let filtroObrasStatus = 'todos'; // 'todos' | 'execucao' | 'finalizada'
 let obraDetalheId = null;
 let obraCalendarioMesAtual = {};
+let obraDocArquivosSelecionados = [];
+let obraRelatorioPreviewAtual = null;
+let obraRelatorioPreviewUrl = '';
+
+const OBRA_DOC_CLASSIFICACOES = ['Contrato', 'Projeto', 'ART/RRT', 'Medição', 'Foto técnica', 'Laudo', 'Nota fiscal', 'Outro'];
+const OBRA_DOC_STATUS = ['Pendente', 'Em revisão', 'Aprovado', 'Reprovado'];
 
 function normalizarTexto(v = '') {
   return String(v || '')
@@ -28,6 +39,74 @@ function formatarDataObra(data) {
 
 function moedaObra(valor) {
   return (Number(valor) || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+}
+
+function normalizarArquivosDocumentoObra(doc = {}) {
+  return Array.isArray(doc.arquivos) ? doc.arquivos.filter(arq => arq && (arq.url || arq.src)) : [];
+}
+
+function getDocumentosDaObra(obra) {
+  const nome = normalizarTexto(obra?.nome);
+  return (window.obraDocumentos || []).filter(doc => {
+    if (doc.obraId && doc.obraId === obra.id) return true;
+    return nome && normalizarTexto(doc.obraNome) === nome;
+  }).sort((a, b) => (b.data || b.criadoEm || '').localeCompare(a.data || a.criadoEm || ''));
+}
+
+function arquivoEhImagem(arq = {}) {
+  const tipo = String(arq.tipo || arq.type || '').toLowerCase();
+  const url = String(arq.url || arq.src || '').toLowerCase();
+  return tipo.startsWith('image/') || /\.(png|jpe?g|webp)(\?|$)/.test(url);
+}
+
+function getEventosPeriodoObra(obra, inicio, fim) {
+  const dentro = data => (!inicio || data >= inicio) && (!fim || data <= fim);
+  const rels = getRelatoriosDaObra(obra).filter(r => r.data && dentro(r.data));
+  const ags = getAgendamentosDaObra(obra).filter(a => a.data && dentro(a.data));
+  const docs = getDocumentosDaObra(obra).filter(d => (d.data || d.criadoEm || '').slice(0, 10) && dentro((d.data || d.criadoEm || '').slice(0, 10)));
+  return { rels, ags, docs };
+}
+
+function toDataUrlImagem(src) {
+  return new Promise((resolve) => {
+    if (!src) return resolve('');
+    if (src.startsWith('data:image/')) return resolve(src);
+    const img = new Image();
+    img.crossOrigin = 'anonymous';
+    img.onload = () => {
+      try {
+        const canvas = document.createElement('canvas');
+        canvas.width = img.naturalWidth || img.width;
+        canvas.height = img.naturalHeight || img.height;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0);
+        resolve(canvas.toDataURL('image/jpeg', 0.88));
+      } catch (err) {
+        console.warn('Nao foi possivel converter imagem para PDF:', err);
+        resolve('');
+      }
+    };
+    img.onerror = () => resolve('');
+    img.src = src;
+  });
+}
+
+async function adicionarImagemPdf(doc, src, x, y, maxW, maxH) {
+  const dataUrl = await toDataUrlImagem(src);
+  if (!dataUrl) return 0;
+  return new Promise(resolve => {
+    const img = new Image();
+    img.onload = () => {
+      const ratio = Math.min(maxW / img.width, maxH / img.height, 1);
+      const w = img.width * ratio;
+      const h = img.height * ratio;
+      const fmt = dataUrl.startsWith('data:image/png') ? 'PNG' : 'JPEG';
+      doc.addImage(dataUrl, fmt, x + (maxW - w) / 2, y, w, h, undefined, 'FAST');
+      resolve(h);
+    };
+    img.onerror = () => resolve(0);
+    img.src = dataUrl;
+  });
 }
 
 function totalOrcamentoObra(orc) {
@@ -214,6 +293,32 @@ function abrirOrcamentoAtrelado(id) {
   window.editarOrcamento?.(id);
 }
 
+function renderDocumentoObraItem(doc) {
+  const arquivos = normalizarArquivosDocumentoObra(doc);
+  const aprovado = String(doc.status || '').toLowerCase() === 'aprovado';
+  return `<div class="obra-doc-item">
+    <div class="obra-doc-main">
+      <div class="obra-doc-title">
+        <strong>${escapeHtml(doc.titulo || doc.nome || 'Documento')}</strong>
+        <span class="obra-doc-status ${aprovado ? 'aprovado' : ''}">${escapeHtml(doc.status || 'Pendente')}</span>
+      </div>
+      <div class="obra-doc-meta">
+        ${escapeHtml(doc.classificacao || 'Sem classificação')} · Rev. ${escapeHtml(doc.revisao || '00')} · ${formatarDataObra(doc.data || '')}
+      </div>
+      ${doc.descricao ? `<p>${escapeHtml(doc.descricao)}</p>` : ''}
+      ${arquivos.length ? `<div class="obra-doc-arquivos">${arquivos.slice(0, 4).map(arq => arquivoEhImagem(arq)
+        ? `<img src="${escapeAttr(arq.url || arq.src)}" alt="${escapeAttr(arq.nome || 'Documento')}">`
+        : `<a href="${escapeAttr(arq.url || arq.src)}" target="_blank" rel="noopener">${escapeHtml(arq.nome || 'Arquivo')}</a>`
+      ).join('')}${arquivos.length > 4 ? `<span>+${arquivos.length - 4}</span>` : ''}</div>` : ''}
+    </div>
+    <div class="obra-doc-acoes">
+      <button type="button" class="btn-mini editar" onclick="editarDocumentoObra('${escapeAttr(doc.id)}')">Editar</button>
+      <button type="button" class="btn-mini ver" onclick="aprovarDocumentoObra('${escapeAttr(doc.id)}')">Aprovar</button>
+      <button type="button" class="btn-mini excluir" onclick="confirmarExcluirDocumentoObra('${escapeAttr(doc.id)}')">Excluir</button>
+    </div>
+  </div>`;
+}
+
 function renderizarDetalheObra(id) {
   const obra = obras.find(o => o.id === id);
   const cont = document.getElementById('obras-lista');
@@ -226,6 +331,7 @@ function renderizarDetalheObra(id) {
   const rels = getRelatoriosDaObra(obra);
   const ags = getAgendamentosDaObra(obra);
   const orcs = getOrcamentosDaObra(obra);
+  const docs = getDocumentosDaObra(obra);
   const rendimento = rels.reduce((acc, rel) => acc + (Number(rel.rendimento) || 0), 0);
   const totalOrcamentos = orcs.reduce((acc, orc) => acc + totalOrcamentoObra(orc), 0);
   const isFinali = obra.status === 'finalizada';
@@ -242,6 +348,8 @@ function renderizarDetalheObra(id) {
         ${(obra.responsavel || obra.contatoResponsavel) ? `<p>Responsável: ${escapeHtml(obra.responsavel || '-')}${obra.contatoResponsavel ? ' · ' + escapeHtml(obra.contatoResponsavel) : ''}</p>` : ''}
       </div>
       <div class="obra-detalhe-acoes">
+        <button class="btn-mini ver" onclick="abrirRelatorioPeriodoObra('${escapeAttr(obra.id)}')">Gerar relatório</button>
+        <button class="btn-mini ver" onclick="abrirModalDocumentoObra('${escapeAttr(obra.id)}')">+ Documento</button>
         <button class="btn-mini editar" onclick="editarObra('${escapeAttr(obra.id)}')">Editar</button>
         ${isFinali
           ? `<button class="btn-mini ver" onclick="marcarObraExecucao('${escapeAttr(obra.id)}')">Reabrir</button>`
@@ -253,6 +361,7 @@ function renderizarDetalheObra(id) {
       <div class="obra-resumo-card"><span>Relatórios de obra</span><strong>${rels.length}</strong></div>
       <div class="obra-resumo-card"><span>Rendimento registrado</span><strong>${moedaObra(rendimento)}</strong></div>
       <div class="obra-resumo-card"><span>Orçamentos atrelados</span><strong>${orcs.length}</strong></div>
+      <div class="obra-resumo-card"><span>Documentos</span><strong>${docs.length}</strong></div>
       <div class="obra-resumo-card"><span>Total orçado</span><strong>${moedaObra(totalOrcamentos)}</strong></div>
     </div>
 
@@ -265,6 +374,13 @@ function renderizarDetalheObra(id) {
         </div>
         <span>${formatarDataObra(orc.data)} · ${moedaObra(totalOrcamentoObra(orc))}</span>
       </button>`).join('')}</div>` : '<div class="obra-vazio">Nenhum orçamento relacionado a esta obra.</div>'}
+    </section>
+    <section class="obra-detalhe-section">
+      <div class="obra-section-topo">
+        <h4>Documentos da obra</h4>
+        <button type="button" class="btn-primario" onclick="abrirModalDocumentoObra('${escapeAttr(obra.id)}')">+ Adicionar Documento</button>
+      </div>
+      ${docs.length ? `<div class="obra-doc-lista">${docs.map(doc => renderDocumentoObraItem(doc)).join('')}</div>` : '<div class="obra-vazio">Nenhum documento vinculado a esta obra.</div>'}
     </section>
     <section class="obra-detalhe-section">
       <div class="obra-section-topo">
@@ -299,6 +415,375 @@ function renderizarDetalheObra(id) {
       </div>
     </section>
   </div>`;
+}
+
+function fecharModalDocumentoObra() {
+  document.getElementById('modal-documento-obra')?.remove();
+}
+
+function previewArquivoObra(file) {
+  return new Promise(resolve => {
+    if (!file || !file.type?.startsWith('image/')) return resolve('');
+    const reader = new FileReader();
+    reader.onload = e => resolve(e.target.result || '');
+    reader.onerror = () => resolve('');
+    reader.readAsDataURL(file);
+  });
+}
+
+function renderArquivosDocumentoObraModal() {
+  const cont = document.getElementById('obra-doc-arquivos-preview');
+  if (!cont) return;
+  if (!obraDocArquivosSelecionados.length) {
+    cont.innerHTML = '<div class="obra-doc-vazio">Nenhum arquivo adicionado.</div>';
+    return;
+  }
+  cont.innerHTML = obraDocArquivosSelecionados.map((arq, index) => `
+    <div class="obra-doc-upload-item ${arq.status === 'pending' ? 'enviando' : ''}">
+      ${arquivoEhImagem(arq) ? `<img src="${escapeAttr(arq.preview || arq.url || arq.src || '')}" alt="${escapeAttr(arq.nome || 'Arquivo')}">` : '<div class="obra-doc-file-icon">PDF</div>'}
+      <div><strong>${escapeHtml(arq.nome || 'Arquivo')}</strong><span>${escapeHtml(arq.status === 'pending' ? 'Enviando...' : arq.status === 'error' ? 'Falhou' : 'Pronto')}</span></div>
+      <button type="button" onclick="removerArquivoDocumentoObra(${index})">&times;</button>
+    </div>
+  `).join('');
+}
+
+function removerArquivoDocumentoObra(index) {
+  obraDocArquivosSelecionados.splice(index, 1);
+  renderArquivosDocumentoObraModal();
+}
+
+async function handleArquivosDocumentoObra(input) {
+  const arquivos = Array.from(input?.files || []);
+  input.value = '';
+  if (!arquivos.length) return;
+  for (const file of arquivos) {
+    if (!['image/png', 'image/jpeg', 'application/pdf'].includes(file.type)) {
+      mostrarToast('Use PNG, JPEG ou PDF.', 'erro');
+      continue;
+    }
+    const item = {
+      nome: file.name,
+      tipo: file.type,
+      tamanho: file.size,
+      preview: await previewArquivoObra(file),
+      status: 'pending'
+    };
+    obraDocArquivosSelecionados.push(item);
+    renderArquivosDocumentoObraModal();
+    try {
+      const uploaded = await DB.salvarDocumentoObraArquivo(file);
+      item.url = uploaded.url;
+      item.path = uploaded.path;
+      item.status = 'done';
+    } catch (err) {
+      console.error('Erro ao enviar documento da obra:', err);
+      item.status = 'error';
+      mostrarToast('Erro ao enviar arquivo do documento.', 'erro');
+    }
+    renderArquivosDocumentoObraModal();
+  }
+}
+
+function abrirModalDocumentoObra(obraId, docId = '') {
+  const obra = obras.find(o => o.id === obraId) || obras.find(o => o.id === obraDetalheId);
+  if (!obra) { mostrarToast('Obra não encontrada.', 'erro'); return; }
+  const doc = docId ? (window.obraDocumentos || []).find(d => d.id === docId) : null;
+  obraDocArquivosSelecionados = doc ? normalizarArquivosDocumentoObra(doc).map(arq => ({ ...arq, status: 'done', preview: arq.url || arq.src || '' })) : [];
+  fecharModalDocumentoObra();
+  const overlay = document.createElement('div');
+  overlay.id = 'modal-documento-obra';
+  overlay.className = 'modal-overlay aberto';
+  overlay.innerHTML = `<div class="modal-gestao obra-doc-modal">
+    <h3>${doc ? 'Editar Documento' : 'Novo Documento da Obra'}</h3>
+    <input type="hidden" id="obra-doc-id" value="${escapeAttr(doc?.id || '')}">
+    <input type="hidden" id="obra-doc-obra-id" value="${escapeAttr(obra.id)}">
+    <div class="campo"><label>Obra</label><input type="text" value="${escapeAttr(obra.nome || '')}" disabled></div>
+    <div class="grid-2">
+      <div class="campo"><label>Título *</label><input type="text" id="obra-doc-titulo" value="${escapeAttr(doc?.titulo || '')}" placeholder="Ex: Projeto executivo, ART, medição..."></div>
+      <div class="campo"><label>Classificação</label><select id="obra-doc-classificacao">${OBRA_DOC_CLASSIFICACOES.map(c => `<option ${doc?.classificacao === c ? 'selected' : ''}>${escapeHtml(c)}</option>`).join('')}</select></div>
+    </div>
+    <div class="grid-3">
+      <div class="campo"><label>Revisão</label><input type="text" id="obra-doc-revisao" value="${escapeAttr(doc?.revisao || '00')}" placeholder="00, R01, Rev. A..."></div>
+      <div class="campo"><label>Status / Aprovação</label><select id="obra-doc-status">${OBRA_DOC_STATUS.map(s => `<option ${doc?.status === s ? 'selected' : ''}>${escapeHtml(s)}</option>`).join('')}</select></div>
+      <div class="campo"><label>Data</label><input type="date" id="obra-doc-data" value="${escapeAttr(doc?.data || new Date().toISOString().slice(0, 10))}"></div>
+    </div>
+    <div class="campo"><label>Descrição</label><textarea id="obra-doc-descricao" rows="3" placeholder="Observações, motivo da revisão, parecer de aprovação...">${escapeHtml(doc?.descricao || '')}</textarea></div>
+    <div class="campo">
+      <label>Arquivos vinculados</label>
+      <div class="rel-imagens-box">
+        <button type="button" class="btn-secundario" onclick="document.getElementById('obra-doc-input').click()">+ Adicionar Arquivos</button>
+        <input type="file" id="obra-doc-input" accept="image/png,image/jpeg,application/pdf" multiple style="display:none" onchange="handleArquivosDocumentoObra(this)">
+        <small>Use PNG, JPEG ou PDF. Arquivos ficam classificados, revisados e vinculados a esta obra.</small>
+        <div class="obra-doc-upload-list" id="obra-doc-arquivos-preview"></div>
+      </div>
+    </div>
+    <div class="modal-acoes">
+      <button type="button" class="btn-secundario" onclick="fecharModalDocumentoObra()">Cancelar</button>
+      <button type="button" class="btn-primario" onclick="salvarDocumentoObra()">Salvar Documento</button>
+    </div>
+  </div>`;
+  overlay.addEventListener('click', ev => { if (ev.target === overlay) fecharModalDocumentoObra(); });
+  document.body.appendChild(overlay);
+  renderArquivosDocumentoObraModal();
+}
+
+function editarDocumentoObra(docId) {
+  const doc = (window.obraDocumentos || []).find(d => d.id === docId);
+  if (!doc) { mostrarToast('Documento não encontrado.', 'erro'); return; }
+  abrirModalDocumentoObra(doc.obraId || obraDetalheId, docId);
+}
+
+async function salvarDocumentoObra() {
+  const id = document.getElementById('obra-doc-id')?.value || '';
+  const obraId = document.getElementById('obra-doc-obra-id')?.value || obraDetalheId;
+  const obra = obras.find(o => o.id === obraId);
+  const titulo = document.getElementById('obra-doc-titulo')?.value.trim() || '';
+  if (!obra || !titulo) { mostrarToast('Informe o título do documento.', 'erro'); return; }
+  if (obraDocArquivosSelecionados.some(a => a.status === 'pending')) { mostrarToast('Aguarde o envio dos arquivos terminar.', 'erro'); return; }
+  if (obraDocArquivosSelecionados.some(a => a.status === 'error' || !a.url)) { mostrarToast('Remova ou reenvie arquivos com erro.', 'erro'); return; }
+  const dados = {
+    obraId,
+    obraNome: obra.nome || '',
+    titulo,
+    classificacao: document.getElementById('obra-doc-classificacao')?.value || 'Outro',
+    revisao: document.getElementById('obra-doc-revisao')?.value.trim() || '00',
+    status: document.getElementById('obra-doc-status')?.value || 'Pendente',
+    data: document.getElementById('obra-doc-data')?.value || new Date().toISOString().slice(0, 10),
+    descricao: document.getElementById('obra-doc-descricao')?.value.trim() || '',
+    arquivos: obraDocArquivosSelecionados.filter(a => a.url || a.src).map(a => ({
+      url: a.url || a.src,
+      path: a.path || '',
+      nome: a.nome || '',
+      tipo: a.tipo || '',
+      tamanho: a.tamanho || 0
+    }))
+  };
+  try {
+    const salvoId = await DB.salvarDocumentoObra(dados, id || null);
+    if (id) {
+      const idx = window.obraDocumentos.findIndex(d => d.id === id);
+      if (idx >= 0) window.obraDocumentos[idx] = { ...window.obraDocumentos[idx], ...dados };
+    } else {
+      window.obraDocumentos.push({ id: salvoId, ...dados, criadoEm: new Date().toISOString() });
+    }
+    fecharModalDocumentoObra();
+    renderizarDetalheObra(obraId);
+    mostrarToast('Documento salvo.', 'sucesso');
+  } catch (err) {
+    console.error(err);
+    mostrarToast('Erro ao salvar documento.', 'erro');
+  }
+}
+
+async function aprovarDocumentoObra(docId) {
+  const doc = (window.obraDocumentos || []).find(d => d.id === docId);
+  if (!doc) return;
+  try {
+    await DB.salvarDocumentoObra({ status: 'Aprovado', aprovadoEm: new Date().toISOString() }, docId);
+    doc.status = 'Aprovado';
+    doc.aprovadoEm = new Date().toISOString();
+    renderizarDetalheObra(doc.obraId || obraDetalheId);
+    mostrarToast('Documento aprovado.', 'sucesso');
+  } catch (err) {
+    console.error(err);
+    mostrarToast('Erro ao aprovar documento.', 'erro');
+  }
+}
+
+function confirmarExcluirDocumentoObra(docId) {
+  const doc = (window.obraDocumentos || []).find(d => d.id === docId);
+  abrirModal('Excluir Documento', `Excluir "${doc?.titulo || 'documento'}"?`, async () => {
+    try {
+      await DB.excluirDocumentoObra(docId);
+      window.obraDocumentos = window.obraDocumentos.filter(d => d.id !== docId);
+      normalizarArquivosDocumentoObra(doc).forEach(arq => { if (arq.path) DB.excluirArquivoStorage?.(arq.path); });
+      renderizarDetalheObra(doc?.obraId || obraDetalheId);
+      mostrarToast('Documento removido.', '');
+    } catch (err) {
+      console.error(err);
+      mostrarToast('Erro ao excluir documento.', 'erro');
+    }
+  });
+}
+
+function fecharRelatorioPeriodoObra() {
+  document.getElementById('modal-relatorio-periodo-obra')?.remove();
+  if (obraRelatorioPreviewUrl) URL.revokeObjectURL(obraRelatorioPreviewUrl);
+  obraRelatorioPreviewUrl = '';
+  obraRelatorioPreviewAtual = null;
+}
+
+function abrirRelatorioPeriodoObra(obraId) {
+  const obra = obras.find(o => o.id === obraId);
+  if (!obra) { mostrarToast('Obra não encontrada.', 'erro'); return; }
+  fecharRelatorioPeriodoObra();
+  const hoje = new Date().toISOString().slice(0, 10);
+  const inicio = obra.data || hoje;
+  const overlay = document.createElement('div');
+  overlay.id = 'modal-relatorio-periodo-obra';
+  overlay.className = 'modal-overlay pdf-preview-overlay aberto';
+  overlay.innerHTML = `<div class="pdf-preview-modal obra-relatorio-periodo-modal">
+    <div class="pdf-preview-topo">
+      <div><h3>Relatório da Obra</h3><p>${escapeHtml(obra.nome || 'Obra')} · escolha o período e gere a prévia.</p></div>
+      <button type="button" class="pdf-preview-fechar" onclick="fecharRelatorioPeriodoObra()" aria-label="Fechar">×</button>
+    </div>
+    <div class="pdf-preview-toolbar obra-periodo-toolbar">
+      <label>De <input type="date" id="obra-rel-inicio" value="${escapeAttr(inicio)}"></label>
+      <label>Até <input type="date" id="obra-rel-fim" value="${escapeAttr(hoje)}"></label>
+      <button type="button" class="btn-secundario" onclick="atualizarPreviewRelatorioObra('${escapeAttr(obra.id)}')">Gerar prévia</button>
+      <button type="button" class="btn-primario" onclick="baixarRelatorioPeriodoObra()">Baixar PDF</button>
+    </div>
+    <iframe id="obra-relatorio-preview-frame" class="pdf-preview-frame" title="Prévia do relatório da obra"></iframe>
+  </div>`;
+  overlay.addEventListener('click', ev => { if (ev.target === overlay) fecharRelatorioPeriodoObra(); });
+  document.body.appendChild(overlay);
+  atualizarPreviewRelatorioObra(obraId);
+}
+
+function textoPeriodoRelatorioObra(inicio, fim) {
+  const a = inicio ? formatarDataObra(inicio) : 'início';
+  const b = fim ? formatarDataObra(fim) : 'fim';
+  return `${a} a ${b}`;
+}
+
+async function gerarRelatorioPeriodoObraPDF(obraId, inicio, fim) {
+  const JsPDF = window.jspdf?.jsPDF || window.jsPDF;
+  if (!JsPDF) throw new Error('Biblioteca de PDF não carregada.');
+  const obra = obras.find(o => o.id === obraId);
+  if (!obra) throw new Error('Obra não encontrada.');
+  const { rels, ags, docs } = getEventosPeriodoObra(obra, inicio, fim);
+  const etapas = ags.filter(isEtapaObra);
+  const agendamentos = ags.filter(a => !isEtapaObra(a));
+  const doc = new JsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+  const PW = doc.internal.pageSize.getWidth();
+  const PH = doc.internal.pageSize.getHeight();
+  const M = 14;
+  const W = PW - M * 2;
+  const azul = [26, 58, 92];
+  const azulClaro = [74, 144, 217];
+  const cinza = [95, 91, 86];
+  const laranja = [224, 92, 32];
+  let y = 16;
+
+  const novaPaginaSePreciso = h => { if (y + h > PH - 18) { doc.addPage(); y = 16; } };
+  const linha = () => { doc.setDrawColor(...azulClaro); doc.setLineWidth(0.25); doc.line(M, y, M + W, y); y += 4; };
+  const tituloSecao = t => {
+    novaPaginaSePreciso(12);
+    doc.setFont('helvetica', 'bold'); doc.setFontSize(12); doc.setTextColor(...azul);
+    doc.text(String(t).toUpperCase(), M, y);
+    y += 3; linha();
+  };
+  const paragrafo = (txt, x = M, maxW = W, cor = [20, 20, 20], size = 9) => {
+    const lines = doc.splitTextToSize(String(txt || '-'), maxW);
+    novaPaginaSePreciso(lines.length * 5 + 2);
+    doc.setFont('helvetica', 'normal'); doc.setFontSize(size); doc.setTextColor(...cor);
+    doc.text(lines, x, y);
+    y += lines.length * 5 + 2;
+  };
+  const itemBox = (titulo, meta, desc = '', destaque = azul) => {
+    const descLines = desc ? doc.splitTextToSize(desc, W - 10) : [];
+    const h = 15 + descLines.length * 4.5;
+    novaPaginaSePreciso(h + 4);
+    doc.setFillColor(248, 250, 252);
+    doc.setDrawColor(220, 216, 210);
+    doc.roundedRect(M, y, W, h, 2, 2, 'FD');
+    doc.setFillColor(...destaque);
+    doc.rect(M, y, 2.5, h, 'F');
+    doc.setFont('helvetica', 'bold'); doc.setFontSize(9.5); doc.setTextColor(...azul);
+    doc.text(titulo || '-', M + 6, y + 7);
+    doc.setFont('helvetica', 'normal'); doc.setFontSize(8); doc.setTextColor(...cinza);
+    doc.text(meta || '-', M + 6, y + 12);
+    if (descLines.length) {
+      doc.setTextColor(30, 30, 30);
+      doc.text(descLines, M + 6, y + 17);
+    }
+    y += h + 4;
+  };
+
+  doc.setFillColor(...azul);
+  doc.rect(0, 0, PW, 34, 'F');
+  doc.setFont('helvetica', 'bold'); doc.setFontSize(19); doc.setTextColor(255, 255, 255);
+  doc.text('Relatório de Obra', M, 15);
+  doc.setFont('helvetica', 'normal'); doc.setFontSize(9);
+  doc.text(`Período: ${textoPeriodoRelatorioObra(inicio, fim)}`, M, 24);
+  doc.setFont('helvetica', 'bold'); doc.setFontSize(12);
+  doc.text(obra.nome || 'Obra', PW - M, 15, { align: 'right' });
+  doc.setFont('helvetica', 'normal'); doc.setFontSize(8.5);
+  doc.text(obra.construtora || '', PW - M, 22, { align: 'right' });
+  y = 44;
+
+  tituloSecao('Informações da obra');
+  paragrafo(`Obra: ${obra.nome || '-'}\nConstrutora / Empreiteiro: ${obra.construtora || '-'}\nLocal: ${obra.local || '-'}\nResponsável técnico/responsável: ${obra.responsavel || '-'}\nContato do responsável: ${obra.contatoResponsavel || '-'}\nInício: ${formatarDataObra(obra.data)}\nStatus: ${obra.status === 'finalizada' ? 'Finalizada' : 'Em execução'}`);
+
+  tituloSecao('Resumo do período');
+  const rendimento = rels.reduce((acc, r) => acc + (Number(r.rendimento) || 0), 0);
+  paragrafo(`Relatórios de obra: ${rels.length}\nEtapas / cronogramas: ${etapas.length}\nAgendamentos: ${agendamentos.length}\nDocumentos: ${docs.length}\nRendimento registrado: ${moedaObra(rendimento)}`);
+
+  tituloSecao('Etapas e cronograma');
+  if (!etapas.length && !agendamentos.length) paragrafo('Nenhuma etapa ou agendamento registrado no período.', M, W, cinza);
+  etapas.forEach(ev => itemBox(ev.cliente || 'Etapa de obra', `${formatarDataObra(ev.data)}${ev.hora ? ' · ' + ev.hora.slice(0, 5) : ''}${ev.funcionariosNomes ? ' · ' + ev.funcionariosNomes : ''}`, [ev.local, ev.obs].filter(Boolean).join('\n'), [34, 160, 90]));
+  agendamentos.forEach(ev => itemBox(ev.cliente || 'Agendamento', `${formatarDataObra(ev.data)}${ev.hora ? ' · ' + ev.hora.slice(0, 5) : ''}`, [ev.local, ev.obs].filter(Boolean).join('\n'), azulClaro));
+
+  tituloSecao('Relatórios de obra');
+  if (!rels.length) paragrafo('Nenhum relatório de obra registrado no período.', M, W, cinza);
+  for (const rel of rels) {
+    itemBox(rel.obra || obra.nome || 'Relatório', `${formatarDataObra(rel.data)} · ${rel.funcionariosNomes || rel.funcionarioNome || 'Sem funcionário'} · ${moedaObra(rel.rendimento || 0)}`, rel.obs || '', laranja);
+    const imgs = normalizarArquivosDocumentoObra({ arquivos: rel.imagens }).filter(arquivoEhImagem).slice(0, 4);
+    if (imgs.length) {
+      let x = M;
+      let rowH = 0;
+      for (const img of imgs) {
+        novaPaginaSePreciso(42);
+        const h = await adicionarImagemPdf(doc, img.url || img.src, x, y, 42, 34);
+        rowH = Math.max(rowH, h || 34);
+        x += 46;
+        if (x + 42 > M + W) { x = M; y += rowH + 5; rowH = 0; }
+      }
+      if (rowH) y += rowH + 5;
+    }
+  }
+
+  tituloSecao('Documentos vinculados');
+  if (!docs.length) paragrafo('Nenhum documento vinculado no período.', M, W, cinza);
+  for (const d of docs) {
+    itemBox(d.titulo || 'Documento', `${formatarDataObra(d.data)} · ${d.classificacao || 'Sem classificação'} · Rev. ${d.revisao || '00'} · ${d.status || 'Pendente'}`, d.descricao || '', d.status === 'Aprovado' ? [34, 160, 90] : azul);
+    const imgs = normalizarArquivosDocumentoObra(d).filter(arquivoEhImagem).slice(0, 3);
+    for (const img of imgs) {
+      novaPaginaSePreciso(52);
+      const h = await adicionarImagemPdf(doc, img.url || img.src, M + 8, y, W - 16, 46);
+      if (h) y += h + 5;
+    }
+  }
+
+  doc.setFont('helvetica', 'normal'); doc.setFontSize(8); doc.setTextColor(...cinza);
+  doc.text('Desenvolvido por Sanoj Sistemas', PW / 2, PH - 8, { align: 'center' });
+  return doc;
+}
+
+async function atualizarPreviewRelatorioObra(obraId) {
+  const inicio = document.getElementById('obra-rel-inicio')?.value || '';
+  const fim = document.getElementById('obra-rel-fim')?.value || '';
+  if (inicio && fim && inicio > fim) { mostrarToast('Data inicial maior que a data final.', 'erro'); return; }
+  const frame = document.getElementById('obra-relatorio-preview-frame');
+  if (frame) frame.srcdoc = '<div style="font-family:Arial;padding:24px">Gerando prévia...</div>';
+  try {
+    const doc = await gerarRelatorioPeriodoObraPDF(obraId, inicio, fim);
+    if (obraRelatorioPreviewUrl) URL.revokeObjectURL(obraRelatorioPreviewUrl);
+    obraRelatorioPreviewAtual = { doc, obraId, inicio, fim };
+    obraRelatorioPreviewUrl = URL.createObjectURL(doc.output('blob'));
+    if (frame) frame.src = obraRelatorioPreviewUrl;
+  } catch (err) {
+    console.error(err);
+    mostrarToast('Erro ao gerar prévia do relatório.', 'erro');
+  }
+}
+
+async function baixarRelatorioPeriodoObra() {
+  if (!obraRelatorioPreviewAtual) { mostrarToast('Gere a prévia antes de baixar.', 'erro'); return; }
+  const obra = obras.find(o => o.id === obraRelatorioPreviewAtual.obraId);
+  const nome = String(obra?.nome || 'obra').normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]+/gi, '-').replace(/^-|-$/g, '').toLowerCase();
+  obraRelatorioPreviewAtual.doc.save(`relatorio-obra-${nome || 'obra'}-${obraRelatorioPreviewAtual.inicio || 'inicio'}-${obraRelatorioPreviewAtual.fim || 'fim'}.pdf`);
+  mostrarToast('Relatório de obra baixado.', 'sucesso');
 }
 
 function fecharMenuDiaObra() {
@@ -487,6 +972,9 @@ function popularSelectObrasRel() {
 Object.assign(window, {
   renderizarObras, setFiltroObras, abrirDetalheObra, voltarListaObras, renderizarDetalheObra, mudarMesCronogramaObra,
   abrirMenuDiaObra, fecharMenuDiaObra, criarRelatorioObraDia, criarAgendamentoObraDia, abrirEtapaCronogramaObra, criarEtapaObraDia, criarOrcamentoObraDia, abrirOrcamentoAtrelado,
+  abrirModalDocumentoObra, fecharModalDocumentoObra, handleArquivosDocumentoObra, removerArquivoDocumentoObra,
+  salvarDocumentoObra, editarDocumentoObra, aprovarDocumentoObra, confirmarExcluirDocumentoObra,
+  abrirRelatorioPeriodoObra, fecharRelatorioPeriodoObra, atualizarPreviewRelatorioObra, baixarRelatorioPeriodoObra,
   abrirModalObra, fecharModalObra, editarObra, salvarObra,
   marcarObraFinalizada, marcarObraExecucao, confirmarExcluirObra
 });

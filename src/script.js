@@ -1418,13 +1418,17 @@ function toggleDesconto() {
 function normalizarDesconto(valor = {}) {
     if (typeof valor === 'number') {
         const pct = Number.isFinite(valor) ? Math.max(0, Math.min(99.99, valor)) : 0;
-        return { material: pct, maoObra: pct };
+        return { material: pct, maoObra: pct, materialValorDesejado: 0, maoObraValorDesejado: 0 };
     }
     const material = parseFloat(valor.material ?? valor.descontoMaterial ?? valor.mat ?? 0) || 0;
     const maoObra = parseFloat(valor.maoObra ?? valor.descontoMaoObra ?? valor.mao ?? 0) || 0;
+    const materialValorDesejado = normalizarNumeroInput(valor.materialValorDesejado ?? valor.valorDesejadoMaterial ?? valor.materialFinal ?? 0);
+    const maoObraValorDesejado = normalizarNumeroInput(valor.maoObraValorDesejado ?? valor.valorDesejadoMaoObra ?? valor.maoObraFinal ?? 0);
     return {
         material: Math.max(0, Math.min(99.99, material)),
-        maoObra: Math.max(0, Math.min(99.99, maoObra))
+        maoObra: Math.max(0, Math.min(99.99, maoObra)),
+        materialValorDesejado: Math.max(0, materialValorDesejado),
+        maoObraValorDesejado: Math.max(0, maoObraValorDesejado)
     };
 }
 
@@ -1443,11 +1447,21 @@ function temDesconto(desc = descontoAplicado) {
 
 function calcularDescontoValores(subtotalMaterial, subtotalMaoObra, desc = descontoAplicado) {
     const d = normalizarDesconto(desc);
-    const descontoMaterialValor = subtotalMaterial * d.material / 100;
-    const descontoMaoValor = subtotalMaoObra * d.maoObra / 100;
+    const temMaterialDesejado = d.materialValorDesejado > 0 && d.materialValorDesejado <= subtotalMaterial;
+    const temMaoDesejado = d.maoObraValorDesejado > 0 && d.maoObraValorDesejado <= subtotalMaoObra;
+    const materialFinal = temMaterialDesejado ? d.materialValorDesejado : subtotalMaterial * (1 - d.material / 100);
+    const maoFinal = temMaoDesejado ? d.maoObraValorDesejado : subtotalMaoObra * (1 - d.maoObra / 100);
+    const descontoMaterialValor = Math.max(0, subtotalMaterial - materialFinal);
+    const descontoMaoValor = Math.max(0, subtotalMaoObra - maoFinal);
+    const materialPct = subtotalMaterial > 0 ? (descontoMaterialValor / subtotalMaterial) * 100 : 0;
+    const maoPct = subtotalMaoObra > 0 ? (descontoMaoValor / subtotalMaoObra) * 100 : 0;
     const totalDesconto = descontoMaterialValor + descontoMaoValor;
     return {
         ...d,
+        material: materialPct,
+        maoObra: maoPct,
+        materialValorDesejado: materialFinal,
+        maoObraValorDesejado: maoFinal,
         descontoMaterialValor,
         descontoMaoValor,
         totalDesconto,
@@ -1486,7 +1500,11 @@ function formatarNumeroCampo(valor) {
     return n > 0 ? n.toFixed(2) : '';
 }
 
-function atualizarLinhaTabelaDesconto(tipo, subtotal, percentual, { atualizarPercentual = true, atualizarValorDesejado = true } = {}) {
+function formatarPercentualDesconto(valor) {
+    return (Number(valor) || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+
+function atualizarLinhaTabelaDesconto(tipo, subtotal, percentual, { atualizarPercentual = true, atualizarValorDesejado = true, valorDesejadoExato = 0 } = {}) {
     const cfg = getConfigLinhaDesconto(tipo);
     const atualEl = document.getElementById(cfg.atual);
     const valorDesejadoEl = document.getElementById(cfg.valorDesejado);
@@ -1494,9 +1512,10 @@ function atualizarLinhaTabelaDesconto(tipo, subtotal, percentual, { atualizarPer
     const percentualEl = document.getElementById(cfg.percentual);
     if (!atualEl || !valorDesejadoEl || !valorDescontoEl || !percentualEl) return;
 
-    const pct = Math.max(0, Math.min(99.99, Number(percentual) || 0));
-    const descontoValor = subtotal * pct / 100;
-    const valorDesejado = Math.max(0, subtotal - descontoValor);
+    const temValorDesejado = valorDesejadoExato > 0 && valorDesejadoExato <= subtotal;
+    const valorDesejado = temValorDesejado ? valorDesejadoExato : Math.max(0, subtotal - (subtotal * (Number(percentual) || 0) / 100));
+    const descontoValor = Math.max(0, subtotal - valorDesejado);
+    const pct = subtotal > 0 ? Math.max(0, Math.min(99.99, (descontoValor / subtotal) * 100)) : 0;
     atualEl.textContent = formatarMoeda(subtotal);
     valorDescontoEl.textContent = formatarMoeda(descontoValor);
     if (atualizarPercentual) percentualEl.value = formatarNumeroCampo(pct);
@@ -1508,11 +1527,13 @@ function atualizarTabelaDesconto(totais = null, opcoes = {}) {
     const subtotalMaoObra = Number(totais?.subtotalMaoObra) || 0;
     atualizarLinhaTabelaDesconto('material', subtotalMaterial, descontoAplicado.material, {
         atualizarPercentual: !opcoes.preservarInputs,
-        atualizarValorDesejado: !opcoes.preservarInputs
+        atualizarValorDesejado: !opcoes.preservarInputs,
+        valorDesejadoExato: descontoAplicado.materialValorDesejado || 0
     });
     atualizarLinhaTabelaDesconto('maoObra', subtotalMaoObra, descontoAplicado.maoObra, {
         atualizarPercentual: !opcoes.preservarInputs,
-        atualizarValorDesejado: !opcoes.preservarInputs
+        atualizarValorDesejado: !opcoes.preservarInputs,
+        valorDesejadoExato: descontoAplicado.maoObraValorDesejado || 0
     });
 }
 
@@ -1522,8 +1543,13 @@ function atualizarDescontoPorPercentual(tipo) {
     const subtotal = Number(totais[cfg.subtotal]) || 0;
     const percentualEl = document.getElementById(cfg.percentual);
     const pct = Math.max(0, Math.min(99.99, normalizarNumeroInput(percentualEl?.value)));
-    if (tipo === 'maoObra') descontoAplicado.maoObra = pct;
-    else descontoAplicado.material = pct;
+    if (tipo === 'maoObra') {
+        descontoAplicado.maoObra = pct;
+        descontoAplicado.maoObraValorDesejado = 0;
+    } else {
+        descontoAplicado.material = pct;
+        descontoAplicado.materialValorDesejado = 0;
+    }
     atualizarLinhaTabelaDesconto(tipo, subtotal, pct, { atualizarPercentual: false, atualizarValorDesejado: true });
     if (temDesconto()) renderizarDescontoCalculo(totais);
     else ocultarDescontoCalculo();
@@ -1536,8 +1562,13 @@ function atualizarDescontoPorValor(tipo) {
     const valorDesejadoEl = document.getElementById(cfg.valorDesejado);
     const valorDigitado = String(valorDesejadoEl?.value || '').trim();
     if (!valorDigitado) {
-        if (tipo === 'maoObra') descontoAplicado.maoObra = 0;
-        else descontoAplicado.material = 0;
+        if (tipo === 'maoObra') {
+            descontoAplicado.maoObra = 0;
+            descontoAplicado.maoObraValorDesejado = 0;
+        } else {
+            descontoAplicado.material = 0;
+            descontoAplicado.materialValorDesejado = 0;
+        }
         atualizarLinhaTabelaDesconto(tipo, subtotal, 0, { atualizarPercentual: true, atualizarValorDesejado: false });
         if (temDesconto()) renderizarDescontoCalculo(totais);
         else ocultarDescontoCalculo();
@@ -1548,9 +1579,14 @@ function atualizarDescontoPorValor(tipo) {
         valorDesejadoEl.value = formatarNumeroCampo(valorDesejado);
     }
     const pct = subtotal > 0 ? ((subtotal - valorDesejado) / subtotal) * 100 : 0;
-    if (tipo === 'maoObra') descontoAplicado.maoObra = pct;
-    else descontoAplicado.material = pct;
-    atualizarLinhaTabelaDesconto(tipo, subtotal, pct, { atualizarPercentual: true, atualizarValorDesejado: false });
+    if (tipo === 'maoObra') {
+        descontoAplicado.maoObra = pct;
+        descontoAplicado.maoObraValorDesejado = valorDesejado;
+    } else {
+        descontoAplicado.material = pct;
+        descontoAplicado.materialValorDesejado = valorDesejado;
+    }
+    atualizarLinhaTabelaDesconto(tipo, subtotal, pct, { atualizarPercentual: true, atualizarValorDesejado: false, valorDesejadoExato: valorDesejado });
     if (temDesconto()) renderizarDescontoCalculo(totais);
     else ocultarDescontoCalculo();
 }
@@ -1558,6 +1594,8 @@ function atualizarDescontoPorValor(tipo) {
 function aplicarDesconto() {
     const pctMaterial = normalizarNumeroInput(document.getElementById('input-desconto-material').value);
     const pctMao = normalizarNumeroInput(document.getElementById('input-desconto-mao').value);
+    const valorDesejadoMaterial = normalizarNumeroInput(document.getElementById('input-desconto-material-valor')?.value);
+    const valorDesejadoMao = normalizarNumeroInput(document.getElementById('input-desconto-mao-valor')?.value);
     if (pctMaterial < 0 || pctMaterial >= 100 || pctMao < 0 || pctMao >= 100) {
         mostrarToast('Informe percentuais entre 0 e 100.', 'erro');
         return;
@@ -1566,8 +1604,13 @@ function aplicarDesconto() {
         mostrarToast('Informe desconto para material ou mão de obra.', 'erro');
         return;
     }
-    descontoAplicado = normalizarDesconto({ material: pctMaterial, maoObra: pctMao });
     const totais = calcularTotais();
+    descontoAplicado = normalizarDesconto({
+        material: pctMaterial,
+        maoObra: pctMao,
+        materialValorDesejado: valorDesejadoMaterial > 0 && valorDesejadoMaterial <= totais.subtotalMaterial ? valorDesejadoMaterial : 0,
+        maoObraValorDesejado: valorDesejadoMao > 0 && valorDesejadoMao <= totais.subtotalMaoObra ? valorDesejadoMao : 0
+    });
     renderizarDescontoCalculo(totais);
 }
 
@@ -1598,7 +1641,7 @@ function atualizarDescontoCalculo(totais) {
 }
 
 function limparDesconto() {
-    descontoAplicado = { material: 0, maoObra: 0 };
+    descontoAplicado = { material: 0, maoObra: 0, materialValorDesejado: 0, maoObraValorDesejado: 0 };
     ocultarDescontoCalculo();
     document.getElementById('form-desconto').classList.remove('visivel');
     document.getElementById('input-desconto-material').value = '';
@@ -1611,7 +1654,7 @@ function limparDesconto() {
 }
 
 function limparDescontoCalculo() {
-    descontoAplicado = { material: 0, maoObra: 0 };
+    descontoAplicado = { material: 0, maoObra: 0, materialValorDesejado: 0, maoObraValorDesejado: 0 };
     ocultarDescontoCalculo();
 }
 
@@ -2527,6 +2570,13 @@ function formatarReferenciaDocumento(valor, isCobranca = false) {
     return new Date(valor + 'T12:00:00').toLocaleDateString('pt-BR');
 }
 
+function obterRevisaoAtualPdf() {
+    const salvo = orcamentoEditandoId ? getHistorico().find(o => o.id === orcamentoEditandoId) : null;
+    if (salvo?.revisao) return String(salvo.revisao);
+    const revTexto = document.getElementById('display-rev')?.textContent || '';
+    return revTexto.replace(/\s*\(.*?\)\s*/g, '').trim();
+}
+
 function mostrarToast(msg, tipo = '') {
     const t = document.getElementById('toast');
     if (!msg) { t.classList.remove('visivel'); return; }
@@ -2633,6 +2683,7 @@ function gerarPDF(baixar = true) {
     const isCobranca = getTipoDocumento(dados) === 'cobranca';
     const docTitulo = getLabelTipoDocumento(dados.tipoDocumento).toUpperCase();
     const validFmt = formatarReferenciaDocumento(dados.validade, isCobranca);
+    const revisaoPdf = obterRevisaoAtualPdf();
 
     const PW = isLandscape ? 297 : 210;
     const PH = isLandscape ? 210 : 297;
@@ -2661,6 +2712,12 @@ function gerarPDF(baixar = true) {
     doc.text(docTitulo, PW - MR, 14, { align: 'right' });
     doc.setFont('helvetica', 'bold'); doc.setFontSize(20); doc.setTextColor(...C_BRANCO);
     doc.text(numDisplay, PW - MR, 24, { align: 'right' });
+    if (revisaoPdf) {
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(8);
+        doc.setTextColor(...C_AZUL_CLA);
+        doc.text(revisaoPdf.toUpperCase(), PW - MR, HEADER_H - 2.5, { align: 'right' });
+    }
     y = HEADER_H + 8;
 
     // Cliente
@@ -2885,11 +2942,11 @@ function gerarPDF(baixar = true) {
     y += 2;
 
     if (temDescontoPdf) {
-        if (descontoPdf.material > 0) {
-            renderLinhaTotalPdf(`Desconto Material (${descontoPdf.material}%)`, totaisDescontoPdf.descontoMaterialValor, { cor: C_LARANJA, negativo: true });
+        if (totaisDescontoPdf.descontoMaterialValor > 0) {
+            renderLinhaTotalPdf(`Desconto Material (${formatarPercentualDesconto(totaisDescontoPdf.material)}%)`, totaisDescontoPdf.descontoMaterialValor, { cor: C_LARANJA, negativo: true });
         }
-        if (descontoPdf.maoObra > 0) {
-            renderLinhaTotalPdf(`Desconto Mão de Obra (${descontoPdf.maoObra}%)`, totaisDescontoPdf.descontoMaoValor, { cor: C_LARANJA, negativo: true });
+        if (totaisDescontoPdf.descontoMaoValor > 0) {
+            renderLinhaTotalPdf(`Desconto Mão de Obra (${formatarPercentualDesconto(totaisDescontoPdf.maoObra)}%)`, totaisDescontoPdf.descontoMaoValor, { cor: C_LARANJA, negativo: true });
         }
         y += 2;
         renderLinhaTotalPdf('Subtotal Material com desconto', subtotalMaterialFinal);
