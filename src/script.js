@@ -1467,20 +1467,18 @@ function aplicarDesconto() {
 
 function renderizarDescontoCalculo({ subtotalMaterial, subtotalMaoObra }) {
     const d = calcularDescontoValores(subtotalMaterial, subtotalMaoObra);
-    const partes = [
-        d.material > 0 ? `Material ${d.material}%` : '',
-        d.maoObra > 0 ? `Mão de obra ${d.maoObra}%` : ''
-    ].filter(Boolean).join(' • ');
+    const materialFinal = subtotalMaterial - d.descontoMaterialValor;
+    const maoFinal = subtotalMaoObra - d.descontoMaoValor;
     document.getElementById('desc-cartoes').innerHTML = `
-    <div class="desc-cartao" style="background:#2563a8">
-      <span class="dc-label">Total com desconto</span>
-      <span class="dc-valor">${formatarMoeda(d.totalComDesconto)}</span>
-      <span class="dc-economia">${escapeHtml(partes)} • Economia de ${formatarMoeda(d.totalDesconto)}</span>
-    </div>
     <div class="desc-cartao" style="background:#e05c20">
       <span class="dc-label">Valor do desconto</span>
       <span class="dc-valor">${formatarMoeda(d.totalDesconto)}</span>
       <span class="dc-economia">Material: ${formatarMoeda(d.descontoMaterialValor)} • M.O.: ${formatarMoeda(d.descontoMaoValor)}</span>
+    </div>
+    <div class="desc-cartao" style="background:#2563a8">
+      <span class="dc-label">Total com desconto</span>
+      <span class="dc-valor">${formatarMoeda(d.totalComDesconto)}</span>
+      <span class="dc-economia">Material: ${formatarMoeda(materialFinal)} • M.O.: ${formatarMoeda(maoFinal)} • Total: ${formatarMoeda(d.totalComDesconto)}</span>
     </div>`;
     document.getElementById('resultados-desconto').classList.add('visivel');
 }
@@ -2754,10 +2752,13 @@ function gerarPDF(baixar = true) {
     const totalGeral = totais.subtotalMaterial + totais.subtotalMaoObra;
     const descontoPdf = normalizarDescontoOrcamento(dados);
     const totaisDescontoPdf = calcularDescontoValores(totais.subtotalMaterial, totais.subtotalMaoObra, descontoPdf);
-    const totalComDesconto = temDesconto(descontoPdf) ? totaisDescontoPdf.totalComDesconto : totalGeral;
+    const temDescontoPdf = temDesconto(descontoPdf);
+    const totalComDesconto = temDescontoPdf ? totaisDescontoPdf.totalComDesconto : totalGeral;
+    const subtotalMaterialFinal = temDescontoPdf ? totais.subtotalMaterial - totaisDescontoPdf.descontoMaterialValor : totais.subtotalMaterial;
+    const subtotalMaoFinal = temDescontoPdf ? totais.subtotalMaoObra - totaisDescontoPdf.descontoMaoValor : totais.subtotalMaoObra;
     [
-        ['Subtotal Material', totais.subtotalMaterial],
-        ['Subtotal Mão de Obra', totais.subtotalMaoObra],
+        [temDescontoPdf ? 'Subtotal Material c/ Desconto' : 'Subtotal Material', subtotalMaterialFinal],
+        [temDescontoPdf ? 'Subtotal Mão de Obra c/ Desconto' : 'Subtotal Mão de Obra', subtotalMaoFinal],
     ].forEach(([label, val]) => {
         if (y + 7 > PH - 27) { doc.addPage(); y = 14; }
         doc.setFont('helvetica', 'normal'); doc.setFontSize(9); doc.setTextColor(...C_CINZA);
