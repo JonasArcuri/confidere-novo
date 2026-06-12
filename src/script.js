@@ -1136,6 +1136,47 @@ function removerCabecalho(cid) {
 
 let imagemLinhaId = 0;
 
+function compactarImagemParaOrcamento(src, larguraOriginal = 0, alturaOriginal = 0) {
+    return new Promise(resolve => {
+        if (!src || !String(src).startsWith('data:image/')) {
+            resolve(src || '');
+            return;
+        }
+        const img = new Image();
+        img.onload = () => {
+            try {
+                const larguraBase = Number(larguraOriginal) || img.naturalWidth || img.width || 0;
+                const alturaBase = Number(alturaOriginal) || img.naturalHeight || img.height || 0;
+                if (!larguraBase || !alturaBase) {
+                    resolve(src);
+                    return;
+                }
+
+                const maxLado = 1200;
+                const escala = Math.min(1, maxLado / Math.max(larguraBase, alturaBase));
+                const canvas = document.createElement('canvas');
+                canvas.width = Math.max(1, Math.round(larguraBase * escala));
+                canvas.height = Math.max(1, Math.round(alturaBase * escala));
+                const ctx = canvas.getContext('2d');
+                ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+
+                let qualidade = 0.82;
+                let dataUrl = canvas.toDataURL('image/jpeg', qualidade);
+                while (dataUrl.length > 450000 && qualidade > 0.42) {
+                    qualidade -= 0.08;
+                    dataUrl = canvas.toDataURL('image/jpeg', qualidade);
+                }
+                resolve(dataUrl);
+            } catch (err) {
+                console.error('Erro ao compactar imagem do orçamento:', err);
+                resolve(src);
+            }
+        };
+        img.onerror = () => resolve(src);
+        img.src = src;
+    });
+}
+
 function handleImagemOrcamento(input) {
     const file = input.files?.[0];
     if (!file) return;
@@ -1153,9 +1194,11 @@ function handleImagemOrcamento(input) {
     const reader = new FileReader();
     reader.onload = () => {
         const img = new Image();
-        img.onload = () => {
+        img.onload = async () => {
+            const fallbackSrc = await compactarImagemParaOrcamento(reader.result, img.naturalWidth, img.naturalHeight);
             const linhaImagem = adicionarImagemOrcamento(reader.result, img.naturalWidth, img.naturalHeight, {
-                uploadStatus: 'pending'
+                uploadStatus: 'pending',
+                fallbackSrc
             });
             try {
                 mostrarToast('Enviando imagem...', '');
@@ -1166,13 +1209,13 @@ function handleImagemOrcamento(input) {
                     mostrarToast('Imagem adicionada!', 'sucesso');
                 }).catch(err => {
                     console.error(err);
-                    linhaImagem.dataset.uploadStatus = 'error';
-                    mostrarToast('Imagem apareceu na tela, mas falhou ao enviar. Tente adicionar novamente antes de salvar.', 'erro');
+                    linhaImagem.dataset.uploadStatus = 'done';
+                    mostrarToast('Imagem adicionada com salvamento local. O envio ao Storage falhou, mas o orçamento pode ser salvo.', 'sucesso');
                 });
             } catch (err) {
                 console.error(err);
-                linhaImagem.dataset.uploadStatus = 'error';
-                mostrarToast('Erro ao enviar imagem. Tente novamente.', 'erro');
+                linhaImagem.dataset.uploadStatus = 'done';
+                mostrarToast('Imagem adicionada com salvamento local. O envio ao Storage falhou, mas o orçamento pode ser salvo.', 'sucesso');
             }
         };
         img.src = reader.result;
@@ -1192,6 +1235,7 @@ function adicionarImagemOrcamento(src, width = 0, height = 0, opcoes = {}) {
     const srcTexto = String(src || '');
     tr.dataset.storageUrl = opcoes.storageUrl || (srcTexto.startsWith('data:') ? '' : srcTexto);
     tr.dataset.storagePath = opcoes.storagePath || '';
+    tr.dataset.fallbackSrc = opcoes.fallbackSrc || (srcTexto.startsWith('data:') ? srcTexto : '');
     tr.dataset.uploadStatus = opcoes.uploadStatus || (tr.dataset.storageUrl ? 'done' : '');
     tr.className = 'linha-imagem-orcamento';
     tr.innerHTML = `
@@ -1220,7 +1264,8 @@ async function restaurarImagemOrcamento(linha) {
 
     adicionarImagemOrcamento(src, linha.width || 0, linha.height || 0, {
         storageUrl: linha.storageUrl || (String(src || '').startsWith('data:') ? '' : src),
-        storagePath
+        storagePath,
+        fallbackSrc: linha.fallbackSrc || (String(src || '').startsWith('data:') ? src : '')
     });
 }
 
@@ -1958,11 +2003,14 @@ function coletarDados() {
         }
         if (tr.dataset.imgId) {
             const img = tr.querySelector('img');
+            const storageUrl = tr.dataset.storageUrl || '';
+            const fallbackSrc = tr.dataset.fallbackSrc || '';
             linhas.push({
                 tipo: 'imagem',
-                src: img?.src || '',
-                storageUrl: tr.dataset.storageUrl || '',
+                src: storageUrl || fallbackSrc || img?.src || '',
+                storageUrl,
                 storagePath: tr.dataset.storagePath || '',
+                fallbackSrc,
                 width: Number(tr.dataset.imgWidth) || 0,
                 height: Number(tr.dataset.imgHeight) || 0
             });
@@ -2026,9 +2074,10 @@ function normalizarLinhaParaFirestore(linha) {
     if (linha.tipo === 'imagem') {
         return {
             tipo: 'imagem',
-            src: linha.storageUrl || (String(linha.src || '').startsWith('data:') ? '' : linha.src || ''),
+            src: linha.storageUrl || linha.fallbackSrc || linha.src || '',
             storageUrl: linha.storageUrl || '',
             storagePath: linha.storagePath || '',
+            fallbackSrc: linha.storageUrl ? '' : (linha.fallbackSrc || (String(linha.src || '').startsWith('data:') ? linha.src : '')),
             width: Number(linha.width) || 0,
             height: Number(linha.height) || 0
         };
@@ -2094,21 +2143,21 @@ async function validarImagensAntesDeSalvar() {
     const imagens = Array.from(document.querySelectorAll('#linhas-tbody tr[data-img-id]'));
     const normalizarStatus = () => {
         imagens.forEach(tr => {
-            if (tr.dataset.storageUrl && tr.dataset.uploadStatus === 'pending') {
+            if ((tr.dataset.storageUrl || tr.dataset.fallbackSrc) && tr.dataset.uploadStatus === 'pending') {
                 tr.dataset.uploadStatus = 'done';
             }
         });
     };
 
     normalizarStatus();
-    let pendente = imagens.some(tr => tr.dataset.uploadStatus === 'pending' && !tr.dataset.storageUrl);
+    let pendente = imagens.some(tr => tr.dataset.uploadStatus === 'pending' && !tr.dataset.storageUrl && !tr.dataset.fallbackSrc);
     if (pendente) {
         mostrarToast('Enviando imagem... aguarde alguns instantes.', '');
         const limite = Date.now() + 30000;
         while (Date.now() < limite) {
             await new Promise(resolve => setTimeout(resolve, 300));
             normalizarStatus();
-            pendente = imagens.some(tr => tr.dataset.uploadStatus === 'pending' && !tr.dataset.storageUrl);
+            pendente = imagens.some(tr => tr.dataset.uploadStatus === 'pending' && !tr.dataset.storageUrl && !tr.dataset.fallbackSrc);
             if (!pendente) break;
         }
     }
@@ -2120,7 +2169,7 @@ async function validarImagensAntesDeSalvar() {
 
     const comErro = imagens.some(tr => {
         const imgSrc = tr.querySelector('img')?.src || '';
-        return imgSrc.startsWith('data:') && !tr.dataset.storageUrl;
+        return imgSrc.startsWith('data:') && !tr.dataset.storageUrl && !tr.dataset.fallbackSrc;
     });
     if (comErro) {
         mostrarToast('Uma imagem ainda não foi enviada. Remova e adicione novamente antes de salvar.', 'erro');
@@ -2143,9 +2192,7 @@ async function salvarOrcamento() {
             const hist = getHistorico();
             const atual = hist.find(o => o.id === orcamentoEditandoId);
             if (atual) {
-                const tipoAtual = getTipoDocumento(atual);
                 const tipoNovo = getTipoDocumento(dados);
-                const mudouTipoDocumento = tipoAtual !== tipoNovo;
                 const revBase = (atual.revisoes || []).length + 1;
                 if (!atual.revisoes) atual.revisoes = [];
                 atual.revisoes.push({ ...atual, revisoes: undefined, savedAt: atual.savedAt });
@@ -2153,13 +2200,16 @@ async function salvarOrcamento() {
                 const updated = {
                     ...dados,
                     tipoDocumento: tipoNovo,
-                    numero: mudouTipoDocumento ? proximoNumero(tipoNovo) : atual.numero,
+                    numero: atual.numero,
                     savedAt: new Date().toISOString(),
                     revisao: revLabel,
                     revisoes: atual.revisoes,
                     statusAprovacao: atual.statusAprovacao || (atual.aprovado ? 'aprovado' : 'pendente'),
                     aprovado: !!atual.aprovado || atual.statusAprovacao === 'aprovado',
-                    dataAprovacao: atual.dataAprovacao || ''
+                    dataAprovacao: atual.dataAprovacao || '',
+                    statusPagamento: atual.statusPagamento || (atual.pago ? 'pago' : (tipoNovo === 'cobranca' ? 'pendente' : '')),
+                    pago: !!atual.pago || atual.statusPagamento === 'pago',
+                    dataPagamento: atual.dataPagamento || ''
                 };
                 await DB.salvarOrcamento(prepararOrcamentoParaFirestore(updated), orcamentoEditandoId);
                 const idx = hist.findIndex(o => o.id === orcamentoEditandoId);
@@ -2187,10 +2237,56 @@ async function salvarOrcamento() {
         mostrarToast(`${getLabelTipoDocumento(dados.tipoDocumento)} salvo com sucesso!`, 'sucesso');
         orcamentoEditandoId = null;
         document.getElementById('display-rev').innerHTML = '';
+        atualizarBotaoSalvarComoNovo();
         atualizarNumeroDisplay();
     } catch (err) {
         console.error(err);
         mostrarToast('Erro ao salvar documento.', 'erro');
+    }
+}
+
+async function salvarComoNovoOrcamento() {
+    if (!document.getElementById('campo-cliente')?.value?.trim()) {
+        mostrarToast('Informe o nome do cliente.', 'erro');
+        return;
+    }
+    if (!(await validarImagensAntesDeSalvar())) return;
+
+    const dados = {
+        ...coletarDados(),
+        tipoDocumento: 'orcamento'
+    };
+
+    try {
+        const novoOrc = {
+            ...dados,
+            numero: proximoNumero('orcamento'),
+            savedAt: new Date().toISOString(),
+            revisao: null,
+            revisoes: [],
+            statusAprovacao: 'pendente',
+            aprovado: false,
+            dataAprovacao: '',
+            statusPagamento: '',
+            pago: false,
+            dataPagamento: ''
+        };
+        const newId = await DB.salvarOrcamento(prepararOrcamentoParaFirestore(novoOrc));
+        const hist = getHistorico();
+        hist.push({ id: newId, ...novoOrc });
+        setHistorico(hist);
+
+        orcamentoEditandoId = newId;
+        tipoDocumentoAtual = 'orcamento';
+        aplicarTipoDocumento();
+        document.getElementById('display-numero').textContent = '#' + String(novoOrc.numero).padStart(3, '0');
+        document.getElementById('display-rev').innerHTML = '';
+        atualizarBotaoSalvarComoNovo();
+        window.renderizarObras?.();
+        mostrarToast('Novo orçamento criado a partir da edição.', 'sucesso');
+    } catch (err) {
+        console.error(err);
+        mostrarToast('Erro ao salvar como novo orçamento.', 'erro');
     }
 }
 
@@ -2199,6 +2295,11 @@ function numeroRomano(n) {
     let res = '';
     for (const [r, v] of romanos) { while (n >= v) { res += r; n -= v; } }
     return res;
+}
+
+function atualizarBotaoSalvarComoNovo() {
+    const btn = document.getElementById('btn-salvar-como-novo');
+    if (btn) btn.style.display = orcamentoEditandoId ? 'inline-flex' : 'none';
 }
 
 // ===== NOVO ORÇAMENTO =====
@@ -2228,6 +2329,7 @@ function novoOrcamento() {
     limparPagamento();
     calcularTotais();
     atualizarNumeroDisplay();
+    atualizarBotaoSalvarComoNovo();
     mudarAba('orcamento', document.querySelector(".nav-tab[onclick*=\"orcamento\"]") || document.querySelector('.nav-tab'));
 }
 
@@ -2247,6 +2349,7 @@ async function editarOrcamento(id) {
     const orc = getHistorico().find(o => o.id === id);
     if (!orc) return;
     orcamentoEditandoId = id;
+    atualizarBotaoSalvarComoNovo();
     obraVinculadaOrcamentoId = orc.obraId || '';
     tipoDocumentoAtual = getTipoDocumento(orc);
     aplicarTipoDocumento();
@@ -2864,11 +2967,11 @@ function gerarPDF(baixar = true) {
 
     // Tabela — larguras responsivas por orientação
     // Paisagem tem +87mm de largura útil, distribuímos nas colunas de texto
-    const COL_UNID  = isLandscape ? 24 : 20;
-    const COL_CMAT  = isLandscape ? 22 : 18;
-    const COL_CMO   = isLandscape ? 22 : 18;
-    const COL_TMAT  = isLandscape ? 24 : 20;
-    const COL_TMAO  = isLandscape ? 24 : 20;
+    const COL_UNID  = isLandscape ? 23 : 18;
+    const COL_CMAT  = isLandscape ? 23 : 19;
+    const COL_CMO   = isLandscape ? 23 : 19;
+    const COL_TMAT  = isLandscape ? 30 : 27;
+    const COL_TMAO  = isLandscape ? 30 : 27;
     const COL_FIXED = COL_UNID + COL_CMAT + COL_CMO + COL_TMAT + COL_TMAO; // colunas numéricas fixas
     const COL_FLEX  = CW - COL_FIXED; // espaço restante para desc + material
     const COL_DESC  = Math.round(COL_FLEX * 0.45);
@@ -2884,6 +2987,20 @@ function gerarPDF(baixar = true) {
     function wrapText(doc, text, maxW) {
         if (!text) return ['-'];
         return doc.splitTextToSize(String(text), maxW);
+    }
+
+    function textRightFit(doc, text, xRight, baseY, maxW, opcoes = {}) {
+        const fonteOriginal = doc.getFontSize();
+        const maxFonte = opcoes.maxFonte || fonteOriginal;
+        const minFonte = opcoes.minFonte || 6.2;
+        let fonte = maxFonte;
+        doc.setFontSize(fonte);
+        while (doc.getTextWidth(String(text)) > maxW && fonte > minFonte) {
+            fonte -= 0.2;
+            doc.setFontSize(fonte);
+        }
+        doc.text(String(text), xRight, baseY, { align: 'right' });
+        doc.setFontSize(fonteOriginal);
     }
 
     // Retorna a baseline Y da primeira linha de um bloco centralizado verticalmente
@@ -3029,12 +3146,12 @@ function gerarPDF(baixar = true) {
 
             // VALORES NUMÉRICOS
             doc.setFont('helvetica', 'normal'); doc.setFontSize(8); doc.setTextColor(...C_TEXTO);
-            doc.text(formatarMoeda(l.custoMaterial || 0), ccx + COL_CMAT - PAD_X, midY, { align: 'right' }); ccx += COL_CMAT;
-            doc.text(formatarMoeda(l.custoMao      || 0), ccx + COL_CMO  - PAD_X, midY, { align: 'right' }); ccx += COL_CMO;
+            textRightFit(doc, formatarMoeda(l.custoMaterial || 0), ccx + COL_CMAT - 2, midY, COL_CMAT - 4, { maxFonte: 8, minFonte: 6.4 }); ccx += COL_CMAT;
+            textRightFit(doc, formatarMoeda(l.custoMao      || 0), ccx + COL_CMO  - 2, midY, COL_CMO  - 4, { maxFonte: 8, minFonte: 6.4 }); ccx += COL_CMO;
 
             doc.setFont('helvetica', 'bold'); doc.setTextColor(...C_AZUL_ESC);
-            doc.text(formatarMoeda(l.subtotalMaterial), ccx + COL_TMAT - PAD_X, midY, { align: 'right' }); ccx += COL_TMAT;
-            doc.text(formatarMoeda(l.subtotalMao),      ccx + COL_TMAO - PAD_X, midY, { align: 'right' });
+            textRightFit(doc, formatarMoeda(l.subtotalMaterial), ccx + COL_TMAT - 2, midY, COL_TMAT - 4, { maxFonte: 7.8, minFonte: 6.2 }); ccx += COL_TMAT;
+            textRightFit(doc, formatarMoeda(l.subtotalMao),      ccx + COL_TMAO - 2, midY, COL_TMAO - 4, { maxFonte: 7.8, minFonte: 6.2 });
 
             doc.setFont('helvetica', 'normal'); doc.setTextColor(...C_TEXTO);
             y += rowH;
@@ -3114,23 +3231,57 @@ function gerarPDF(baixar = true) {
     });
 
     if (dados.obs && dados.obs.trim()) {
-        if (y + 16 > PH - 27) { doc.addPage(); y = 14; }
+        const margemQuebraObs = 15; // 1,5 cm de respiro antes do rodape/quebra
         const obsPadding = PAD_X;
+        const obsHeaderH = 12;
+        const obsLineH = 5;
+        const obsMinH = 16;
         doc.setFont('helvetica', 'normal'); doc.setFontSize(8.5);
         const obsLinhas = doc.splitTextToSize(dados.obs.trim(), CW - obsPadding * 2);
-        const obsH = Math.max(16, obsLinhas.length * 5 + 12);
-        doc.setFillColor(...C_AZUL_FADE); doc.setDrawColor(...C_AZUL_MED); doc.setLineWidth(0.8);
-        doc.rect(ML, y, CW, obsH, 'F');
-        doc.setFont('helvetica', 'bold'); doc.setFontSize(7); doc.setTextColor(...C_AZUL_MED);
-        doc.text('OBSERVAÇÕES', ML + obsPadding, y + 6);
-        doc.setFont('helvetica', 'normal'); doc.setFontSize(8.5); doc.setTextColor(68, 68, 68);
-        obsLinhas.forEach((linha, li) => {
-            doc.text(linha, ML + obsPadding, y + 12 + li * 5);
-        });
-        y += obsH + 6;
+
+        const desenharBlocoObs = (linhas, continuar = false) => {
+            const obsH = Math.max(obsMinH, linhas.length * obsLineH + obsHeaderH);
+            doc.setFillColor(...C_AZUL_FADE); doc.setDrawColor(...C_AZUL_MED); doc.setLineWidth(0.8);
+            doc.rect(ML, y, CW, obsH, 'F');
+            doc.setFont('helvetica', 'bold'); doc.setFontSize(7); doc.setTextColor(...C_AZUL_MED);
+            doc.text(continuar ? 'OBSERVACOES (CONT.)' : 'OBSERVACOES', ML + obsPadding, y + 6);
+            doc.setFont('helvetica', 'normal'); doc.setFontSize(8.5); doc.setTextColor(68, 68, 68);
+            linhas.forEach((linha, li) => {
+                doc.text(linha, ML + obsPadding, y + obsHeaderH + li * obsLineH);
+            });
+            y += obsH + 6;
+        };
+
+        let restantes = [...obsLinhas];
+        let continuacao = false;
+        while (restantes.length > 0) {
+            const limitePagina = PH - 27 - margemQuebraObs;
+            const espacoDisponivel = limitePagina - y;
+            const linhasNaPagina = Math.floor((espacoDisponivel - obsHeaderH) / obsLineH);
+            const obsHCompleto = Math.max(obsMinH, restantes.length * obsLineH + obsHeaderH);
+
+            if (obsHCompleto > espacoDisponivel && (linhasNaPagina < 1 || y > 20)) {
+                doc.addPage();
+                y = 14;
+                continuacao = continuacao || restantes.length < obsLinhas.length;
+                continue;
+            }
+
+            if (obsHCompleto <= espacoDisponivel) {
+                desenharBlocoObs(restantes, continuacao);
+                restantes = [];
+            } else {
+                const qtd = Math.max(1, linhasNaPagina);
+                desenharBlocoObs(restantes.slice(0, qtd), continuacao);
+                restantes = restantes.slice(qtd);
+                doc.addPage();
+                y = 14;
+                continuacao = true;
+            }
+        }
     }
 
-    // ── Condições de Pagamento ──
+    // Condicoes de Pagamento
     if (dados.pagamento && dados.pagamento.opcoes && dados.pagamento.opcoes.length > 0) {
         if (y + 16 > PH - 27) { doc.addPage(); y = 14; }
 
@@ -3211,6 +3362,55 @@ function _pdfTextoEmpresaComLink(doc, texto, x, y, opcoes = {}) {
     }
 }
 
+let whatsappPdfIconDataUrl = '';
+
+function criarIconeWhatsappPdfDataUrl() {
+    if (whatsappPdfIconDataUrl) return whatsappPdfIconDataUrl;
+    const canvas = document.createElement('canvas');
+    canvas.width = 96;
+    canvas.height = 96;
+    const ctx = canvas.getContext('2d');
+
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.fillStyle = '#25D366';
+    ctx.beginPath();
+    ctx.arc(48, 48, 44, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.strokeStyle = '#FFFFFF';
+    ctx.fillStyle = '#FFFFFF';
+    ctx.lineWidth = 6;
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+
+    ctx.beginPath();
+    ctx.arc(48, 45, 25, 0.25 * Math.PI, 2.15 * Math.PI);
+    ctx.stroke();
+
+    ctx.beginPath();
+    ctx.moveTo(31, 64);
+    ctx.lineTo(24, 75);
+    ctx.lineTo(38, 69);
+    ctx.closePath();
+    ctx.fill();
+
+    ctx.beginPath();
+    ctx.moveTo(38, 33);
+    ctx.bezierCurveTo(34, 38, 37, 48, 45, 56);
+    ctx.bezierCurveTo(53, 64, 63, 67, 68, 62);
+    ctx.lineTo(62, 55);
+    ctx.bezierCurveTo(60, 53, 57, 53, 55, 55);
+    ctx.lineTo(52, 58);
+    ctx.bezierCurveTo(47, 56, 40, 49, 38, 44);
+    ctx.lineTo(42, 40);
+    ctx.bezierCurveTo(44, 38, 44, 35, 42, 33);
+    ctx.closePath();
+    ctx.fill();
+
+    whatsappPdfIconDataUrl = canvas.toDataURL('image/png');
+    return whatsappPdfIconDataUrl;
+}
+
 function _pdfMarcaDetalhes(doc, x, y, fontSize, textColor) {
     const contato = empresaConfig.empresaContato || '';
     const local = empresaConfig.empresaLocal || '';
@@ -3223,13 +3423,13 @@ function _pdfMarcaDetalhes(doc, x, y, fontSize, textColor) {
 
     if (contato) {
         if (empresaConfig.empresaContatoWhatsapp) {
-            doc.setFillColor(37, 211, 102);
-            doc.circle(cursor + 1.8, y - 1.5, 1.9, 'F');
-            doc.setTextColor(255, 255, 255);
-            doc.setFont('helvetica', 'bold');
-            doc.setFontSize(Math.max(5, fontSize - 0.4));
-            doc.text('☎', cursor + 1.8, y - 0.05, { align: 'center' });
-            cursor += 5.2;
+            try {
+                doc.addImage(criarIconeWhatsappPdfDataUrl(), 'PNG', cursor, y - 4.3, 4.2, 4.2, undefined, 'FAST');
+            } catch {
+                doc.setFillColor(37, 211, 102);
+                doc.circle(cursor + 2.1, y - 2.1, 2.1, 'F');
+            }
+            cursor += 5.4;
             doc.setFont('helvetica', 'normal');
             doc.setFontSize(fontSize);
             doc.setTextColor(...textColor);
@@ -3240,8 +3440,8 @@ function _pdfMarcaDetalhes(doc, x, y, fontSize, textColor) {
     }
 
     if (contato && local) {
-        doc.text(' • ', cursor, y);
-        cursor += doc.getTextWidth(' • ');
+        doc.text(' - ', cursor, y);
+        cursor += doc.getTextWidth(' - ');
     }
 
     if (local) {
@@ -3490,7 +3690,7 @@ Object.assign(window, {
     adicionarCabecalho, removerCabecalho, selecionarCabecalho, filtrarCabecalhoOpcoes, abrirDropdownCabecalho,
     toggleDesconto, aplicarDesconto, limparDesconto, atualizarDescontoPorPercentual, atualizarDescontoPorValor,
     togglePagamento, aplicarPagamento, limparPagamento, handlePgtoChange, calcularSaldo,
-    salvarOrcamento, novoOrcamento, editarOrcamento, confirmarExcluir,
+    salvarOrcamento, salvarComoNovoOrcamento, novoOrcamento, editarOrcamento, confirmarExcluir,
     iniciarOrcamentoParaObra,
     filtrarHistorico, renderizarHistorico, setTipoHistorico,
     toggleAprovacaoHistorico, confirmarAprovacaoHistorico, fecharMenuAprovacao, gerarRelatorioCobrancaDeOrcamento,
