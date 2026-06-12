@@ -49,6 +49,7 @@ document.addEventListener('DOMContentLoaded', () => {
     aplicarTipoDocumento();
     atualizarNumeroDisplay();
     renderizarOpcoesObservacao();
+    renderizarPagamentosManuais();
 });
 
 // ===== LOGO =====
@@ -661,6 +662,7 @@ function recarregarOpcoesEditaveisUsuario() {
     _OPCOES_OBS = carregarOpcoesObservacao();
     atualizarDropdownsEditaveis();
     renderizarOpcoesObservacao();
+    renderizarPagamentosManuais();
 }
 
 function getListaOpcoesEditaveis(tipo) {
@@ -1017,7 +1019,7 @@ function adicionarLinha(desc = '', area = '', material = '', custoMaterial = '',
       <div class="desc-opt manual-option-row" onclick="toggleDescManual(${id})">Digitar manualmente...</div>
       ${renderOpcoesDesc(id, descPredefinida)}
     </div>
-    <label class="manual-save-row" id="desc-manual-save-row-${id}" style="display:${descManualVal ? 'flex' : 'none'}"><input type="checkbox" id="desc-manual-salvar-${id}" onchange="salvarManualSeMarcado('desc',${id})"><span>Salvar na lista</span></label>
+    <label class="manual-save-row" id="desc-manual-save-row-${id}" style="display:${descManualVal ? 'flex' : 'none'}"><input type="checkbox" id="desc-manual-salvar-${id}" onchange="salvarManualSeMarcado('desc',${id})"><span>Salvar na lista</span><span class="tooltip-wrap tooltip-manual-save" data-tooltip="Salva o serviço descrito manualmente na lista de serviços para uso posterior."><button type="button" class="manual-save-help-btn" aria-label="Ajuda sobre salvar serviço na lista" onclick="event.preventDefault();event.stopPropagation();">?</button></span></label>
     <input type="text" id="desc-manual-${id}" placeholder="Digite o servi&ccedil;o..." value="${escapeAttr(descManualVal)}" oninput="atualizarDescManual(${id});calcularLinha(${id})" onblur="salvarManualSeMarcado('desc',${id})" style="display:${descManualVal ? 'block' : 'none'};margin-top:4px;width:100%;box-sizing:border-box;padding:5px 8px;border:1px solid #c0bdb8;border-radius:6px;font-size:13px">
   </div>
 </td>
@@ -1822,9 +1824,6 @@ function getTextoObservacaoOpcao(valor) {
 
 function montarObservacoes() {
     const textoLivre = document.getElementById('campo-obs').value.trim();
-    if (document.getElementById('obs-manual-salvar')?.checked) {
-        adicionarObservacaoPreset(textoLivre, { silencioso: true });
-    }
     const opcoes = getObservacoesMarcadas()
         .map(getTextoObservacaoOpcao)
         .filter(Boolean)
@@ -1836,8 +1835,6 @@ function montarObservacoes() {
 function limparObservacoes() {
     document.querySelectorAll('input[name="obs-opcao"]').forEach(cb => { cb.checked = false; });
     document.getElementById('campo-obs').value = '';
-    const salvarCb = document.getElementById('obs-manual-salvar');
-    if (salvarCb) salvarCb.checked = false;
 }
 
 function restaurarObservacoes(orc) {
@@ -1849,6 +1846,89 @@ function restaurarObservacoes(orc) {
 }
 
 // ===== FORMAS DE PAGAMENTO =====
+let pagamentosManuaisSessao = [];
+
+function chavePagamentoPresetUsuario() {
+    return getChaveUsuarioLocal('obraflux_pagamentos_presets');
+}
+
+function gerarIdPagamentoManual(texto) {
+    let hash = 0;
+    const limpo = String(texto || '').trim().toUpperCase();
+    for (let i = 0; i < limpo.length; i++) hash = ((hash << 5) - hash) + limpo.charCodeAt(i);
+    return 'manual_' + Math.abs(hash).toString(36);
+}
+
+function getPagamentosManuaisSalvos() {
+    try {
+        const lista = JSON.parse(localStorage.getItem(chavePagamentoPresetUsuario()) || '[]');
+        return Array.isArray(lista) ? lista.filter(p => p?.id && p?.texto) : [];
+    } catch {
+        return [];
+    }
+}
+
+function salvarPagamentosManuais(lista) {
+    try { localStorage.setItem(chavePagamentoPresetUsuario(), JSON.stringify(lista || [])); } catch { /* localStorage pode estar cheio/bloqueado */ }
+}
+
+function getTodosPagamentosManuais() {
+    const porId = new Map();
+    [...getPagamentosManuaisSalvos(), ...pagamentosManuaisSessao].forEach(item => {
+        if (item?.id && item?.texto) porId.set(item.id, item);
+    });
+    return [...porId.values()];
+}
+
+function renderizarPagamentosManuais(marcados = []) {
+    const container = document.getElementById('pgto-presets-manuais');
+    if (!container) return;
+    const marcadosSet = new Set(marcados);
+    container.innerHTML = getTodosPagamentosManuais().map(item => `
+        <label class="pgto-opcao-item manual" data-pgto-manual-id="${escapeAttr(item.id)}">
+          <input type="checkbox" name="pgto-opcao" value="${escapeAttr(item.id)}" data-pgto-manual-label="${escapeAttr(item.texto)}" ${marcadosSet.has(item.id) ? 'checked' : ''} onchange="handlePgtoChange(this)">
+          <span class="pgto-opcao-label">${escapeHtml(item.texto)}</span>
+          <button type="button" class="pgto-opcao-delete" title="Excluir forma de pagamento" onclick="removerPagamentoManualPreset('${escapeAttr(item.id)}', event)">&times;</button>
+        </label>
+    `).join('');
+}
+
+function adicionarPagamentoManual() {
+    const input = document.getElementById('pgto-manual-texto');
+    const texto = input?.value?.trim() || '';
+    if (!texto) {
+        mostrarToast('Digite uma forma de pagamento.', 'erro');
+        return;
+    }
+    const item = { id: gerarIdPagamentoManual(texto), texto };
+    const jaExiste = getTodosPagamentosManuais().some(p => p.id === item.id || p.texto.trim().toUpperCase() === texto.toUpperCase());
+    if (!jaExiste) {
+        if (document.getElementById('pgto-manual-salvar')?.checked) {
+            const salvos = getPagamentosManuaisSalvos();
+            salvos.push(item);
+            salvarPagamentosManuais(salvos);
+        } else {
+            pagamentosManuaisSessao.push(item);
+        }
+    }
+    const marcados = _getOpcoesMarcadas();
+    renderizarPagamentosManuais([...marcados, item.id]);
+    const cb = document.querySelector(`input[name="pgto-opcao"][value="${CSS.escape(item.id)}"]`);
+    if (cb) cb.checked = true;
+    if (input) input.value = '';
+    mostrarToast(document.getElementById('pgto-manual-salvar')?.checked ? 'Forma de pagamento salva como preset.' : 'Forma de pagamento adicionada.', 'sucesso');
+}
+
+function removerPagamentoManualPreset(id, event) {
+    event?.preventDefault();
+    event?.stopPropagation();
+    salvarPagamentosManuais(getPagamentosManuaisSalvos().filter(p => p.id !== id));
+    pagamentosManuaisSessao = pagamentosManuaisSessao.filter(p => p.id !== id);
+    const marcados = _getOpcoesMarcadas().filter(v => v !== id);
+    renderizarPagamentosManuais(marcados);
+    if (pagamentoSelecionado?.opcoes?.includes(id)) aplicarPagamento();
+}
+
 function togglePagamento() {
     document.getElementById('form-pagamento').classList.toggle('visivel');
 }
@@ -1884,8 +1964,21 @@ function _getOpcoesMarcadas() {
 }
 
 // Gera linhas de texto para o PDF com base nas opções marcadas
-function _gerarLinhasPagamentoPDF(opcoes) {
+
+function getLabelsPagamentosManuais(opcoes = [], pgto = null) {
+    const labels = { ...(pgto?.personalizados || {}) };
+    opcoes.forEach(opcao => {
+        if (!String(opcao).startsWith('manual_')) return;
+        const cb = document.querySelector(`input[name="pgto-opcao"][value="${CSS.escape(opcao)}"]`);
+        const local = getTodosPagamentosManuais().find(p => p.id === opcao);
+        labels[opcao] = labels[opcao] || cb?.dataset.pgtoManualLabel || local?.texto || '';
+    });
+    return labels;
+}
+
+function _gerarLinhasPagamentoPDF(opcoes, pgto = null) {
     const linhas = [];
+    const personalizados = getLabelsPagamentosManuais(opcoes, pgto);
     // Determina linha do MATERIAL
     if (opcoes.includes('avista')) {
         linhas.push('A VISTA');
@@ -1911,6 +2004,11 @@ function _gerarLinhasPagamentoPDF(opcoes) {
     if (opcoes.includes('a_combinar')) {
         linhas.push('MATERIAL E MÃO DE OBRA: A COMBINAR');
     }
+    opcoes.forEach(opcao => {
+        if (String(opcao).startsWith('manual_') && personalizados[opcao]) {
+            linhas.push(String(personalizados[opcao]).trim().toUpperCase());
+        }
+    });
     return linhas;
 }
 
@@ -1932,10 +2030,11 @@ function aplicarPagamento() {
 
     pagamentoSelecionado = { opcoes,
         matEntradaPct: parseFloat(document.getElementById('mat-entrada-pct')?.value) || 0,
-        maoEntradaPct: parseFloat(document.getElementById('mao-entrada-pct')?.value) || 0
+        maoEntradaPct: parseFloat(document.getElementById('mao-entrada-pct')?.value) || 0,
+        personalizados: getLabelsPagamentosManuais(opcoes)
     };
 
-    const linhasPDF = _gerarLinhasPagamentoPDF(opcoes);
+    const linhasPDF = _gerarLinhasPagamentoPDF(opcoes, pagamentoSelecionado);
     const resumoHtml = linhasPDF.map(l =>
         `<div class="desc-cartao" style="background:#1a3a5c"><span class="dc-label" style="font-size:13px;font-weight:600">${l}</span></div>`
     ).join('');
@@ -1947,6 +2046,12 @@ function aplicarPagamento() {
 function restaurarPagamento(pgto) {
     limparPagamento();
     if (!pgto || !Array.isArray(pgto.opcoes) || pgto.opcoes.length === 0) return;
+
+    pagamentosManuaisSessao = [
+        ...pagamentosManuaisSessao,
+        ...Object.entries(pgto.personalizados || {}).map(([id, texto]) => ({ id, texto }))
+    ];
+    renderizarPagamentosManuais(pgto.opcoes);
 
     pgto.opcoes.forEach(opcao => {
         const cb = document.querySelector(`input[name="pgto-opcao"][value="${opcao}"]`);
@@ -1964,10 +2069,11 @@ function restaurarPagamento(pgto) {
     pagamentoSelecionado = {
         opcoes: [...pgto.opcoes],
         matEntradaPct: parseFloat(pgto.matEntradaPct) || 0,
-        maoEntradaPct: parseFloat(pgto.maoEntradaPct) || 0
+        maoEntradaPct: parseFloat(pgto.maoEntradaPct) || 0,
+        personalizados: getLabelsPagamentosManuais(pgto.opcoes, pgto)
     };
 
-    const linhasPDF = _gerarLinhasPagamentoPDF(pgto.opcoes);
+    const linhasPDF = _gerarLinhasPagamentoPDF(pgto.opcoes, pagamentoSelecionado);
     document.getElementById('pagamento-cartoes').innerHTML = linhasPDF.map(l =>
         `<div class="desc-cartao" style="background:#1a3a5c"><span class="dc-label" style="font-size:13px;font-weight:600">${l}</span></div>`
     ).join('');
@@ -1978,6 +2084,7 @@ function limparPagamento() {
     pagamentoSelecionado = null;
     document.getElementById('form-pagamento').classList.remove('visivel');
     document.querySelectorAll('input[name="pgto-opcao"]').forEach(cb => { cb.checked = false; });
+    renderizarPagamentosManuais();
     ['campos-material-ent','campos-mao-ent'].forEach(id => {
         const el = document.getElementById(id);
         if (el) el.style.display = 'none';
@@ -2303,7 +2410,54 @@ function atualizarBotaoSalvarComoNovo() {
 }
 
 // ===== NOVO ORÇAMENTO =====
-function novoOrcamento() {
+function linhaOrcamentoTemConteudo(tr) {
+    if (!tr) return false;
+    if (tr.dataset.imgId) return true;
+    if (tr.dataset.cabId) return !!tr.querySelector('.cabecalho-input')?.value.trim();
+    const rowId = parseInt(tr.dataset.id);
+    if (!rowId) return false;
+    const area = Number(tr.querySelector('.col-area input[type=number]')?.value) || 0;
+    const custoMaterial = Number(tr.querySelector('.col-qtd input')?.value) || 0;
+    const custoMao = Number(tr.querySelector('.col-unit input')?.value) || 0;
+    const descManual = document.getElementById(`desc-manual-${rowId}`)?.value.trim() || '';
+    const matManual = document.getElementById(`mat-manual-input-${rowId}`)?.value.trim() || '';
+    const areaManual = document.getElementById(`area-manual-${rowId}`)?.value.trim() || '';
+    const materiais = _getMateriais(rowId);
+    const desc = _descPersonalizada[rowId] || '';
+    const areaLabel = _areaLabel[rowId] || '';
+    return !!(area || custoMaterial || custoMao || desc || descManual || matManual || areaManual || areaLabel || materiais.length);
+}
+
+function orcamentoAtualTemDadosNaoSalvos() {
+    if (orcamentoEditandoId) return true;
+    const camposTexto = ['campo-cliente', 'campo-obra', 'campo-endereco', 'campo-estado'];
+    if (camposTexto.some(id => !!document.getElementById(id)?.value.trim())) return true;
+    const hoje = new Date();
+    const validade = new Date();
+    validade.setDate(hoje.getDate() + 30);
+    const dataPadrao = hoje.toISOString().split('T')[0];
+    const validadePadrao = validade.toISOString().split('T')[0];
+    const dataAtual = document.getElementById('campo-data')?.value || '';
+    const validadeAtual = document.getElementById('campo-validade')?.value || '';
+    if ((dataAtual && dataAtual !== dataPadrao) || (validadeAtual && validadeAtual !== validadePadrao)) return true;
+    if (document.getElementById('campo-obs')?.value.trim()) return true;
+    if (document.querySelector('input[name="obs-opcao"]:checked')) return true;
+    if (document.querySelector('input[name="pgto-opcao"]:checked') || pagamentoSelecionado) return true;
+    if (temDesconto(descontoAplicado)) return true;
+    return Array.from(document.querySelectorAll('#linhas-tbody tr')).some(linhaOrcamentoTemConteudo);
+}
+
+function novoOrcamento(opcoes = {}) {
+    const confirmarPerda = opcoes.confirmarPerda !== false;
+    if (confirmarPerda && orcamentoAtualTemDadosNaoSalvos()) {
+        abrirModal(
+            'Dados não salvos',
+            'Este orçamento possui informações preenchidas ou marcadas que ainda podem não ter sido salvas. Se continuar, esses dados serão perdidos. Deseja continuar sem salvar?',
+            () => novoOrcamento({ confirmarPerda: false })
+        );
+        return;
+    }
+
     orcamentoEditandoId = null;
     obraVinculadaOrcamentoId = '';
     tipoDocumentoAtual = 'orcamento';
@@ -2334,7 +2488,7 @@ function novoOrcamento() {
 }
 
 function iniciarOrcamentoParaObra(obra = {}, data = '') {
-    novoOrcamento();
+    novoOrcamento({ confirmarPerda: false });
     obraVinculadaOrcamentoId = obra.id || '';
     document.getElementById('campo-cliente').value = obra.construtora || obra.nome || '';
     document.getElementById('campo-obra').value = obra.nome || '';
@@ -3244,7 +3398,7 @@ function gerarPDF(baixar = true) {
             doc.setFillColor(...C_AZUL_FADE); doc.setDrawColor(...C_AZUL_MED); doc.setLineWidth(0.8);
             doc.rect(ML, y, CW, obsH, 'F');
             doc.setFont('helvetica', 'bold'); doc.setFontSize(7); doc.setTextColor(...C_AZUL_MED);
-            doc.text(continuar ? 'OBSERVACOES (CONT.)' : 'OBSERVACOES', ML + obsPadding, y + 6);
+            doc.text(continuar ? 'OBSERVAÇÕES (CONT.)' : 'OBSERVAÇÕES', ML + obsPadding, y + 6);
             doc.setFont('helvetica', 'normal'); doc.setFontSize(8.5); doc.setTextColor(68, 68, 68);
             linhas.forEach((linha, li) => {
                 doc.text(linha, ML + obsPadding, y + obsHeaderH + li * obsLineH);
@@ -3285,24 +3439,8 @@ function gerarPDF(baixar = true) {
     if (dados.pagamento && dados.pagamento.opcoes && dados.pagamento.opcoes.length > 0) {
         if (y + 16 > PH - 27) { doc.addPage(); y = 14; }
 
-        // Restaurar valores de entrada para gerar linhas corretamente
         const pgto = dados.pagamento;
-        const linhasPgto = [];
-        const opcoes = pgto.opcoes || [];
-        if (opcoes.includes('avista'))              linhasPgto.push('A VISTA');
-        if (opcoes.includes('material_avista'))     linhasPgto.push('MATERIAL A VISTA');
-        if (opcoes.includes('material_entrada_saldo')) {
-            const ent = pgto.matEntradaPct || 0;
-            const sal = Math.max(0, 100 - ent);
-            linhasPgto.push(`MATERIAL ${ent}% ENTRADA + SALDO ${sal}% APÓS CONCLUSÃO`);
-        }
-        if (opcoes.includes('mao_avista'))          linhasPgto.push('MÃO DE OBRA A VISTA');
-        if (opcoes.includes('mao_entrada_saldo')) {
-            const ent = pgto.maoEntradaPct || 0;
-            const sal = Math.max(0, 100 - ent);
-            linhasPgto.push(`MÃO DE OBRA ${ent}% ENTRADA + SALDO ${sal}% APÓS CONCLUSÃO`);
-        }
-        if (opcoes.includes('a_combinar'))          linhasPgto.push('MATERIAL E MÃO DE OBRA: A COMBINAR');
+        const linhasPgto = _gerarLinhasPagamentoPDF(pgto.opcoes || [], pgto);
 
         if (linhasPgto.length > 0) {
             const pgH = Math.max(14, linhasPgto.length * 6 + 14);
@@ -3401,13 +3539,15 @@ function _pdfMarcaDetalhes(doc, x, y, fontSize, textColor) {
 
     if (contato) {
         if (empresaConfig.empresaContatoWhatsapp) {
+            const iconSize = 4.2;
+            const iconY = y - iconSize + 0.9;
             try {
-                doc.addImage(criarIconeWhatsappPdfDataUrl(), 'PNG', cursor, y - 4.4, 4.4, 4.4, undefined, 'FAST');
+                doc.addImage(criarIconeWhatsappPdfDataUrl(), 'PNG', cursor, iconY, iconSize, iconSize, undefined, 'FAST');
             } catch {
                 doc.setFillColor(37, 211, 102);
-                doc.circle(cursor + 2.1, y - 2.1, 2.1, 'F');
+                doc.circle(cursor + iconSize / 2, iconY + iconSize / 2, iconSize / 2, 'F');
             }
-            cursor += 5.4;
+            cursor += iconSize + 1.2;
             doc.setFont('helvetica', 'normal');
             doc.setFontSize(fontSize);
             doc.setTextColor(...textColor);
@@ -3668,6 +3808,7 @@ Object.assign(window, {
     adicionarCabecalho, removerCabecalho, selecionarCabecalho, filtrarCabecalhoOpcoes, abrirDropdownCabecalho,
     toggleDesconto, aplicarDesconto, limparDesconto, atualizarDescontoPorPercentual, atualizarDescontoPorValor,
     togglePagamento, aplicarPagamento, limparPagamento, handlePgtoChange, calcularSaldo,
+    adicionarPagamentoManual, removerPagamentoManualPreset, renderizarPagamentosManuais,
     salvarOrcamento, salvarComoNovoOrcamento, novoOrcamento, editarOrcamento, confirmarExcluir,
     iniciarOrcamentoParaObra,
     filtrarHistorico, renderizarHistorico, setTipoHistorico,
@@ -3697,5 +3838,11 @@ Object.assign(window, {
 Object.defineProperty(window, 'logoBase64', {
     get() { return logoBase64; },
     set(v) { logoBase64 = v; },
+    configurable: true
+});
+
+Object.defineProperty(window, 'empresaConfig', {
+    get() { return empresaConfig; },
+    set(v) { empresaConfig = { ...empresaConfig, ...(v || {}) }; },
     configurable: true
 });

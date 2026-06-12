@@ -342,10 +342,6 @@ nav .nav-tab.ativo {
   margin: -4px 0 10px;
 }
 
-.obs-manual-save-row {
-  margin: 0;
-}
-
 /* TABELA */
 .tabela-wrapper {
   overflow-x: auto;
@@ -902,6 +898,19 @@ table tbody td select:focus {
   font-size: 2rem;
   color: var(--azul);
   letter-spacing: 3px;
+}
+
+.hist-title-help {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.tooltip-historico::before {
+  width: 560px;
+  max-width: min(560px, calc(100vw - 32px));
+  white-space: normal;
+  line-height: 1.45;
 }
 
 .hist-tabs {
@@ -2378,6 +2387,67 @@ table {
   color: #2563a8;
 }
 
+#pgto-presets-manuais {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.pgto-opcao-item.manual {
+  position: relative;
+  padding-right: 38px;
+}
+
+.pgto-opcao-delete {
+  position: absolute;
+  right: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 22px;
+  height: 22px;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: #e9551d;
+  cursor: pointer;
+  font-size: 18px;
+  line-height: 1;
+}
+
+.pgto-opcao-delete:hover {
+  background: #fff0ea;
+}
+
+.pgto-manual-box {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  padding: 10px 12px;
+  border: 1.5px dashed #b8cde8;
+  border-radius: 8px;
+  background: #f7fbff;
+}
+
+.pgto-manual-box input[type="text"] {
+  min-width: 260px;
+  flex: 1;
+  padding: 8px 10px;
+  border: 1.5px solid #dddad5;
+  border-radius: 7px;
+  font-size: 13px;
+}
+
+.pgto-manual-check {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #1a3a5c;
+}
+
+
 /* ===== ÁREA DROPDOWN ===== */
 .area-dropdown-wrapper {
   position: relative;
@@ -2514,6 +2584,86 @@ table {
   width: 14px;
   height: 14px;
   accent-color: var(--azul);
+}
+
+.manual-save-help-btn {
+  width: 18px;
+  height: 18px;
+  display: inline-grid;
+  place-items: center;
+  border: 1px solid #b8cde8;
+  border-radius: 50%;
+  background: #eef6ff;
+  color: var(--azul);
+  font-size: 11px;
+  font-weight: 800;
+  line-height: 1;
+  cursor: help;
+}
+
+.manual-save-help-btn:hover {
+  background: var(--azul);
+  color: #fff;
+}
+
+.tooltip-manual-save::before {
+  width: 300px;
+  max-width: min(300px, calc(100vw - 32px));
+}
+
+.func-title-help {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.tooltip-funcionarios::before {
+  width: 420px;
+  max-width: min(420px, calc(100vw - 32px));
+}
+
+.detalhe-data-topo {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 1.4rem;
+}
+
+.detalhe-data-topo .detalhe-data-titulo {
+  margin-bottom: 0;
+}
+
+.tooltip-agenda-dia::before {
+  width: 420px;
+  max-width: min(420px, calc(100vw - 32px));
+}
+
+.detalhe-item-acoes {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: nowrap;
+  margin-top: 12px;
+}
+
+.detalhe-item-acoes .btn-mini {
+  min-width: 0;
+  flex: 0 1 78px;
+  padding-inline: 12px;
+  text-align: center;
+  white-space: nowrap;
+}
+
+@media (max-width: 560px) {
+  .detalhe-item-acoes {
+    gap: 6px;
+  }
+
+  .detalhe-item-acoes .btn-mini {
+    flex: 1 1 0;
+    padding: 8px 6px;
+    font-size: 12px;
+  }
 }
 
 /* ===== LINHA DE CABEÇALHO DE SEÇÃO ===== */
@@ -2776,6 +2926,8 @@ table {
 .acoes-tabela,
 .tabela-acoes,
 .btn-add-row,
+.acoes-finais,
+.desconto-area,
 .secao:has(.tooltip-wrap) {
   position: relative;
   overflow: visible;
@@ -2954,6 +3106,28 @@ table {
   font-size: 2rem;
   letter-spacing: 3px;
   color: var(--azul);
+}
+
+.financeiro-title-help {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.tooltip-financeiro::before {
+  width: 460px;
+  max-width: min(460px, calc(100vw - 32px));
+}
+
+.config-title-help {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.tooltip-configuracoes::before {
+  width: 360px;
+  max-width: min(360px, calc(100vw - 32px));
 }
 
 .financeiro-subtitulo,

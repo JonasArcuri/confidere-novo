@@ -1,5 +1,5 @@
 // ===== INSUMOS / DESPESAS =====
-import { DB } from './firebase.js';
+import { DB, getUid } from './firebase.js';
 import { escapeHtml, escapeAttr, setOptions } from './utils.js';
 
 // Estado global
@@ -11,12 +11,111 @@ Object.defineProperty(window, 'insumos', {
 
 let fotoInsumoSelecionada = null;
 
+const TIPOS_BASE_INSUMO = [
+  { value: 'material', label: 'Material', icon: '🧱' },
+  { value: 'ferramenta', label: 'Ferramenta', icon: '🔧' },
+  { value: 'veiculo', label: 'Veículo', icon: '🚗' },
+  { value: 'trajeto', label: 'Trajeto', icon: '🛣️' }
+];
+
+function chaveTiposInsumoUsuario() {
+  let uid = 'sem-login';
+  try { uid = getUid(); } catch { /* sem login */ }
+  return `obraflux_tipos_insumo_${uid}`;
+}
+
+function normalizarTipoInsumo(texto) {
+  const base = String(texto || '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '_')
+    .replace(/^_+|_+$/g, '');
+  return base ? `custom_${base}` : '';
+}
+
+function getTiposInsumoManuais() {
+  try {
+    const lista = JSON.parse(localStorage.getItem(chaveTiposInsumoUsuario()) || '[]');
+    return Array.isArray(lista) ? lista.filter(t => t?.value && t?.label) : [];
+  } catch {
+    return [];
+  }
+}
+
+function salvarTiposInsumoManuais(lista) {
+  try { localStorage.setItem(chaveTiposInsumoUsuario(), JSON.stringify(lista || [])); } catch { /* localStorage pode estar bloqueado */ }
+}
+
+function getTodosTiposInsumo() {
+  const porValor = new Map();
+  [...TIPOS_BASE_INSUMO, ...getTiposInsumoManuais()].forEach(tipo => porValor.set(tipo.value, tipo));
+  (window.insumos || []).forEach(ins => {
+    if (ins?.tipo && !porValor.has(ins.tipo)) {
+      porValor.set(ins.tipo, { value: ins.tipo, label: ins.tipoLabel || ins.tipo, icon: '📦' });
+    }
+  });
+  return [...porValor.values()];
+}
+
+function salvarTipoInsumoManual(label) {
+  const texto = String(label || '').trim();
+  const value = normalizarTipoInsumo(texto);
+  if (!texto || !value) return null;
+  const existentes = getTiposInsumoManuais();
+  const jaExiste = getTodosTiposInsumo().find(t => t.value === value || t.label.toLowerCase() === texto.toLowerCase());
+  if (jaExiste) return jaExiste;
+  const atualizados = existentes.filter(t => t.value !== value && t.label.toLowerCase() !== texto.toLowerCase());
+  const novoTipo = { value, label: texto, icon: '📦' };
+  atualizados.push(novoTipo);
+  salvarTiposInsumoManuais(atualizados);
+  return novoTipo;
+}
+
+function popularTiposInsumo(valorAtual = '') {
+  const tipos = getTodosTiposInsumo();
+  const opcoes = [...tipos, { value: 'manual', label: 'Digitar novo tipo...' }];
+  ['ins-tipo', 'filtro-ins-tipo'].forEach(id => {
+    const sel = document.getElementById(id);
+    if (!sel) return;
+    const atual = valorAtual || sel.value || '';
+    setOptions(
+      sel,
+      id === 'filtro-ins-tipo' ? tipos : opcoes,
+      id === 'filtro-ins-tipo' ? { value: '', label: 'Todos os tipos' } : null,
+      atual
+    );
+    if (id === 'ins-tipo') sel.onchange = toggleTipoInsumoManual;
+  });
+}
+
+function toggleTipoInsumoManual() {
+  const sel = document.getElementById('ins-tipo');
+  const input = document.getElementById('ins-tipo-manual');
+  if (!sel || !input) return;
+  const manual = sel.value === 'manual';
+  input.style.display = manual ? 'block' : 'none';
+  if (manual) input.focus();
+}
+
+function obterTipoInsumoSelecionado() {
+  const sel = document.getElementById('ins-tipo');
+  const input = document.getElementById('ins-tipo-manual');
+  if (sel?.value === 'manual') {
+    const tipoManual = salvarTipoInsumoManual(input?.value || '');
+    return tipoManual || { value: '', label: '' };
+  }
+  const tipo = getTodosTiposInsumo().find(t => t.value === sel?.value);
+  return tipo || { value: sel?.value || '', label: sel?.value || '' };
+}
+
 // ===== RENDERIZAR LISTA =====
 function renderizarInsumos() {
   aplicarFiltrosInsumos();
 }
 
 function aplicarFiltrosInsumos() {
+  popularTiposInsumo();
   const filtroTipo = document.getElementById('filtro-ins-tipo')?.value || '';
   const filtroFunc = document.getElementById('filtro-ins-func')?.value || '';
   const filtroMes  = document.getElementById('filtro-ins-mes')?.value  || '';
@@ -36,20 +135,19 @@ function aplicarFiltrosInsumos() {
     return;
   }
 
-  const TIPO_ICONS = { veiculo: '🚗', trajeto: '🛣️', material: '🧱', ferramenta: '🔧' };
-  const TIPO_LABELS = { veiculo: 'Veículo', trajeto: 'Trajeto', material: 'Material', ferramenta: 'Ferramenta' };
-
   cont.innerHTML = lista.map(ins => {
     const func = funcionarios.find(f => f.id === ins.funcionarioId);
     const dataFmt = ins.data ? new Date(ins.data + 'T00:00:00').toLocaleDateString('pt-BR') : '-';
-    const icon = TIPO_ICONS[ins.tipo] || '📦';
-    const label = TIPO_LABELS[ins.tipo] || ins.tipo;
+    const tipoInfo = getTodosTiposInsumo().find(t => t.value === ins.tipo);
+    const icon = tipoInfo?.icon || '📦';
+    const label = ins.tipoLabel || tipoInfo?.label || ins.tipo;
+    const tipoClasse = TIPOS_BASE_INSUMO.some(t => t.value === ins.tipo) ? ins.tipo : 'custom';
     return `<div class="ins-card">
       <div class="ins-card-header">
         <div class="ins-card-info">
           <div class="ins-card-titulo">${icon} ${escapeHtml(ins.descricao || label)}</div>
           <div class="ins-card-meta">
-            <span class="ins-tipo-badge ins-tipo-${ins.tipo}">${escapeHtml(label)}</span>
+            <span class="ins-tipo-badge ins-tipo-${escapeAttr(tipoClasse)}">${escapeHtml(label)}</span>
             📅 ${dataFmt}
             ${func ? `· 👷 ${escapeHtml(func.nome)}` : ''}
           </div>
@@ -71,6 +169,7 @@ function aplicarFiltrosInsumos() {
 
 // ===== POPULAR SELECTS =====
 function popularSelectFuncionariosIns() {
+  popularTiposInsumo();
   ['ins-funcionario', 'filtro-ins-func'].forEach(selId => {
     const sel = document.getElementById(selId);
     if (!sel) return;
@@ -90,7 +189,10 @@ function popularSelectFuncionariosIns() {
 function abrirModalInsumo(id = null) {
   popularSelectFuncionariosIns();
   document.getElementById('ins-id-edit').value = id || '';
+  popularTiposInsumo('material');
   document.getElementById('ins-tipo').value = 'material';
+  document.getElementById('ins-tipo-manual').value = '';
+  document.getElementById('ins-tipo-manual').style.display = 'none';
   document.getElementById('ins-funcionario').value = '';
   document.getElementById('ins-data').value = new Date().toISOString().split('T')[0];
   document.getElementById('ins-valor').value = '';
@@ -105,7 +207,10 @@ function abrirModalInsumo(id = null) {
   if (id) {
     const ins = insumos.find(i => i.id === id);
     if (ins) {
+      popularTiposInsumo(ins.tipo || 'material');
       document.getElementById('ins-tipo').value = ins.tipo || 'material';
+      document.getElementById('ins-tipo-manual').value = '';
+      document.getElementById('ins-tipo-manual').style.display = 'none';
       document.getElementById('ins-funcionario').value = ins.funcionarioId || '';
       document.getElementById('ins-data').value = ins.data || '';
       document.getElementById('ins-valor').value = ins.valor || '';
@@ -163,7 +268,8 @@ function fecharFotoInsumo() {
 
 // ===== SALVAR INSUMO =====
 async function salvarInsumo() {
-  const tipo        = document.getElementById('ins-tipo').value;
+  const tipoInfo    = obterTipoInsumoSelecionado();
+  const tipo        = tipoInfo.value;
   const funcId      = document.getElementById('ins-funcionario').value;
   const data        = document.getElementById('ins-data').value;
   const valor       = parseFloat(document.getElementById('ins-valor').value) || 0;
@@ -182,7 +288,8 @@ async function salvarInsumo() {
       fotoUrl = await DB.salvarFotoInsumoArquivo(fotoInsumoSelecionada);
     }
 
-    const dados = { tipo, funcionarioId: funcId, funcionarioNome: func?.nome || '', data, valor, descricao, obs, fotoUrl };
+    popularTiposInsumo(tipo);
+    const dados = { tipo, tipoLabel: tipoInfo.label || tipo, funcionarioId: funcId, funcionarioNome: func?.nome || '', data, valor, descricao, obs, fotoUrl };
 
     if (idEdit) {
       await DB.salvarInsumo(dados, idEdit);

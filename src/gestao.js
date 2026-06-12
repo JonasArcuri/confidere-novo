@@ -230,7 +230,12 @@ function abrirDiaDetalhe(dataStr, dia) {
   const agsComuns = eventos.filter(ev => !isEtapaObra(ev));
   const rels = relatorios.filter(r => r.data === dataStr);
   const ins = (window.insumos || []).filter(i => i.data === dataStr);
-  let html = `<div class="detalhe-data-titulo">${dia} de ${escapeHtml(MESES[calMes])}, ${calAno}</div>`;
+  let html = `<div class="detalhe-data-topo">
+    <div class="detalhe-data-titulo">${dia} de ${escapeHtml(MESES[calMes])}, ${calAno}</div>
+    <span class="tooltip-wrap tooltip-agenda-dia" data-tooltip="Visualize completamente qualquer tipo de evento registrado na agenda geral. Também é possível clicar e arrastar um compromisso ou evento para outra data, reagendando automaticamente.">
+      <button type="button" class="manual-save-help-btn" aria-label="Ajuda sobre eventos da agenda">?</button>
+    </span>
+  </div>`;
   if (!eventos.length && !rels.length && !ins.length) html += '<p class="detalhe-vazio">Nenhum evento neste dia.</p>';
 
   if (agsComuns.length) {
@@ -242,8 +247,7 @@ function abrirDiaDetalhe(dataStr, dia) {
         <div class="detalhe-item-meta">${formatarHora(ev.hora) ? 'Hora: ' + escapeHtml(formatarHora(ev.hora)) + ' · ' : ''}${func ? 'Funcionário: ' + escapeHtml(func.nome) : ''}</div>
         ${ev.local ? `<div class="detalhe-item-meta">Local: ${escapeHtml(ev.local)}</div>` : ''}
         ${ev.obs ? `<div class="detalhe-item-obs">${escapeHtml(ev.obs)}</div>` : ''}
-        <button class="btn-mini editar" onclick="editarAgendamento('${escapeAttr(ev.id)}')">Editar</button>
-        <button class="btn-mini excluir" onclick="excluirAgendamento('${escapeAttr(ev.id)}')">Excluir</button>
+        <div class="detalhe-item-acoes"><button class="btn-mini editar" onclick="editarAgendamento('${escapeAttr(ev.id)}')">Editar</button><button class="btn-mini excluir" onclick="excluirAgendamento('${escapeAttr(ev.id)}')">Excluir</button></div>
       </div>`;
     });
   }
@@ -271,7 +275,7 @@ function abrirDiaDetalhe(dataStr, dia) {
         <div class="detalhe-item-meta">Funcionário(s): ${escapeHtml(rel.funcionariosNomes || rel.funcionarioNome || '-')}</div>
         <div class="detalhe-item-meta">Rendimento: <strong>${formatarMoeda(rel.rendimento || 0)}</strong></div>
         ${rel.obs ? `<div class="detalhe-item-obs">${escapeHtml(rel.obs)}</div>` : ''}
-        <button class="btn-mini excluir" onclick="excluirRelatorio('${escapeAttr(rel.id)}')">Excluir</button>
+        <div class="detalhe-item-acoes"><button class="btn-mini excluir" onclick="excluirRelatorio('${escapeAttr(rel.id)}')">Excluir</button></div>
       </div>`;
     });
   }
@@ -283,7 +287,7 @@ function abrirDiaDetalhe(dataStr, dia) {
         <div class="detalhe-item-titulo">${escapeHtml(i.descricao || i.tipo || '')}</div>
         <div class="detalhe-item-meta">Valor: <strong>${formatarMoeda(i.valor || 0)}</strong></div>
         ${i.obs ? `<div class="detalhe-item-obs">${escapeHtml(i.obs)}</div>` : ''}
-        <button class="btn-mini excluir" onclick="confirmarExcluirInsumo('${escapeAttr(i.id)}')">Excluir</button>
+        <div class="detalhe-item-acoes"><button class="btn-mini excluir" onclick="confirmarExcluirInsumo('${escapeAttr(i.id)}')">Excluir</button></div>
       </div>`;
     });
   }

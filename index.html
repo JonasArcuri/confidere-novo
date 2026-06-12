@@ -4,16 +4,16 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>ObraFlux — Gestão Adaptável</title>
+  <title>ObraFlux — Gestão adaptável para prestadores de serviço</title>
   <link
     href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap"
     rel="stylesheet">
-  <link rel="stylesheet" href="src/style.css?v=20260609-tabela-desconto">
+  <link rel="stylesheet" href="src/style.css?v=20260612-observacao-preset-botao">
   <link rel="stylesheet" href="src/gestao.css?v=20260605-etapas-obra">
   <link rel="stylesheet" href="src/auth.css?v=20260605-config-mobile">
-  <link rel="stylesheet" href="src/insumos_obras.css?v=20260609-docs-obras">
-  <link rel="icon" href="landing-obraflux/assets/obraflux-somentelogo-crop.png?v=20260602-login-logo-transparent" type="image/png">
-  <link rel="shortcut icon" href="landing-obraflux/assets/obraflux-somentelogo-crop.png?v=20260602-login-logo-transparent" type="image/png">
+  <link rel="stylesheet" href="src/insumos_obras.css?v=20260612-relatorio-obra-avancado">
+  <link rel="icon" href="src/assets/obraflux-favicon-rounded.png?v=20260612-rounded-favicon" type="image/png">
+  <link rel="shortcut icon" href="src/assets/obraflux-favicon-rounded.png?v=20260612-rounded-favicon" type="image/png">
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 </head>
 
@@ -104,7 +104,12 @@
         <div class="config-menu-wrap">
           <button class="btn-config" type="button" title="Configurações" aria-label="Configurações">⚙</button>
           <div class="config-menu">
-            <div class="config-menu-titulo">Configurações</div>
+            <div class="config-title-help">
+              <div class="config-menu-titulo">Configurações</div>
+              <span class="tooltip-wrap tooltip-configuracoes" data-tooltip="Configure os dados da empresa. O nome da empresa, contato, logo e link/URL aparecerão nos orçamentos e em qualquer relatório gerado pelo sistema.">
+                <button type="button" class="manual-save-help-btn" aria-label="Ajuda sobre configurações">?</button>
+              </span>
+            </div>
             <div class="config-email-info">
               <span>E-mail da conta</span>
               <strong id="config-user-email"></strong>
@@ -340,9 +345,11 @@
 
           <!-- DESCONTO -->
           <div class="desconto-area">
-            <button class="btn-desconto" onclick="toggleDesconto()">
-              <span>%</span> Aplicar Desconto
-            </button>
+            <span class="tooltip-wrap tooltip-aplicar-desconto" data-tooltip="Abre a tabela de desconto. Informe o valor desejado ou o percentual para material e mão de obra; o sistema calcula automaticamente o desconto em reais, o percentual e o total final.">
+              <button class="btn-desconto" onclick="toggleDesconto()">
+                <span>%</span> Aplicar Desconto
+              </button>
+            </span>
             <div class="desconto-form desconto-form-tabela" id="form-desconto">
               <div class="desconto-tabela-wrap">
                 <table class="desconto-tabela">
@@ -412,10 +419,6 @@
             <div class="secao-titulo">Observações</div>
             <div class="obs-opcoes" id="obs-opcoes"></div>
             <div class="obs-preset-actions">
-              <label class="manual-save-row obs-manual-save-row">
-                <input type="checkbox" id="obs-manual-salvar">
-                <span>Salvar observação como preset</span>
-              </label>
               <button type="button" class="btn-mini ver" onclick="salvarObservacaoManualPreset()">Salvar preset</button>
             </div>
             <div class="campo">
@@ -426,9 +429,11 @@
 
           <!-- FORMAS DE PAGAMENTO -->
           <div class="desconto-area">
-            <button class="btn-desconto" onclick="togglePagamento()">
-              <span>💳</span> Formas de Pagamento
-            </button>
+            <span class="tooltip-wrap tooltip-pagamento" data-tooltip="Selecione dentre uma ou mais formas de pagamento ou descreva uma manualmente e a salve.">
+              <button class="btn-desconto" onclick="togglePagamento()">
+                <span>💳</span> Formas de Pagamento
+              </button>
+            </span>
             <div class="desconto-form" id="form-pagamento">
               <div class="pgto-opcoes-grupo">
 
@@ -492,6 +497,17 @@
                   <span class="pgto-opcao-label">MATERIAL E MÃO DE OBRA: A COMBINAR</span>
                 </label>
 
+                <div id="pgto-presets-manuais"></div>
+
+                <div class="pgto-manual-box">
+                  <input type="text" id="pgto-manual-texto" placeholder="Digite uma forma de pagamento personalizada">
+                  <label class="pgto-manual-check">
+                    <input type="checkbox" id="pgto-manual-salvar" checked>
+                    <span>Salvar como preset</span>
+                  </label>
+                  <button type="button" class="btn-mini ver" onclick="adicionarPagamentoManual()">Adicionar</button>
+                </div>
+
               </div>
               <div style="display:flex;gap:8px;margin-top:12px;">
                 <button class="btn-aplicar-desc" onclick="aplicarPagamento()">Confirmar</button>
@@ -505,23 +521,27 @@
 
           <!-- AÇÕES -->
           <div class="acoes-finais">
-            <button class="btn-laranja" onclick="abrirPreviewPDF()">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
-                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
-                <polyline points="14,2 14,8 20,8" />
-                <line x1="12" y1="18" x2="12" y2="12" />
-                <line x1="9" y1="15" x2="15" y2="15" />
-              </svg>
-              GERAR PDF
-            </button>
-            <button class="btn-primario" onclick="salvarOrcamento()">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
-                <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z" />
-                <polyline points="17,21 17,13 7,13 7,21" />
-                <polyline points="7,3 7,8 15,8" />
-              </svg>
-              Salvar Orçamento
-            </button>
+            <span class="tooltip-wrap tooltip-gerar-pdf" data-tooltip="Abre a tela de preview para geração de PDF do orçamento. Escolha entre layout retrato ou paisagem.">
+              <button class="btn-laranja" onclick="abrirPreviewPDF()">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                  <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                  <polyline points="14,2 14,8 20,8" />
+                  <line x1="12" y1="18" x2="12" y2="12" />
+                  <line x1="9" y1="15" x2="15" y2="15" />
+                </svg>
+                GERAR PDF
+              </button>
+            </span>
+            <span class="tooltip-wrap tooltip-salvar-orcamento" data-tooltip="Salva o orçamento no histórico de orçamentos. Se for uma revisão, ele será salvo automaticamente como revisão.">
+              <button class="btn-primario" onclick="salvarOrcamento()">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                  <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z" />
+                  <polyline points="17,21 17,13 7,13 7,21" />
+                  <polyline points="7,3 7,8 15,8" />
+                </svg>
+                Salvar Orçamento
+              </button>
+            </span>
             <button class="btn-secundario" id="btn-salvar-como-novo" style="display:none" onclick="salvarComoNovoOrcamento()">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
                 <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
@@ -549,7 +569,12 @@
       <div class="historico-wrapper">
         <div class="hist-topo">
           <div>
-            <div class="hist-titulo" id="hist-titulo">Histórico de Orçamentos</div>
+            <div class="hist-title-help">
+              <div class="hist-titulo" id="hist-titulo">Histórico de Orçamentos</div>
+              <span class="tooltip-wrap tooltip-historico" data-tooltip="O hist&oacute;rico separa os documentos em duas abas: Or&ccedil;amentos e Relat&oacute;rios de Cobran&ccedil;a. Em Or&ccedil;amentos ficam as propostas emitidas, com numera&ccedil;&atilde;o, revis&otilde;es, status pendente ou aprovado, valores e dados do cliente. Ao aprovar um or&ccedil;amento, informe a data de aprova&ccedil;&atilde;o; depois disso, o sistema permite gerar um Relat&oacute;rio de Cobran&ccedil;a a partir desse pr&oacute;prio or&ccedil;amento, mantendo o v&iacute;nculo entre proposta e cobran&ccedil;a. Em Relat&oacute;rios de Cobran&ccedil;a ficam os documentos usados para faturamento, com status pendente ou pago. Somente cobran&ccedil;as pagas entram como receita no Fluxo Financeiro, usando a data de pagamento informada. Use Editar para revisar o documento, Excluir para remover e a busca para localizar por cliente, n&uacute;mero ou assunto.">
+                <button type="button" class="manual-save-help-btn" aria-label="Ajuda sobre hist&oacute;rico">?</button>
+              </span>
+            </div>
             <div class="hist-tabs" role="tablist" aria-label="Tipo de histórico">
               <button type="button" class="hist-tab ativo" id="hist-tab-orcamento" role="tab" aria-selected="true" onclick="setTipoHistorico('orcamento')">Orçamentos</button>
               <button type="button" class="hist-tab" id="hist-tab-cobranca" role="tab" aria-selected="false" onclick="setTipoHistorico('cobranca')">Relatórios de Cobrança</button>
@@ -567,7 +592,12 @@
       <div class="financeiro-wrapper">
         <div class="financeiro-topo">
           <div>
-            <div class="financeiro-titulo">Fluxo Financeiro</div>
+            <div class="financeiro-title-help">
+              <div class="financeiro-titulo">Fluxo Financeiro</div>
+              <span class="tooltip-wrap tooltip-financeiro" data-tooltip="O fluxo financeiro consolida entradas e saídas por mês. Entradas vêm dos relatórios de cobrança pagos; saídas vêm de insumos, despesas e custos de funcionários. Use os filtros para comparar meses, acompanhar saldo, orçamentos, cobranças e gerar relatório em PDF.">
+                <button type="button" class="manual-save-help-btn" aria-label="Ajuda sobre fluxo financeiro">?</button>
+              </span>
+            </div>
             <div class="financeiro-subtitulo">Entradas por relatórios de obra, saídas por insumos e funcionários.</div>
           </div>
           <div class="financeiro-filtros">
@@ -799,7 +829,12 @@
         <!-- SUB-ABA: FUNCIONÁRIOS -->
         <div id="sub-funcionarios" class="gestao-sub-aba">
           <div class="func-topo">
-            <div class="func-topo-titulo">Funcionários</div>
+            <div class="func-title-help">
+              <div class="func-topo-titulo">Funcionários</div>
+              <span class="tooltip-wrap tooltip-funcionarios" data-tooltip="Menu para cadastrar e editar funcionários. Em Novo Funcionário, informe nome, admissão, telefone, salário ou custo diário/mensal e status. Em Editar, atualize os dados, marque ativo ou inativo, defina demissão/rescisão e, para custo diário, selecione os dias trabalhados para o fluxo financeiro.">
+                <button type="button" class="manual-save-help-btn" aria-label="Ajuda sobre o menu de funcionários">?</button>
+              </span>
+            </div>
             <button class="btn-primario" onclick="abrirModalFuncionario()" style="padding:8px 16px;font-size:13px;">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
                 <line x1="12" y1="5" x2="12" y2="19" />
@@ -906,7 +941,12 @@
         <!-- SUB-ABA: OBRAS -->
         <div id="sub-obras" class="gestao-sub-aba">
           <div class="obras-topo">
-            <div class="func-topo-titulo">Obras</div>
+            <div class="obras-title-help">
+              <div class="func-topo-titulo">Obras</div>
+              <span class="tooltip-wrap tooltip-obras" data-tooltip="Menu para acompanhar obras em execução ou finalizadas. Aqui você cadastra obras, vê resumo, orçamentos atrelados, relatórios, documentos e cronograma. Quando um orçamento é aprovado, ele entra automaticamente como uma obra em execução, herdando as principais informações do orçamento.">
+                <button type="button" class="manual-save-help-btn" aria-label="Ajuda sobre o menu de obras">?</button>
+              </span>
+            </div>
             <button class="btn-primario" onclick="abrirModalObra()" style="padding:8px 16px;font-size:13px;">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
                 <line x1="12" y1="5" x2="12" y2="19" />
@@ -1100,7 +1140,9 @@
                 <option value="ferramenta">Ferramenta</option>
                 <option value="veiculo">Veículo</option>
                 <option value="trajeto">Trajeto</option>
+                <option value="manual">Digitar novo tipo...</option>
               </select>
+              <input type="text" id="ins-tipo-manual" placeholder="Digite o novo tipo de despesa" style="display:none;margin-top:8px;">
             </div>
             <div class="campo">
               <label>Data *</label>
@@ -1262,12 +1304,12 @@
       }, 7000);
     });
   </script>
-  <script type="module" src="src/script.js?v=20260612-whatsapp-icon-classico"></script>
+  <script type="module" src="src/script.js?v=20260612-novo-orcamento-confirmacao"></script>
   <script type="module" src="src/gestao.js?v=20260605-textos-utf8"></script>
   <script type="module" src="src/funcionario_status.js?v=20260602-login-logo-transparent"></script>
-  <script type="module" src="src/insumos.js?v=20260602-login-logo-transparent"></script>
-  <script type="module" src="src/obras.js?v=20260609-docs-obras"></script>
-  <script type="module" src="src/financeiro.js?v=20260609-cobranca-pagamento"></script>
+  <script type="module" src="src/insumos.js?v=20260612-insumo-tipo-manual"></script>
+  <script type="module" src="src/obras.js?v=20260612-relatorio-obra-avancado"></script>
+  <script type="module" src="src/financeiro.js?v=20260612-financeiro-empresa-config"></script>
   <script type="module" src="src/auth.js?v=20260609-docs-obras"></script>
 
   <footer id="footer">

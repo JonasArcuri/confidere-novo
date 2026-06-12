@@ -97,6 +97,17 @@ function getFuncionarios() {
   return Array.isArray(window.funcionarios) ? window.funcionarios : [];
 }
 
+function labelTipoInsumo(insumo) {
+  if (insumo?.tipoLabel) return insumo.tipoLabel;
+  const labels = {
+    material: 'Material',
+    ferramenta: 'Ferramenta',
+    veiculo: 'Veículo',
+    trajeto: 'Trajeto'
+  };
+  return labels[insumo?.tipo] || insumo?.tipo || '-';
+}
+
 function entradaRelatorio(rel) {
   return primeiroValor(rel, [
     'rendimento',
@@ -290,6 +301,7 @@ function montarMovimentos(mes) {
     .map(i => ({
       tipo: 'saida',
       grupo: 'Insumos',
+      tipoInsumo: labelTipoInsumo(i),
       data: dataItem(i),
       descricao: descricao(i, 'Insumo/despesa'),
       valor: saidaInsumo(i)
@@ -430,21 +442,23 @@ function renderAnalisesFinanceiras(orcamentos, cobrancas) {
   </div>`;
 }
 
-function tabela(titulo, linhas, vazio) {
+function tabela(titulo, linhas, vazio, opcoes = {}) {
+  const mostrarTipoInsumo = !!opcoes.tipoInsumo;
   const body = linhas.length
     ? linhas.map(m => `<tr>
         <td>${m.data ? m.data.toLocaleDateString('pt-BR') : '-'}</td>
         <td>${escapeHtml(m.descricao)}</td>
+        ${mostrarTipoInsumo ? `<td>${escapeHtml(m.tipoInsumo || '-')}</td>` : ''}
         <td>${escapeHtml(m.grupo)}</td>
         <td class="${m.tipo === 'entrada' ? 'pos' : 'neg'}">${m.tipo === 'entrada' ? '+' : '-'} ${moeda.format(m.valor)}</td>
       </tr>`).join('')
-    : `<tr><td colspan="4" class="fin-vazio">${escapeHtml(vazio)}</td></tr>`;
+    : `<tr><td colspan="${mostrarTipoInsumo ? 5 : 4}" class="fin-vazio">${escapeHtml(vazio)}</td></tr>`;
 
   return `<section class="fin-section">
     <h3>${escapeHtml(titulo)}</h3>
     <div class="fin-table-wrap">
       <table class="fin-table">
-        <thead><tr><th>Data</th><th>Descrição</th><th>Grupo</th><th>Valor</th></tr></thead>
+        <thead><tr><th>Data</th><th>Descrição</th>${mostrarTipoInsumo ? '<th>Tipo</th>' : ''}<th>Grupo</th><th>Valor</th></tr></thead>
         <tbody>${body}</tbody>
       </table>
     </div>
@@ -508,7 +522,7 @@ function renderizarFluxoFinanceiro() {
     ${renderAnalisesFinanceiras(analiseOrcamentos, analiseCobrancas)}
     ${renderComparativo(atual, comparar)}
     ${tabela('Entradas', atual.entradas, 'Nenhuma entrada no mês selecionado.')}
-    ${tabela('Saídas com insumos', atual.insumos, 'Nenhum gasto com insumo no mês selecionado.')}
+    ${tabela('Saídas com insumos', atual.insumos, 'Nenhum gasto com insumo no mês selecionado.', { tipoInsumo: true })}
     ${tabela('Saídas com funcionários', atual.funcionarios, 'Nenhum custo de funcionário cadastrado.')}
     ${tabela('Relação completa', movimentos, 'Nenhum movimento financeiro encontrado.')}
   `;
@@ -571,16 +585,50 @@ function criarPdfFinanceiroBase() {
   return doc;
 }
 
+function getEmpresaConfigFinanceiro() {
+  return window.empresaConfig || {};
+}
+
+function normalizarUrlFinanceiro(url) {
+  const texto = String(url || '').trim();
+  if (!texto) return '';
+  return /^https?:\/\//i.test(texto) ? texto : `https://${texto}`;
+}
+
 function addCabecalhoFinanceiroPdf(doc, titulo, subtitulo) {
+  const empresa = getEmpresaConfigFinanceiro();
+  const nomeEmpresa = empresa.empresaNome || 'Empresa';
+  const contato = empresa.empresaContato
+    ? `${empresa.empresaContatoWhatsapp ? 'WhatsApp: ' : 'Contato: '}${empresa.empresaContato}`
+    : '';
+  const local = empresa.empresaLocal || '';
+  const gestor = empresa.empresaGestor ? `Responsável: ${empresa.empresaGestor}` : '';
+  const url = normalizarUrlFinanceiro(empresa.empresaUrl);
+  const linhaContato = [contato, local].filter(Boolean).join(' • ');
+
   doc.setFillColor(26, 58, 92);
-  doc.rect(0, 0, 210, 30, 'F');
+  doc.rect(0, 0, 210, 38, 'F');
   doc.setTextColor(255, 255, 255);
   doc.setFont('helvetica', 'bold');
-  doc.setFontSize(17);
-  textoPdf(doc, titulo, 14, 14);
+  doc.setFontSize(14);
+  const nomeEmpresaPdf = cortarPdf(doc, nomeEmpresa, 92);
+  if (url && typeof doc.textWithLink === 'function') {
+    doc.textWithLink(normalizarTextoPdf(nomeEmpresaPdf), 14, 12, { url });
+  } else {
+    textoPdf(doc, nomeEmpresaPdf, 14, 12);
+  }
   doc.setFont('helvetica', 'normal');
-  doc.setFontSize(9);
-  textoPdf(doc, subtitulo, 14, 22);
+  doc.setFontSize(8);
+  if (linhaContato) textoPdf(doc, cortarPdf(doc, linhaContato, 96), 14, 19);
+  if (gestor) textoPdf(doc, cortarPdf(doc, gestor, 96), 14, 25);
+  if (url) textoPdf(doc, cortarPdf(doc, url, 96), 14, 31);
+
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(15);
+  textoPdf(doc, titulo, 196, 14, { align: 'right' });
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(8);
+  textoPdf(doc, subtitulo, 196, 23, { align: 'right' });
   doc.setTextColor(26, 58, 92);
 }
 
@@ -634,7 +682,8 @@ function addKpisPdf(doc, itens, y) {
   return y + 27;
 }
 
-function addTabelaPdf(doc, titulo, linhas, y, limite = 18) {
+function addTabelaPdf(doc, titulo, linhas, y, limite = 18, opcoes = {}) {
+  const mostrarTipoInsumo = !!opcoes.tipoInsumo;
   y = addSecaoTituloPdf(doc, titulo, y);
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(8);
@@ -643,7 +692,12 @@ function addTabelaPdf(doc, titulo, linhas, y, limite = 18) {
   doc.rect(14, y, 182, 7, 'F');
   textoPdf(doc, 'Data', 16, y + 5);
   textoPdf(doc, 'Descri\u00E7\u00E3o', 38, y + 5);
-  textoPdf(doc, 'Grupo', 122, y + 5);
+  if (mostrarTipoInsumo) {
+    textoPdf(doc, 'Tipo', 104, y + 5);
+    textoPdf(doc, 'Grupo', 134, y + 5);
+  } else {
+    textoPdf(doc, 'Grupo', 122, y + 5);
+  }
   textoPdf(doc, 'Valor', 194, y + 5, { align: 'right' });
   y += 9;
 
@@ -664,8 +718,13 @@ function addTabelaPdf(doc, titulo, linhas, y, limite = 18) {
     }
     const valor = `${m.tipo === 'entrada' ? '+' : '-'} ${moeda.format(m.valor)}`;
     textoPdf(doc, m.data ? m.data.toLocaleDateString('pt-BR') : '-', 16, y + 4);
-    textoPdf(doc, cortarPdf(doc, m.descricao, 78), 38, y + 4);
-    textoPdf(doc, cortarPdf(doc, m.grupo, 42), 122, y + 4);
+    textoPdf(doc, cortarPdf(doc, m.descricao, mostrarTipoInsumo ? 58 : 78), 38, y + 4);
+    if (mostrarTipoInsumo) {
+      textoPdf(doc, cortarPdf(doc, m.tipoInsumo || '-', 26), 104, y + 4);
+      textoPdf(doc, cortarPdf(doc, m.grupo, 28), 134, y + 4);
+    } else {
+      textoPdf(doc, cortarPdf(doc, m.grupo, 42), 122, y + 4);
+    }
     doc.setTextColor(m.tipo === 'entrada' ? 31 : 224, m.tipo === 'entrada' ? 157 : 92, m.tipo === 'entrada' ? 85 : 32);
     textoPdf(doc, valor, 194, y + 4, { align: 'right' });
     doc.setTextColor(35, 35, 35);
@@ -695,7 +754,7 @@ function gerarRelatorioFinanceiroPDF() {
   if (!doc) return;
 
   addCabecalhoFinanceiroPdf(doc, 'Relat\u00F3rio de Fluxo Financeiro', `M\u00EAs principal: ${nomeMes(mes)}${comparar ? ' | Comparativo: ' + nomeMes(comp) : ''}`);
-  let y = 40;
+  let y = 48;
 
   y = addSecaoTituloPdf(doc, 'Resumo do m\u00EAs', y);
   y = addKpisPdf(doc, [
@@ -757,7 +816,7 @@ function gerarRelatorioFinanceiroPDF() {
   }
 
   y = addTabelaPdf(doc, 'Entradas', atual.entradas, y, 14);
-  y = addTabelaPdf(doc, 'Sa\u00EDdas com insumos', atual.insumos, y, 12);
+  y = addTabelaPdf(doc, 'Sa\u00EDdas com insumos', atual.insumos, y, 12, { tipoInsumo: true });
   y = addTabelaPdf(doc, 'Sa\u00EDdas com funcion\u00E1rios', atual.funcionarios, y, 12);
   y = addTabelaPdf(doc, 'Rela\u00E7\u00E3o completa', movimentos, y, 20);
 
