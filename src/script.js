@@ -3367,45 +3367,23 @@ let whatsappPdfIconDataUrl = '';
 function criarIconeWhatsappPdfDataUrl() {
     if (whatsappPdfIconDataUrl) return whatsappPdfIconDataUrl;
     const canvas = document.createElement('canvas');
-    canvas.width = 96;
-    canvas.height = 96;
+    canvas.width = 128;
+    canvas.height = 128;
     const ctx = canvas.getContext('2d');
 
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     ctx.fillStyle = '#25D366';
     ctx.beginPath();
-    ctx.arc(48, 48, 44, 0, Math.PI * 2);
+    ctx.arc(64, 64, 60, 0, Math.PI * 2);
     ctx.fill();
 
-    ctx.strokeStyle = '#FFFFFF';
     ctx.fillStyle = '#FFFFFF';
-    ctx.lineWidth = 6;
-    ctx.lineCap = 'round';
-    ctx.lineJoin = 'round';
-
-    ctx.beginPath();
-    ctx.arc(48, 45, 25, 0.25 * Math.PI, 2.15 * Math.PI);
-    ctx.stroke();
-
-    ctx.beginPath();
-    ctx.moveTo(31, 64);
-    ctx.lineTo(24, 75);
-    ctx.lineTo(38, 69);
-    ctx.closePath();
-    ctx.fill();
-
-    ctx.beginPath();
-    ctx.moveTo(38, 33);
-    ctx.bezierCurveTo(34, 38, 37, 48, 45, 56);
-    ctx.bezierCurveTo(53, 64, 63, 67, 68, 62);
-    ctx.lineTo(62, 55);
-    ctx.bezierCurveTo(60, 53, 57, 53, 55, 55);
-    ctx.lineTo(52, 58);
-    ctx.bezierCurveTo(47, 56, 40, 49, 38, 44);
-    ctx.lineTo(42, 40);
-    ctx.bezierCurveTo(44, 38, 44, 35, 42, 33);
-    ctx.closePath();
-    ctx.fill();
+    ctx.save();
+    ctx.translate(18, 18);
+    ctx.scale(5.75, 5.75);
+    const whatsappPath = new Path2D('M13.601 2.326A7.854 7.854 0 0 0 7.994 0C3.627 0 .068 3.558 .064 7.926c0 1.399 .366 2.76 1.057 3.965L0 16l4.204-1.102a7.933 7.933 0 0 0 3.79 .965h.004c4.368 0 7.926-3.558 7.93-7.93A7.898 7.898 0 0 0 13.6 2.326zM7.994 14.521a6.573 6.573 0 0 1-3.356-.92l-.24-.144-2.494 .654.666-2.433-.156-.251a6.56 6.56 0 0 1-1.007-3.505c0-3.626 2.957-6.584 6.591-6.584a6.56 6.56 0 0 1 4.66 1.931 6.557 6.557 0 0 1 1.928 4.66c-.004 3.639-2.961 6.592-6.592 6.592zm3.615-4.934c-.197-.099-1.17-.578-1.353-.646-.182-.065-.315-.099-.445.099-.133.197-.513.646-.627.775-.114.133-.232.148-.43.05-.197-.1-.836-.308-1.592-.985-.59-.525-.985-1.175-1.103-1.372-.114-.198-.011-.304.088-.403.087-.088.197-.232.296-.346.1-.114.133-.198.198-.33.065-.134.034-.248-.015-.347-.05-.099-.445-1.076-.612-1.47-.16-.389-.323-.335-.445-.34-.114-.007-.247-.007-.38-.007a.729.729 0 0 0-.529.247c-.182.198-.691.677-.691 1.654 0 .977.71 1.916.81 2.049.098.133 1.394 2.132 3.383 2.992.473.205.842.326 1.13.418.475.152.904.129 1.246.08.38-.058 1.171-.48 1.338-.943.164-.464.164-.86.114-.943-.049-.084-.182-.133-.38-.232z');
+    ctx.fill(whatsappPath);
+    ctx.restore();
 
     whatsappPdfIconDataUrl = canvas.toDataURL('image/png');
     return whatsappPdfIconDataUrl;
@@ -3424,7 +3402,7 @@ function _pdfMarcaDetalhes(doc, x, y, fontSize, textColor) {
     if (contato) {
         if (empresaConfig.empresaContatoWhatsapp) {
             try {
-                doc.addImage(criarIconeWhatsappPdfDataUrl(), 'PNG', cursor, y - 4.3, 4.2, 4.2, undefined, 'FAST');
+                doc.addImage(criarIconeWhatsappPdfDataUrl(), 'PNG', cursor, y - 4.4, 4.4, 4.4, undefined, 'FAST');
             } catch {
                 doc.setFillColor(37, 211, 102);
                 doc.circle(cursor + 2.1, y - 2.1, 2.1, 'F');
