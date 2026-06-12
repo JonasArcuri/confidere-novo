@@ -624,17 +624,20 @@
 
 @media (max-width: 768px) {
   .nav-usuario {
+    order: 2;
     width: 100%;
     margin-left: 0;
-    padding: 8px 0 12px;
+    padding: 0 0 12px;
     justify-content: center;
     align-items: center;
     gap: 10px;
   }
 
   .nav-logo-direita {
-    max-width: min(230px, calc(100vw - 150px));
+    flex: 1 1 100%;
+    max-width: 100%;
     justify-content: center;
+    order: 1;
   }
 
   .nav-logo-direita .nav-brand {
@@ -648,6 +651,7 @@
 
   .config-menu-wrap {
     position: static;
+    order: 2;
   }
 
   .btn-config {
@@ -662,12 +666,12 @@
 
   .config-menu {
     position: fixed;
-    top: 136px;
+    top: 150px;
     left: 12px;
     right: 12px;
     width: auto;
     max-width: calc(100vw - 24px);
-    max-height: calc(100dvh - 148px);
+    max-height: calc(100dvh - 162px);
     overflow-y: auto;
     padding: 16px;
     border-radius: 12px;
@@ -681,7 +685,7 @@
   }
 
   .nav-logo-direita {
-    max-width: min(210px, calc(100vw - 142px));
+    max-width: 100%;
   }
 
   .nav-logo-direita .logo-nav {
@@ -695,11 +699,11 @@
   }
 
   .config-menu {
-    top: 132px;
+    top: 154px;
     left: 10px;
     right: 10px;
     max-width: calc(100vw - 20px);
-    max-height: calc(100dvh - 144px);
+    max-height: calc(100dvh - 166px);
   }
 
   .config-menu-titulo {
@@ -718,6 +722,7 @@
   }
 
   .btn-logout {
+    order: 3;
     min-height: 42px;
     padding: 6px 13px;
   }

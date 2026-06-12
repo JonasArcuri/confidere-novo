@@ -170,6 +170,14 @@ function toDataUrlImagem(src) {
   return new Promise((resolve) => {
     if (!src) return resolve('');
     if (src.startsWith('data:image/')) return resolve(src);
+    let finalizado = false;
+    const concluir = (valor = '') => {
+      if (finalizado) return;
+      finalizado = true;
+      clearTimeout(timeoutId);
+      resolve(valor);
+    };
+    const timeoutId = setTimeout(() => concluir(''), 8000);
     const img = new Image();
     img.crossOrigin = 'anonymous';
     img.onload = () => {
@@ -179,13 +187,13 @@ function toDataUrlImagem(src) {
         canvas.height = img.naturalHeight || img.height;
         const ctx = canvas.getContext('2d');
         ctx.drawImage(img, 0, 0);
-        resolve(canvas.toDataURL('image/jpeg', 0.88));
+        concluir(canvas.toDataURL('image/jpeg', 0.88));
       } catch (err) {
         console.warn('Nao foi possivel converter imagem para PDF:', err);
-        resolve('');
+        concluir('');
       }
     };
-    img.onerror = () => resolve('');
+    img.onerror = () => concluir('');
     img.src = src;
   });
 }
@@ -194,16 +202,29 @@ async function adicionarImagemPdf(doc, src, x, y, maxW, maxH) {
   const dataUrl = await toDataUrlImagem(src);
   if (!dataUrl) return 0;
   return new Promise(resolve => {
+    let finalizado = false;
+    const concluir = (valor = 0) => {
+      if (finalizado) return;
+      finalizado = true;
+      clearTimeout(timeoutId);
+      resolve(valor);
+    };
+    const timeoutId = setTimeout(() => concluir(0), 8000);
     const img = new Image();
     img.onload = () => {
-      const ratio = Math.min(maxW / img.width, maxH / img.height, 1);
-      const w = img.width * ratio;
-      const h = img.height * ratio;
-      const fmt = dataUrl.startsWith('data:image/png') ? 'PNG' : 'JPEG';
-      doc.addImage(dataUrl, fmt, x + (maxW - w) / 2, y, w, h, undefined, 'FAST');
-      resolve(h);
+      try {
+        const ratio = Math.min(maxW / img.width, maxH / img.height, 1);
+        const w = img.width * ratio;
+        const h = img.height * ratio;
+        const fmt = dataUrl.startsWith('data:image/png') ? 'PNG' : 'JPEG';
+        doc.addImage(dataUrl, fmt, x + (maxW - w) / 2, y, w, h, undefined, 'FAST');
+        concluir(h);
+      } catch (err) {
+        console.warn('Nao foi possivel adicionar imagem ao PDF:', err);
+        concluir(0);
+      }
     };
-    img.onerror = () => resolve(0);
+    img.onerror = () => concluir(0);
     img.src = dataUrl;
   });
 }
@@ -929,7 +950,7 @@ function abrirRelatorioPeriodoObraAvancado(obraId) {
   </div>`;
   overlay.addEventListener('click', ev => { if (ev.target === overlay) fecharRelatorioPeriodoObra(); });
   document.body.appendChild(overlay);
-  atualizarPreviewRelatorioObraAvancado(obraId);
+  atualizarPreviewRelatorioObraAvancadoSeguro(obraId);
 }
 
 async function gerarRelatorioPeriodoObraPDFAvancado(obraId, inicio, fim, opcoes = {}) {
@@ -948,6 +969,7 @@ async function gerarRelatorioPeriodoObraPDFAvancado(obraId, inicio, fim, opcoes 
   const rendimento = rels.reduce((acc, r) => acc + (Number(r.rendimento) || 0), 0);
   const totalOrcado = orcamentos.reduce((acc, o) => acc + totalOrcamentoObra(o), 0);
   const totalCobrancas = cobrancas.reduce((acc, c) => acc + totalOrcamentoObra(c), 0);
+  const empresaNome = window.empresaConfig?.empresaNome || 'Empresa';
 
   const doc = new JsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
   const PW = doc.internal.pageSize.getWidth();
@@ -959,16 +981,24 @@ async function gerarRelatorioPeriodoObraPDFAvancado(obraId, inicio, fim, opcoes 
   const cinza = [95, 91, 86];
   const laranja = [224, 92, 32];
   const verde = [31, 143, 77];
+  const margemRodape = 24;
   let y = 16;
 
   const rodape = () => {
     doc.setFont('helvetica', 'normal'); doc.setFontSize(8); doc.setTextColor(...cinza);
-    doc.text('Desenvolvido por Sanoj Sistemas', PW / 2, PH - 8, { align: 'center' });
+    const prefixo = 'Desenvolvido por ';
+    const marca = 'Sanoj Sistemas';
+    const totalW = doc.getTextWidth(prefixo + marca);
+    const x = (PW - totalW) / 2;
+    doc.text(prefixo, x, PH - 8);
+    doc.setTextColor(...azulClaro);
+    doc.textWithLink(marca, x + doc.getTextWidth(prefixo), PH - 8, { url: 'https://www.sanojsistemas.com.br' });
   };
-  const novaPaginaSePreciso = h => { if (y + h > PH - 18) { rodape(); doc.addPage(); y = 16; } };
+  const novaPaginaSePreciso = h => { if (y + h > PH - margemRodape) { rodape(); doc.addPage(); y = 16; } };
   const linha = () => { doc.setDrawColor(...azulClaro); doc.setLineWidth(0.25); doc.line(M, y, M + W, y); y += 4; };
   const tituloSecao = t => {
-    novaPaginaSePreciso(12);
+    if (y > 20) y += 5;
+    novaPaginaSePreciso(17);
     doc.setFont('helvetica', 'bold'); doc.setFontSize(12); doc.setTextColor(...azul);
     doc.text(String(t).toUpperCase(), M, y);
     y += 3; linha();
@@ -1022,6 +1052,26 @@ async function gerarRelatorioPeriodoObraPDFAvancado(obraId, inicio, fim, opcoes 
   doc.text(obra.construtora || '', PW - M, 23, { align: 'right' });
   y = 48;
 
+  doc.setFillColor(...azul);
+  doc.rect(0, 0, PW, 58, 'F');
+  doc.setTextColor(255, 255, 255);
+  doc.setFont('helvetica', 'bold'); doc.setFontSize(12);
+  doc.text(empresaNome, M, 12);
+  doc.setFontSize(18);
+  doc.text('Relatório de Andamento da Obra', M, 24);
+  doc.setFont('helvetica', 'bold'); doc.setFontSize(10);
+  doc.text(`Obra: ${obra.nome || '-'}`, M, 35);
+  doc.setFont('helvetica', 'normal'); doc.setFontSize(8.5);
+  doc.text(`Responsável: ${obra.responsavel || '-'}`, M, 43);
+  doc.text(`Endereço: ${obra.local || '-'}`, M, 50);
+  doc.setFont('helvetica', 'bold'); doc.setFontSize(9);
+  doc.text(`Período: ${textoPeriodoRelatorioObra(inicio, fim)}`, PW - M, 24, { align: 'right' });
+  if (obra.construtora) {
+    doc.setFont('helvetica', 'normal'); doc.setFontSize(8.5);
+    doc.text(obra.construtora, PW - M, 33, { align: 'right' });
+  }
+  y = 68;
+
   tituloSecao('Informações da obra');
   paragrafo(`Obra: ${obra.nome || '-'}\nConstrutora / Empreiteiro: ${obra.construtora || '-'}\nLocal: ${obra.local || '-'}\nResponsável técnico/responsável: ${obra.responsavel || '-'}\nContato do responsável: ${obra.contatoResponsavel || '-'}\nInício: ${formatarDataObra(obra.data)}\nStatus: ${obra.status === 'finalizada' ? 'Finalizada' : 'Em execução'}`);
 
@@ -1037,6 +1087,11 @@ async function gerarRelatorioPeriodoObraPDFAvancado(obraId, inicio, fim, opcoes 
   resumoCard(M, y, cardW, 'Orçado', moedaObra(totalOrcado));
   resumoCard(M + cardW + 4, y, cardW, 'Cobrado', moedaObra(totalCobrancas), laranja);
   resumoCard(M + cardW * 2 + 8, y, cardW, 'Rendimento', moedaObra(rendimento), verde);
+  doc.setFillColor(255, 255, 255);
+  doc.rect(M - 1, y - 1, W + 2, 21, 'F');
+  const cardWResumo = (W - 6) / 2;
+  resumoCard(M, y, cardWResumo, 'Orçado', moedaObra(totalOrcado));
+  resumoCard(M + cardWResumo + 6, y, cardWResumo, 'Executado', moedaObra(totalCobrancas), laranja);
   y += 24;
   paragrafo(`Relatórios de obra: ${rels.length}\nEtapas / cronogramas: ${etapas.length}\nAgendamentos: ${agendamentos.length}\nOrçamentos atrelados: ${orcamentos.length}\nRelatórios de cobrança: ${cobrancas.length}\nDocumentos selecionados: ${docsSelecionados.length}`, M, W, cinza, 8.5);
 
@@ -1124,6 +1179,39 @@ async function atualizarPreviewRelatorioObraAvancado(obraId) {
     if (frame) frame.src = obraRelatorioPreviewUrl;
   } catch (err) {
     console.error(err);
+    mostrarToast('Erro ao gerar prévia do relatório.', 'erro');
+  }
+}
+
+async function atualizarPreviewRelatorioObraAvancadoSeguro(obraId) {
+  const inicio = document.getElementById('obra-rel-inicio')?.value || '';
+  const fim = document.getElementById('obra-rel-fim')?.value || '';
+  const frame = document.getElementById('obra-relatorio-preview-frame');
+  if (inicio && fim && inicio > fim) {
+    mostrarToast('Data inicial maior que a data final.', 'erro');
+    return;
+  }
+  if (frame) {
+    frame.removeAttribute('src');
+    frame.srcdoc = '<div style="font-family:Arial;padding:24px">Gerando prévia...</div>';
+  }
+  try {
+    const opcoes = selecionarRelatorioObraOpcoes();
+    const pdf = await gerarRelatorioPeriodoObraPDFAvancado(obraId, inicio, fim, opcoes);
+    if (obraRelatorioPreviewUrl) URL.revokeObjectURL(obraRelatorioPreviewUrl);
+    obraRelatorioPreviewAtual = { doc: pdf, obraId, inicio, fim };
+    obraRelatorioPreviewUrl = URL.createObjectURL(pdf.output('blob'));
+    if (frame) {
+      frame.removeAttribute('srcdoc');
+      frame.src = obraRelatorioPreviewUrl;
+    }
+  } catch (err) {
+    console.error(err);
+    if (frame) {
+      const msg = escapeHtml(err?.message || 'Erro desconhecido ao gerar a prévia.');
+      frame.removeAttribute('src');
+      frame.srcdoc = `<div style="font-family:Arial;padding:24px;color:#9b1c1c"><strong>Não foi possível gerar a prévia.</strong><br>${msg}</div>`;
+    }
     mostrarToast('Erro ao gerar prévia do relatório.', 'erro');
   }
 }
@@ -1318,7 +1406,7 @@ Object.assign(window, {
   salvarDocumentoObra, editarDocumentoObra, aprovarDocumentoObra, confirmarExcluirDocumentoObra,
   abrirRelatorioPeriodoObra: abrirRelatorioPeriodoObraAvancado,
   fecharRelatorioPeriodoObra,
-  atualizarPreviewRelatorioObra: atualizarPreviewRelatorioObraAvancado,
+  atualizarPreviewRelatorioObra: atualizarPreviewRelatorioObraAvancadoSeguro,
   baixarRelatorioPeriodoObra,
   alternarDocumentosRelatorioObra,
   abrirModalObra, fecharModalObra, editarObra, salvarObra,

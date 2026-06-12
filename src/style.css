@@ -901,16 +901,37 @@ table tbody td select:focus {
 }
 
 .hist-title-help {
-  display: inline-flex;
+  display: flex;
   align-items: center;
   gap: 8px;
 }
 
 .tooltip-historico::before {
-  width: 560px;
-  max-width: min(560px, calc(100vw - 32px));
+  left: 0;
+  top: calc(100% + 12px);
+  bottom: auto;
+  width: 420px;
+  max-width: min(420px, calc(100vw - 32px));
+  transform: translate(0, 8px);
   white-space: normal;
   line-height: 1.45;
+  text-align: left;
+}
+
+.tooltip-historico::after {
+  left: 10px;
+  top: calc(100% + 5px);
+  bottom: auto;
+  border-top-color: transparent;
+  border-bottom-color: #1a3a5c;
+  transform: translate(0, 8px);
+}
+
+.tooltip-historico:hover::before,
+.tooltip-historico:hover::after,
+.tooltip-historico:focus-within::before,
+.tooltip-historico:focus-within::after {
+  transform: translate(0, 0);
 }
 
 .hist-tabs {
@@ -1475,20 +1496,27 @@ table tbody td select:focus {
     height: auto;
     min-height: 56px;
     flex-wrap: wrap;
-    gap: 0;
+    gap: 8px;
+    justify-content: center;
   }
 
   .nav-logo-area {
     padding: 8px 0;
   }
 
+  .nav-logo-placeholder {
+    display: none;
+  }
+
   nav .nav-tabs {
+    order: 1;
     width: 100%;
     overflow-x: auto;
     -webkit-overflow-scrolling: touch;
-    padding: 0 0 6px;
-    gap: 2px;
+    padding: 10px 0 4px;
+    gap: 8px;
     scrollbar-width: none;
+    justify-content: flex-start;
   }
 
   nav .nav-tabs::-webkit-scrollbar {
@@ -1496,7 +1524,7 @@ table tbody td select:focus {
   }
 
   nav .nav-tab {
-    padding: 7px 12px;
+    padding: 9px 12px;
     font-size: 13px;
     white-space: nowrap;
     flex-shrink: 0;
@@ -2634,8 +2662,25 @@ table {
 }
 
 .tooltip-agenda-dia::before {
-  width: 420px;
-  max-width: min(420px, calc(100vw - 32px));
+  position: fixed;
+  left: 50%;
+  right: auto;
+  top: 96px;
+  bottom: auto;
+  width: min(520px, calc(100vw - 32px));
+  max-width: none;
+  transform: translate(-50%, 8px);
+  text-align: left;
+  z-index: 100000;
+}
+
+.tooltip-agenda-dia::after {
+  display: none;
+}
+
+.tooltip-agenda-dia:hover::before,
+.tooltip-agenda-dia:focus-within::before {
+  transform: translate(-50%, 0);
 }
 
 .detalhe-item-acoes {
@@ -2962,6 +3007,51 @@ table {
 .btn-add-row .tooltip-wrap:hover::after,
 .btn-add-row .tooltip-wrap:focus-within::before,
 .btn-add-row .tooltip-wrap:focus-within::after {
+  transform: translate(0, 0);
+}
+
+.tooltip-aplicar-desconto::before,
+.tooltip-aplicar-desconto::after,
+.tooltip-pagamento::before,
+.tooltip-pagamento::after,
+.tooltip-gerar-pdf::before,
+.tooltip-gerar-pdf::after {
+  left: 0;
+  top: calc(100% + 12px);
+  bottom: auto;
+  transform: translate(0, 8px);
+}
+
+.tooltip-aplicar-desconto::before,
+.tooltip-pagamento::before,
+.tooltip-gerar-pdf::before {
+  width: 420px;
+  max-width: min(420px, calc(100vw - 32px));
+  text-align: left;
+}
+
+.tooltip-aplicar-desconto::after,
+.tooltip-pagamento::after,
+.tooltip-gerar-pdf::after {
+  left: 22px;
+  top: calc(100% + 5px);
+  bottom: auto;
+  border-top-color: transparent;
+  border-bottom-color: #1a3a5c;
+}
+
+.tooltip-aplicar-desconto:hover::before,
+.tooltip-aplicar-desconto:hover::after,
+.tooltip-aplicar-desconto:focus-within::before,
+.tooltip-aplicar-desconto:focus-within::after,
+.tooltip-pagamento:hover::before,
+.tooltip-pagamento:hover::after,
+.tooltip-pagamento:focus-within::before,
+.tooltip-pagamento:focus-within::after,
+.tooltip-gerar-pdf:hover::before,
+.tooltip-gerar-pdf:hover::after,
+.tooltip-gerar-pdf:focus-within::before,
+.tooltip-gerar-pdf:focus-within::after {
   transform: translate(0, 0);
 }
 
@@ -3565,6 +3655,33 @@ table {
 }
 
 @media (max-width: 600px) {
+  .tooltip-wrap::before {
+    position: fixed;
+    left: 16px !important;
+    right: 16px !important;
+    top: auto !important;
+    bottom: 84px !important;
+    width: auto !important;
+    max-width: none !important;
+    transform: translateY(8px) !important;
+    text-align: left;
+    z-index: 100000;
+  }
+
+  .tooltip-wrap::after {
+    display: none;
+  }
+
+  .tooltip-wrap:hover::before,
+  .tooltip-wrap:focus-within::before {
+    transform: translateY(0) !important;
+  }
+
+  .tooltip-historico::before {
+    width: auto !important;
+    max-width: none !important;
+  }
+
   .financeiro-wrapper {
     width: calc(100% - 1rem);
     margin: 1rem auto;

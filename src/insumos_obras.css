@@ -231,6 +231,30 @@
   max-width: min(460px, calc(100vw - 32px));
 }
 
+@media (max-width: 600px) {
+  .tooltip-obras::before {
+    position: fixed;
+    left: 16px !important;
+    right: 16px !important;
+    top: auto !important;
+    bottom: 84px !important;
+    width: auto !important;
+    max-width: none !important;
+    transform: translateY(8px) !important;
+    text-align: left;
+    z-index: 100000;
+  }
+
+  .tooltip-obras::after {
+    display: none;
+  }
+
+  .tooltip-obras:hover::before,
+  .tooltip-obras:focus-within::before {
+    transform: translateY(0) !important;
+  }
+}
+
 .obras-filtros-bar {
   display: flex;
   gap: 6px;
