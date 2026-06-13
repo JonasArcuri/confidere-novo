@@ -127,6 +127,22 @@ function getEventosPeriodoObra(obra, inicio, fim) {
   return { rels, ags, docs };
 }
 
+function getPeriodoPadraoRelatorioObra(obra) {
+  const datas = [
+    obra?.data,
+    ...getRelatoriosDaObra(obra).map(r => r.data),
+    ...getAgendamentosDaObra(obra).map(a => a.data),
+    ...getDocumentosDaObra(obra).map(d => (d.data || d.criadoEm || '').slice(0, 10)),
+    ...getOrcamentosDaObra(obra).map(dataDocumentoFinanceiroObra)
+  ].filter(data => /^\d{4}-\d{2}-\d{2}$/.test(String(data || '')));
+  const hoje = new Date().toISOString().slice(0, 10);
+  const ordenadas = datas.sort();
+  return {
+    inicio: obra?.data || ordenadas[0] || hoje,
+    fim: ordenadas[ordenadas.length - 1] || hoje
+  };
+}
+
 function dataDocumentoFinanceiroObra(doc = {}) {
   return (doc.data || doc.dataOrcamento || doc.dataCobranca || doc.savedAt || doc.criadoEm || doc.createdAt || '').slice(0, 10);
 }
@@ -751,8 +767,9 @@ function abrirRelatorioPeriodoObra(obraId) {
   const obra = obras.find(o => o.id === obraId);
   if (!obra) { mostrarToast('Obra não encontrada.', 'erro'); return; }
   fecharRelatorioPeriodoObra();
-  const hoje = new Date().toISOString().slice(0, 10);
-  const inicio = obra.data || hoje;
+  const periodo = getPeriodoPadraoRelatorioObra(obra);
+  const inicio = periodo.inicio;
+  const fim = periodo.fim;
   const overlay = document.createElement('div');
   overlay.id = 'modal-relatorio-periodo-obra';
   overlay.className = 'modal-overlay pdf-preview-overlay aberto';
@@ -763,7 +780,7 @@ function abrirRelatorioPeriodoObra(obraId) {
     </div>
     <div class="pdf-preview-toolbar obra-periodo-toolbar">
       <label>De <input type="date" id="obra-rel-inicio" value="${escapeAttr(inicio)}"></label>
-      <label>Até <input type="date" id="obra-rel-fim" value="${escapeAttr(hoje)}"></label>
+      <label>Até <input type="date" id="obra-rel-fim" value="${escapeAttr(fim)}"></label>
       <button type="button" class="btn-secundario" onclick="atualizarPreviewRelatorioObra('${escapeAttr(obra.id)}')">Gerar prévia</button>
       <button type="button" class="btn-primario" onclick="baixarRelatorioPeriodoObra()">Baixar PDF</button>
     </div>
@@ -924,8 +941,9 @@ function abrirRelatorioPeriodoObraAvancado(obraId) {
   const obra = obras.find(o => o.id === obraId);
   if (!obra) { mostrarToast('Obra não encontrada.', 'erro'); return; }
   fecharRelatorioPeriodoObra();
-  const hoje = new Date().toISOString().slice(0, 10);
-  const inicio = obra.data || hoje;
+  const periodo = getPeriodoPadraoRelatorioObra(obra);
+  const inicio = periodo.inicio;
+  const fim = periodo.fim;
   const documentos = getDocumentosDaObra(obra);
   const overlay = document.createElement('div');
   overlay.id = 'modal-relatorio-periodo-obra';
@@ -938,7 +956,7 @@ function abrirRelatorioPeriodoObraAvancado(obraId) {
     <div class="obra-relatorio-config">
       <div class="pdf-preview-toolbar obra-periodo-toolbar">
         <label>De <input type="date" id="obra-rel-inicio" value="${escapeAttr(inicio)}"></label>
-        <label>Até <input type="date" id="obra-rel-fim" value="${escapeAttr(hoje)}"></label>
+        <label>Até <input type="date" id="obra-rel-fim" value="${escapeAttr(fim)}"></label>
         <button type="button" class="btn-secundario" onclick="atualizarPreviewRelatorioObra('${escapeAttr(obra.id)}')">Gerar prévia</button>
         <button type="button" class="btn-primario" onclick="baixarRelatorioPeriodoObra()">Baixar PDF</button>
       </div>
