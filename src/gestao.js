@@ -8,6 +8,7 @@ let relImagensSelecionadas = [];
 let etapaFuncionariosSelected = [];
 let agendamentoArrastandoId = null;
 let agendamentoObraContextId = '';
+let detalheDiaAtual = '';
 
 window.agendamentos = window.agendamentos || [];
 window.funcionarios = window.funcionarios || [];
@@ -225,6 +226,7 @@ function calProximo() { calMes++; if (calMes > 11) { calMes = 0; calAno++; } ren
 function calHoje() { const h = new Date(); calMes = h.getMonth(); calAno = h.getFullYear(); renderizarCalendario(); }
 
 function abrirDiaDetalhe(dataStr, dia) {
+  detalheDiaAtual = dataStr;
   const eventos = getEventosDia(dataStr);
   const etapas = eventos.filter(isEtapaObra);
   const agsComuns = eventos.filter(ev => !isEtapaObra(ev));
@@ -298,6 +300,14 @@ function abrirDiaDetalhe(dataStr, dia) {
 
 function fecharDetalheDia() { document.getElementById('modal-detalhe-dia')?.classList.remove('aberto'); }
 
+function abrirAgendamentoNoDiaSelecionado(tipo = 'agendamento') {
+  const data = detalheDiaAtual || new Date().toISOString().slice(0, 10);
+  fecharDetalheDia();
+  abrirModalAgendamento(null, tipo);
+  const inputData = document.getElementById('agend-data');
+  if (inputData) inputData.value = data;
+}
+
 function popularSelectFuncionariosAgend() {
   const sel = document.getElementById('agend-funcionario');
   if (!sel) return;
@@ -317,6 +327,35 @@ function popularCheckboxFuncionariosAgend() {
   </label>`).join('');
 }
 
+function popularSelectObrasAgend() {
+  const sel = document.getElementById('agend-obra-select');
+  if (!sel) return;
+  const atual = agendamentoObraContextId || sel.value || '';
+  setOptions(
+    sel,
+    (window.obras || []).map(o => ({
+      value: o.id,
+      label: o.nome + (o.construtora ? ' - ' + o.construtora : ''),
+      dataset: { local: o.local || '', obs: o.construtora ? `Obra: ${o.nome} - ${o.construtora}` : `Obra: ${o.nome}` }
+    })),
+    { value: '', label: 'Selecione a obra...' },
+    atual
+  );
+  agendamentoObraContextId = sel.value || '';
+  sel.onchange = sincronizarObraAgendamento;
+}
+
+function sincronizarObraAgendamento() {
+  const sel = document.getElementById('agend-obra-select');
+  if (!sel) return;
+  agendamentoObraContextId = sel.value || '';
+  const opt = sel.options[sel.selectedIndex];
+  const local = document.getElementById('agend-local');
+  const obs = document.getElementById('agend-obs');
+  if (local && !local.value.trim() && opt?.dataset?.local) local.value = opt.dataset.local;
+  if (obs && !obs.value.trim() && opt?.dataset?.obs) obs.value = opt.dataset.obs;
+}
+
 function toggleFuncEtapa(id, cb) {
   if (cb.checked) {
     if (!etapaFuncionariosSelected.includes(id)) etapaFuncionariosSelected.push(id);
@@ -333,7 +372,11 @@ function aplicarModoAgendamento(tipo = 'agendamento') {
   document.getElementById('agend-cliente').placeholder = isEtapa ? 'Ex: Aplicação de primeira demão, vistoria, liberação de área...' : 'Nome do cliente ou descrição do evento';
   document.getElementById('agend-funcionario').closest('.campo').style.display = isEtapa ? 'none' : '';
   document.getElementById('agend-funcionarios-multi-wrap').style.display = isEtapa ? '' : 'none';
-  if (isEtapa) popularCheckboxFuncionariosAgend();
+  document.getElementById('agend-obra-wrap').style.display = isEtapa ? '' : 'none';
+  if (isEtapa) {
+    popularSelectObrasAgend();
+    popularCheckboxFuncionariosAgend();
+  }
 }
 
 function abrirModalAgendamento(id = null, tipo = 'agendamento') {
@@ -360,6 +403,7 @@ function abrirModalAgendamento(id = null, tipo = 'agendamento') {
       document.getElementById('agend-funcionario').value = ag.funcionarioId || '';
       etapaFuncionariosSelected = Array.isArray(ag.funcionariosIds) ? [...ag.funcionariosIds] : (ag.funcionarioId ? [ag.funcionarioId] : []);
       agendamentoObraContextId = ag.obraId || '';
+      popularSelectObrasAgend();
       popularCheckboxFuncionariosAgend();
     }
   }
@@ -382,7 +426,13 @@ async function salvarAgendamento() {
   const funcionarioId = document.getElementById('agend-funcionario').value;
   const tipo = document.getElementById('agend-tipo')?.value || 'agendamento';
   const idEdit = document.getElementById('agend-id-edit').value;
+  const obraIdSelecionada = tipo === 'etapa_obra' ? (document.getElementById('agend-obra-select')?.value || '') : (agendamentoObraContextId || '');
   if (!cliente || !data) { mostrarToast(tipo === 'etapa_obra' ? 'Informe descrição e data.' : 'Informe cliente e data.', 'erro'); return; }
+  if (tipo === 'etapa_obra' && !obraIdSelecionada) {
+    mostrarToast('Selecione a obra desta etapa/cronograma.', 'erro');
+    document.getElementById('agend-obra-select')?.focus();
+    return;
+  }
   if (hora && agendamentos.some(a => a.id !== idEdit && a.data === data && a.hora === hora)) {
     mostrarToast('Já existe um agendamento nesta data e horário. Escolha outra hora.', 'erro');
     document.getElementById('agend-hora')?.focus();
@@ -400,7 +450,7 @@ async function salvarAgendamento() {
     funcionarioId: tipo === 'etapa_obra' ? (funcionariosIds[0] || '') : funcionarioId,
     funcionariosIds,
     funcionariosNomes,
-    obraId: agendamentoObraContextId || ''
+    obraId: obraIdSelecionada
   };
   try {
     if (idEdit) {
@@ -889,6 +939,7 @@ function abrirEtapaParaObra(obraOuId, data = '') {
   if (!obra) { mostrarToast('Obra não encontrada.', 'erro'); return; }
   abrirModalAgendamento(null, 'etapa_obra');
   agendamentoObraContextId = obra.id || '';
+  popularSelectObrasAgend();
   document.getElementById('agend-cliente').value = '';
   document.getElementById('agend-data').value = data || obra.data || new Date().toISOString().slice(0, 10);
   document.getElementById('agend-local').value = obra.local || '';
@@ -971,7 +1022,7 @@ Object.assign(window, {
   renderizarCalendario, calAnterior, calProximo, calHoje,
   iniciarArrasteAgendamento, finalizarArrasteAgendamento, moverAgendamentoParaDia,
   abrirDiaDetalhe, fecharDetalheDia, getEventosDia,
-  abrirModalAgendamento, fecharModalAgendamento, editarAgendamento, salvarAgendamento, excluirAgendamento, abrirEtapaParaObra,
+  abrirModalAgendamento, fecharModalAgendamento, abrirAgendamentoNoDiaSelecionado, editarAgendamento, salvarAgendamento, excluirAgendamento, abrirEtapaParaObra,
   abrirAgendamentoParaObra,
   renderizarFuncionarios, abrirModalFuncionario, fecharModalFuncionario, editarFuncionario, salvarFuncionario, confirmarExcluirFuncionario,
   renderizarRelatorios, aplicarFiltrosRelatorio, popularSelectFuncionariosRel, popularSelectObrasRel, popularCheckboxFuncionariosRel, toggleFuncRel, toggleFuncEtapa,

@@ -8,10 +8,10 @@
   <link
     href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap"
     rel="stylesheet">
-  <link rel="stylesheet" href="src/style.css?v=20260612-tooltip-historico-fixo">
+  <link rel="stylesheet" href="src/style.css?v=20260613-tooltip-agenda-dia-fixo">
   <link rel="stylesheet" href="src/gestao.css?v=20260605-etapas-obra">
   <link rel="stylesheet" href="src/auth.css?v=20260612-mobile-header-menu">
-  <link rel="stylesheet" href="src/insumos_obras.css?v=20260612-obra-whatsapp-responsavel">
+  <link rel="stylesheet" href="src/insumos_obras.css?v=20260613-preview-obra-compacto">
   <link rel="icon" href="src/assets/obraflux-favicon-rounded.png?v=20260612-rounded-favicon" type="image/png">
   <link rel="shortcut icon" href="src/assets/obraflux-favicon-rounded.png?v=20260612-rounded-favicon" type="image/png">
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
@@ -805,6 +805,13 @@
                 </svg>
                 Novo Agendamento
               </button>
+              <button class="btn-primario" onclick="abrirModalAgendamento(null, 'etapa_obra')" style="padding:8px 16px;font-size:13px;">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                  <line x1="12" y1="5" x2="12" y2="19" />
+                  <line x1="5" y1="12" x2="19" y2="12" />
+                </svg>
+                Nova Etapa
+              </button>
             </div>
           </div>
           <div class="cal-card">
@@ -990,7 +997,8 @@
         <div id="detalhe-corpo"></div>
         <div class="modal-acoes" style="margin-top:1.5rem;">
           <button class="btn-secundario" onclick="fecharDetalheDia()">Fechar</button>
-          <button class="btn-primario" onclick="fecharDetalheDia();abrirModalAgendamento()">+ Agendamento</button>
+          <button class="btn-primario" onclick="abrirAgendamentoNoDiaSelecionado('agendamento')">+ Agendamento</button>
+          <button class="btn-primario" onclick="abrirAgendamentoNoDiaSelecionado('etapa_obra')">+ Nova Etapa</button>
         </div>
       </div>
     </div>
@@ -1005,6 +1013,10 @@
           <div class="campo">
             <label id="agend-cliente-label">Cliente / Evento *</label>
             <input type="text" id="agend-cliente" placeholder="Nome do cliente ou descrição do evento">
+          </div>
+          <div class="campo" id="agend-obra-wrap" style="display:none;">
+            <label>Obra *</label>
+            <select id="agend-obra-select"></select>
           </div>
           <div class="grid-3">
             <div class="campo">
@@ -1315,7 +1327,7 @@
     });
   </script>
   <script type="module" src="src/script.js?v=20260612-desc-manual-sem-duplicar"></script>
-  <script type="module" src="src/gestao.js?v=20260605-textos-utf8"></script>
+  <script type="module" src="src/gestao.js?v=20260613-nova-etapa-calendario"></script>
   <script type="module" src="src/funcionario_status.js?v=20260602-login-logo-transparent"></script>
   <script type="module" src="src/insumos.js?v=20260612-insumo-tipo-manual"></script>
   <script type="module" src="src/obras.js?v=20260612-obra-whatsapp-responsavel"></script>

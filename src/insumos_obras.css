@@ -815,60 +815,62 @@
 
 .obra-relatorio-periodo-modal {
   max-width: min(1120px, 96vw);
-  height: min(96vh, 940px);
+  height: min(98vh, 960px);
 }
 
 .obra-relatorio-config {
   display: grid;
-  gap: 6px;
+  gap: 4px;
   padding: 0;
 }
 
 .obra-relatorio-periodo-modal .pdf-preview-topo {
-  padding: 0.65rem 1rem;
+  padding: 0.42rem 0.85rem;
 }
 
 .obra-relatorio-periodo-modal .pdf-preview-topo h3 {
-  font-size: 1.55rem;
-  margin-bottom: 2px;
+  font-size: 1.3rem;
+  margin-bottom: 0;
+  letter-spacing: 1.5px;
 }
 
 .obra-relatorio-periodo-modal .pdf-preview-topo p {
-  font-size: 12px;
+  font-size: 11px;
+  line-height: 1.2;
 }
 
 .obra-relatorio-periodo-modal .pdf-preview-fechar {
-  font-size: 24px;
+  font-size: 22px;
 }
 
 .obra-relatorio-periodo-modal .pdf-preview-toolbar {
-  padding: 0.55rem 1rem;
-  gap: 10px;
+  padding: 0.35rem 0.85rem;
+  gap: 8px;
 }
 
 .obra-relatorio-periodo-modal .pdf-preview-toolbar label {
-  gap: 3px;
-  font-size: 10px;
+  gap: 2px;
+  font-size: 9px;
 }
 
 .obra-relatorio-periodo-modal .pdf-preview-toolbar input {
-  min-height: 34px;
-  padding: 7px 10px;
-  font-size: 13px;
+  min-height: 30px;
+  padding: 5px 8px;
+  font-size: 12px;
 }
 
 .obra-relatorio-periodo-modal .pdf-preview-toolbar button {
-  min-height: 34px;
-  padding: 7px 14px;
+  min-height: 30px;
+  padding: 5px 12px;
   border-radius: 8px;
-  font-size: 12px;
+  font-size: 11px;
 }
 
 .obra-relatorio-opcoes {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-  gap: 6px;
-  padding: 0 1rem;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 4px;
+  padding: 0 0.85rem;
 }
 
 .obra-relatorio-opcoes label,
@@ -879,11 +881,12 @@
   border: 1px solid var(--cinza-borda);
   border-radius: 7px;
   background: #f8fafc;
-  padding: 7px 8px;
+  min-height: 30px;
+  padding: 5px 7px;
   color: var(--azul);
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 800;
-  line-height: 1.25;
+  line-height: 1.15;
 }
 
 .obra-relatorio-opcoes input,
@@ -894,13 +897,13 @@
 .obra-relatorio-documentos {
   border: 1px solid var(--cinza-borda);
   border-radius: 8px;
-  padding: 8px 10px;
+  padding: 6px 8px;
   background: #fff;
   display: grid;
-  gap: 6px;
-  max-height: 112px;
+  gap: 4px;
+  max-height: 68px;
   overflow: auto;
-  margin: 0 1rem 8px;
+  margin: 0 0.85rem 6px;
 }
 
 .obra-relatorio-documentos-topo {
@@ -912,7 +915,7 @@
 }
 
 .obra-relatorio-documentos-topo strong {
-  font-size: 12px;
+  font-size: 11px;
   text-transform: uppercase;
   letter-spacing: 0.8px;
 }
@@ -921,13 +924,13 @@
 .obra-relatorio-check-item small {
   color: var(--cinza-texto);
   font-weight: 600;
-  font-size: 11px;
+  font-size: 10px;
 }
 
 .obra-relatorio-periodo-modal .obra-vazio {
-  min-height: 42px;
-  padding: 10px;
-  font-size: 12px;
+  min-height: 28px;
+  padding: 6px 8px;
+  font-size: 11px;
 }
 
 .obra-relatorio-periodo-modal .pdf-preview-frame {
@@ -1308,18 +1311,18 @@
   }
 
   .obra-relatorio-periodo-modal .pdf-preview-topo {
-    padding: 0.55rem 0.75rem;
+    padding: 0.4rem 0.65rem;
   }
 
   .obra-relatorio-periodo-modal .pdf-preview-topo h3 {
-    font-size: 1.35rem;
+    font-size: 1.15rem;
   }
 
   .obra-relatorio-periodo-modal .pdf-preview-toolbar {
     display: grid;
     grid-template-columns: 1fr 1fr;
-    padding: 0.45rem 0.75rem;
-    gap: 6px;
+    padding: 0.35rem 0.65rem;
+    gap: 5px;
   }
 
   .obra-relatorio-periodo-modal .pdf-preview-toolbar label {
@@ -1332,18 +1335,20 @@
 
   .obra-relatorio-opcoes {
     grid-template-columns: repeat(2, minmax(0, 1fr));
-    padding: 0 0.75rem;
+    padding: 0 0.65rem;
+    gap: 4px;
   }
 
   .obra-relatorio-opcoes label,
   .obra-relatorio-check-item {
-    font-size: 11px;
-    padding: 6px 7px;
+    min-height: 28px;
+    font-size: 10px;
+    padding: 4px 6px;
   }
 
   .obra-relatorio-documentos {
-    max-height: 76px;
-    margin: 0 0.75rem 6px;
-    padding: 7px;
+    max-height: 54px;
+    margin: 0 0.65rem 5px;
+    padding: 5px 6px;
   }
 }
