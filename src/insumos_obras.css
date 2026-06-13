@@ -397,6 +397,35 @@
   margin-top: 3px;
 }
 
+.obra-responsavel-linha {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.obra-whatsapp-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 28px;
+  padding: 5px 10px;
+  border-radius: 999px;
+  background: #25d366;
+  color: #fff;
+  font-size: 12px;
+  font-weight: 800;
+  line-height: 1;
+  text-decoration: none;
+  box-shadow: 0 8px 18px rgba(37, 211, 102, 0.22);
+}
+
+.obra-whatsapp-btn:hover {
+  background: #1fb85a;
+  color: #fff;
+  transform: translateY(-1px);
+}
+
 .obra-resumo-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
@@ -786,18 +815,60 @@
 
 .obra-relatorio-periodo-modal {
   max-width: min(1120px, 96vw);
+  height: min(96vh, 940px);
 }
 
 .obra-relatorio-config {
   display: grid;
-  gap: 12px;
-  padding: 0 0 12px;
+  gap: 6px;
+  padding: 0;
+}
+
+.obra-relatorio-periodo-modal .pdf-preview-topo {
+  padding: 0.65rem 1rem;
+}
+
+.obra-relatorio-periodo-modal .pdf-preview-topo h3 {
+  font-size: 1.55rem;
+  margin-bottom: 2px;
+}
+
+.obra-relatorio-periodo-modal .pdf-preview-topo p {
+  font-size: 12px;
+}
+
+.obra-relatorio-periodo-modal .pdf-preview-fechar {
+  font-size: 24px;
+}
+
+.obra-relatorio-periodo-modal .pdf-preview-toolbar {
+  padding: 0.55rem 1rem;
+  gap: 10px;
+}
+
+.obra-relatorio-periodo-modal .pdf-preview-toolbar label {
+  gap: 3px;
+  font-size: 10px;
+}
+
+.obra-relatorio-periodo-modal .pdf-preview-toolbar input {
+  min-height: 34px;
+  padding: 7px 10px;
+  font-size: 13px;
+}
+
+.obra-relatorio-periodo-modal .pdf-preview-toolbar button {
+  min-height: 34px;
+  padding: 7px 14px;
+  border-radius: 8px;
+  font-size: 12px;
 }
 
 .obra-relatorio-opcoes {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
-  gap: 8px;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 6px;
+  padding: 0 1rem;
 }
 
 .obra-relatorio-opcoes label,
@@ -806,12 +877,13 @@
   align-items: flex-start;
   gap: 8px;
   border: 1px solid var(--cinza-borda);
-  border-radius: 8px;
+  border-radius: 7px;
   background: #f8fafc;
-  padding: 9px 10px;
+  padding: 7px 8px;
   color: var(--azul);
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 800;
+  line-height: 1.25;
 }
 
 .obra-relatorio-opcoes input,
@@ -821,25 +893,26 @@
 
 .obra-relatorio-documentos {
   border: 1px solid var(--cinza-borda);
-  border-radius: 10px;
-  padding: 12px;
+  border-radius: 8px;
+  padding: 8px 10px;
   background: #fff;
   display: grid;
-  gap: 8px;
-  max-height: 210px;
+  gap: 6px;
+  max-height: 112px;
   overflow: auto;
+  margin: 0 1rem 8px;
 }
 
 .obra-relatorio-documentos-topo {
   display: flex;
   justify-content: space-between;
-  gap: 12px;
+  gap: 8px;
   flex-wrap: wrap;
   color: var(--azul);
 }
 
 .obra-relatorio-documentos-topo strong {
-  font-size: 14px;
+  font-size: 12px;
   text-transform: uppercase;
   letter-spacing: 0.8px;
 }
@@ -848,6 +921,17 @@
 .obra-relatorio-check-item small {
   color: var(--cinza-texto);
   font-weight: 600;
+  font-size: 11px;
+}
+
+.obra-relatorio-periodo-modal .obra-vazio {
+  min-height: 42px;
+  padding: 10px;
+  font-size: 12px;
+}
+
+.obra-relatorio-periodo-modal .pdf-preview-frame {
+  min-height: 0;
 }
 
 .obra-relatorio-check-item span {
@@ -1215,5 +1299,51 @@
   .obras-filtro-btn {
     flex: 1;
     text-align: center;
+  }
+
+  .obra-relatorio-periodo-modal {
+    width: calc(100vw - 12px);
+    height: calc(100dvh - 12px);
+    border-radius: 10px;
+  }
+
+  .obra-relatorio-periodo-modal .pdf-preview-topo {
+    padding: 0.55rem 0.75rem;
+  }
+
+  .obra-relatorio-periodo-modal .pdf-preview-topo h3 {
+    font-size: 1.35rem;
+  }
+
+  .obra-relatorio-periodo-modal .pdf-preview-toolbar {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    padding: 0.45rem 0.75rem;
+    gap: 6px;
+  }
+
+  .obra-relatorio-periodo-modal .pdf-preview-toolbar label {
+    min-width: 0;
+  }
+
+  .obra-relatorio-periodo-modal .pdf-preview-toolbar button {
+    width: 100%;
+  }
+
+  .obra-relatorio-opcoes {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    padding: 0 0.75rem;
+  }
+
+  .obra-relatorio-opcoes label,
+  .obra-relatorio-check-item {
+    font-size: 11px;
+    padding: 6px 7px;
+  }
+
+  .obra-relatorio-documentos {
+    max-height: 76px;
+    margin: 0 0.75rem 6px;
+    padding: 7px;
   }
 }

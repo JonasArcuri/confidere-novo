@@ -41,6 +41,13 @@ function moedaObra(valor) {
   return (Number(valor) || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 }
 
+function linkWhatsappResponsavelObra(contato = '') {
+  const digitos = String(contato || '').replace(/\D/g, '');
+  if (!digitos) return '';
+  const numero = digitos.startsWith('55') ? digitos : `55${digitos}`;
+  return `https://wa.me/${numero}`;
+}
+
 function getTipoDocumentoObra(doc = {}) {
   return doc.tipoDocumento || doc.tipo || doc.documentoTipo || 'orcamento';
 }
@@ -137,6 +144,8 @@ function selecionarRelatorioObraOpcoes() {
   const marcado = id => !!document.getElementById(id)?.checked;
   return {
     rendimentos: marcado('obra-rel-opt-rendimentos'),
+    linhaTempo: marcado('obra-rel-opt-linha-tempo'),
+    resumoGeral: marcado('obra-rel-opt-resumo-geral'),
     relatorios: marcado('obra-rel-opt-relatorios'),
     etapas: marcado('obra-rel-opt-etapas'),
     agendamentos: marcado('obra-rel-opt-agendamentos'),
@@ -457,6 +466,10 @@ function renderizarDetalheObra(id) {
   const rendimento = rels.reduce((acc, rel) => acc + (Number(rel.rendimento) || 0), 0);
   const totalOrcamentos = orcamentosAtrelados.reduce((acc, orc) => acc + totalOrcamentoObra(orc), 0);
   const isFinali = obra.status === 'finalizada';
+  const whatsappResponsavel = linkWhatsappResponsavelObra(obra.contatoResponsavel);
+  const responsavelHtml = (obra.responsavel || obra.contatoResponsavel)
+    ? `<p class="obra-responsavel-linha"><span>Responsável: ${escapeHtml(obra.responsavel || '-')}${obra.contatoResponsavel ? ' · ' + escapeHtml(obra.contatoResponsavel) : ''}</span>${whatsappResponsavel ? `<a class="obra-whatsapp-btn" href="${escapeAttr(whatsappResponsavel)}" target="_blank" rel="noopener" aria-label="Conversar com o responsável pelo WhatsApp">WhatsApp</a>` : ''}</p>`
+    : '';
 
   cont.innerHTML = `<div class="obra-detalhe">
     <div class="obra-detalhe-topo">
@@ -467,7 +480,7 @@ function renderizarDetalheObra(id) {
       <div>
         <h3>${escapeHtml(obra.nome || 'Obra')}</h3>
         <p>${escapeHtml(obra.construtora || '-')} · ${escapeHtml(obra.local || '-')} · ${formatarDataObra(obra.data)}</p>
-        ${(obra.responsavel || obra.contatoResponsavel) ? `<p>Responsável: ${escapeHtml(obra.responsavel || '-')}${obra.contatoResponsavel ? ' · ' + escapeHtml(obra.contatoResponsavel) : ''}</p>` : ''}
+        ${responsavelHtml}
       </div>
       <div class="obra-detalhe-acoes">
         <button class="btn-mini ver" onclick="abrirRelatorioPeriodoObra('${escapeAttr(obra.id)}')">Gerar relatório</button>
@@ -931,6 +944,8 @@ function abrirRelatorioPeriodoObraAvancado(obraId) {
       </div>
       <div class="obra-relatorio-opcoes">
         <label><input type="checkbox" id="obra-rel-opt-rendimentos" checked> Rendimentos e resumo financeiro</label>
+        <label><input type="checkbox" id="obra-rel-opt-linha-tempo" checked> Linha do Tempo</label>
+        <label><input type="checkbox" id="obra-rel-opt-resumo-geral" checked> Resumo Geral</label>
         <label><input type="checkbox" id="obra-rel-opt-relatorios" checked> Relatórios de obra e imagens</label>
         <label><input type="checkbox" id="obra-rel-opt-etapas" checked> Etapas / cronograma</label>
         <label><input type="checkbox" id="obra-rel-opt-agendamentos" checked> Agendamentos vinculados</label>
@@ -960,6 +975,8 @@ async function gerarRelatorioPeriodoObraPDFAvancado(obraId, inicio, fim, opcoes 
   if (!obra) throw new Error('Obra não encontrada.');
 
   const { rels, ags, docs } = getEventosPeriodoObra(obra, inicio, fim);
+  const todosFinanceirosObra = getOrcamentosDaObra(obra);
+  const todosOrcamentosObra = todosFinanceirosObra.filter(isOrcamentoObra);
   const { orcamentos, cobrancas } = getFinanceirosPeriodoObra(obra, inicio, fim);
   const etapas = ags.filter(isEtapaObra);
   const agendamentos = ags.filter(a => !isEtapaObra(a));
@@ -967,7 +984,7 @@ async function gerarRelatorioPeriodoObraPDFAvancado(obraId, inicio, fim, opcoes 
     ? docs.filter(d => !opcoes.documentosIds?.length || opcoes.documentosIds.includes(d.id))
     : [];
   const rendimento = rels.reduce((acc, r) => acc + (Number(r.rendimento) || 0), 0);
-  const totalOrcado = orcamentos.reduce((acc, o) => acc + totalOrcamentoObra(o), 0);
+  const totalOrcado = todosOrcamentosObra.reduce((acc, o) => acc + totalOrcamentoObra(o), 0);
   const totalCobrancas = cobrancas.reduce((acc, c) => acc + totalOrcamentoObra(c), 0);
   const empresaNome = window.empresaConfig?.empresaNome || 'Empresa';
 
@@ -1041,47 +1058,35 @@ async function gerarRelatorioPeriodoObraPDFAvancado(obraId, inicio, fim, opcoes 
   };
 
   doc.setFillColor(...azul);
-  doc.rect(0, 0, PW, 38, 'F');
-  doc.setFont('helvetica', 'bold'); doc.setFontSize(18); doc.setTextColor(255, 255, 255);
-  doc.text('Relatório de Andamento da Obra', M, 15);
-  doc.setFont('helvetica', 'normal'); doc.setFontSize(9);
-  doc.text(`Período: ${textoPeriodoRelatorioObra(inicio, fim)}`, M, 25);
-  doc.setFont('helvetica', 'bold'); doc.setFontSize(12);
-  doc.text(obra.nome || 'Obra', PW - M, 15, { align: 'right' });
-  doc.setFont('helvetica', 'normal'); doc.setFontSize(8.5);
-  doc.text(obra.construtora || '', PW - M, 23, { align: 'right' });
-  y = 48;
-
-  doc.setFillColor(...azul);
-  doc.rect(0, 0, PW, 58, 'F');
+  doc.rect(0, 0, PW, 46, 'F');
   doc.setTextColor(255, 255, 255);
-  doc.setFont('helvetica', 'bold'); doc.setFontSize(12);
-  doc.text(empresaNome, M, 12);
-  doc.setFontSize(18);
-  doc.text('Relatório de Andamento da Obra', M, 24);
-  doc.setFont('helvetica', 'bold'); doc.setFontSize(10);
-  doc.text(`Obra: ${obra.nome || '-'}`, M, 35);
-  doc.setFont('helvetica', 'normal'); doc.setFontSize(8.5);
-  doc.text(`Responsável: ${obra.responsavel || '-'}`, M, 43);
-  doc.text(`Endereço: ${obra.local || '-'}`, M, 50);
-  doc.setFont('helvetica', 'bold'); doc.setFontSize(9);
-  doc.text(`Período: ${textoPeriodoRelatorioObra(inicio, fim)}`, PW - M, 24, { align: 'right' });
-  if (obra.construtora) {
-    doc.setFont('helvetica', 'normal'); doc.setFontSize(8.5);
-    doc.text(obra.construtora, PW - M, 33, { align: 'right' });
-  }
-  y = 68;
+  doc.setFont('helvetica', 'bold'); doc.setFontSize(10.5);
+  doc.text(empresaNome, M, 10);
+  doc.setFontSize(16);
+  doc.text('Relatório de Andamento da Obra', M, 20);
+  doc.setFont('helvetica', 'bold'); doc.setFontSize(8.8);
+  doc.text(`Obra: ${obra.nome || '-'}`, M, 29);
+  doc.setFont('helvetica', 'normal'); doc.setFontSize(8);
+  doc.text(`Cliente: ${obra.cliente || obra.construtora || '-'}`, M, 36);
+  doc.text(`Endereço: ${obra.local || '-'}`, M, 42);
+  doc.setFont('helvetica', 'bold'); doc.setFontSize(8.4);
+  doc.text(`Período: ${textoPeriodoRelatorioObra(inicio, fim)}`, PW - M, 20, { align: 'right' });
+  y = 56;
 
   tituloSecao('Informações da obra');
   paragrafo(`Obra: ${obra.nome || '-'}\nConstrutora / Empreiteiro: ${obra.construtora || '-'}\nLocal: ${obra.local || '-'}\nResponsável técnico/responsável: ${obra.responsavel || '-'}\nContato do responsável: ${obra.contatoResponsavel || '-'}\nInício: ${formatarDataObra(obra.data)}\nStatus: ${obra.status === 'finalizada' ? 'Finalizada' : 'Em execução'}`);
 
-  tituloSecao('Linha do tempo');
-  const primeiroOrc = orcamentos.slice().sort((a, b) => (dataDocumentoFinanceiroObra(a) || '').localeCompare(dataDocumentoFinanceiroObra(b) || ''))[0];
-  const primeiroAprovado = orcamentos.find(o => o.statusAprovacao === 'aprovado' || o.aprovado === true);
+  if (opcoes.linhaTempo !== false) {
+    tituloSecao('Linha do tempo');
+  const primeiroOrc = todosOrcamentosObra.slice().sort((a, b) => (dataDocumentoFinanceiroObra(a) || '').localeCompare(dataDocumentoFinanceiroObra(b) || ''))[0];
+  const primeiroAprovado = todosOrcamentosObra.find(o => o.statusAprovacao === 'aprovado' || o.aprovado === true);
   const primeiraCobrancaPaga = cobrancas.find(c => c.statusPagamento === 'pago' || c.pago === true);
   paragrafo(`Primeiro orçamento: ${primeiroOrc ? `#${String(primeiroOrc.numero || '').padStart(3, '0')} em ${formatarDataObra(dataDocumentoFinanceiroObra(primeiroOrc))}` : '-'}\nAprovação: ${primeiroAprovado ? resumoStatusDocumentoObra(primeiroAprovado).texto : '-'}\nPrimeira cobrança paga: ${primeiraCobrancaPaga ? resumoStatusDocumentoObra(primeiraCobrancaPaga).texto : '-'}\nÚltima atualização do período: ${formatarDataObra(fim || new Date().toISOString().slice(0, 10))}`);
 
-  tituloSecao('Resumo');
+  }
+
+  if (opcoes.resumoGeral !== false) {
+    tituloSecao('Resumo');
   const cardW = (W - 8) / 3;
   novaPaginaSePreciso(42);
   resumoCard(M, y, cardW, 'Orçado', moedaObra(totalOrcado));
@@ -1093,12 +1098,14 @@ async function gerarRelatorioPeriodoObraPDFAvancado(obraId, inicio, fim, opcoes 
   resumoCard(M, y, cardWResumo, 'Orçado', moedaObra(totalOrcado));
   resumoCard(M + cardWResumo + 6, y, cardWResumo, 'Executado', moedaObra(totalCobrancas), laranja);
   y += 24;
-  paragrafo(`Relatórios de obra: ${rels.length}\nEtapas / cronogramas: ${etapas.length}\nAgendamentos: ${agendamentos.length}\nOrçamentos atrelados: ${orcamentos.length}\nRelatórios de cobrança: ${cobrancas.length}\nDocumentos selecionados: ${docsSelecionados.length}`, M, W, cinza, 8.5);
+  paragrafo(`Relatórios de obra: ${rels.length}\nEtapas / cronogramas: ${etapas.length}\nAgendamentos: ${agendamentos.length}\nOrçamentos atrelados: ${todosOrcamentosObra.length}\nRelatórios de cobrança: ${cobrancas.length}\nDocumentos selecionados: ${docsSelecionados.length}`, M, W, cinza, 8.5);
+
+  }
 
   if (opcoes.orcamentos) {
     tituloSecao('Orçamentos atrelados');
-    if (!orcamentos.length) paragrafo('Nenhum orçamento relacionado no período.', M, W, cinza);
-    orcamentos.forEach(o => {
+    if (!todosOrcamentosObra.length) paragrafo('Nenhum orçamento relacionado a esta obra.', M, W, cinza);
+    todosOrcamentosObra.forEach(o => {
       const status = resumoStatusDocumentoObra(o);
       itemBox(`#${String(o.numero || '').padStart(3, '0')} ${o.cliente || 'Orçamento'}`, `${o.assunto || '-'} · Orçado em ${formatarDataObra(dataDocumentoFinanceiroObra(o))} · ${status.texto}`, `Valor: ${moedaObra(totalOrcamentoObra(o))}`, status.classe === 'aprovado' ? verde : azul);
     });

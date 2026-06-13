@@ -207,6 +207,13 @@ function getContatoEmpresaTexto() {
     return empresaConfig.empresaContato;
 }
 
+function getWhatsappEmpresaUrl(contato = '') {
+    const digitos = String(contato || '').replace(/\D/g, '');
+    if (!digitos) return '';
+    const numero = digitos.startsWith('55') ? digitos : `55${digitos}`;
+    return `https://wa.me/${numero}`;
+}
+
 function getSubtituloEmpresa(separador = ' • ') {
     return [getContatoEmpresaTexto(), empresaConfig.empresaLocal].filter(Boolean).join(separador);
 }
@@ -215,8 +222,9 @@ function getSubtituloEmpresaHtml(separador = ' • ') {
     const partes = [];
     if (empresaConfig.empresaContato) {
         const contato = escapeHtml(empresaConfig.empresaContato);
+        const whatsappUrl = getWhatsappEmpresaUrl(empresaConfig.empresaContato);
         partes.push(empresaConfig.empresaContatoWhatsapp
-            ? `<span class="marca-whatsapp-icon" aria-label="WhatsApp">☎</span>${contato}`
+            ? `${whatsappUrl ? `<a class="marca-whatsapp-link" href="${escapeAttr(whatsappUrl)}" target="_blank" rel="noopener" aria-label="Abrir WhatsApp da empresa">` : ''}<span class="marca-whatsapp-icon" aria-hidden="true"></span>${whatsappUrl ? '</a>' : ''}${contato}`
             : contato);
     }
     if (empresaConfig.empresaLocal) partes.push(escapeHtml(empresaConfig.empresaLocal));
@@ -868,7 +876,10 @@ function toggleDropdownDesc(id) {
 function selecionarDesc(id, valor) {
     _descPersonalizada[id] = valor;
     const btn = document.getElementById(`desc-btn-${id}`);
-    if (btn) btn.textContent = valor;
+    if (btn) {
+        btn.textContent = valor;
+        btn.style.display = '';
+    }
     document.getElementById(`desc-dropdown-${id}`).style.display = 'none';
     // Esconder campo manual se selecionar predefinido
     const manual = document.getElementById(`desc-manual-${id}`);
@@ -880,11 +891,13 @@ function selecionarDesc(id, valor) {
 function toggleDescManual(id) {
     const manual = document.getElementById(`desc-manual-${id}`);
     const salvarRow = document.getElementById(`desc-manual-save-row-${id}`);
+    const btn = document.getElementById(`desc-btn-${id}`);
     if (!manual) return;
     const visivel = manual.style.display === 'block';
     manual.style.display = visivel ? 'none' : 'block';
     if (salvarRow) salvarRow.style.display = visivel ? 'none' : 'flex';
     document.getElementById(`desc-dropdown-${id}`).style.display = 'none';
+    if (btn) btn.style.display = visivel ? '' : 'none';
     if (!visivel) manual.focus();
 }
 
@@ -895,6 +908,27 @@ function atualizarDescManual(id) {
     const valor = manual.value.trim();
     _descPersonalizada[id] = valor || '';
     btn.textContent = valor || 'Selecione o serviço';
+}
+
+function sincronizarDescManualVisivel(id) {
+    const manual = document.getElementById(`desc-manual-${id}`);
+    const btn = document.getElementById(`desc-btn-${id}`);
+    if (!manual || !btn) return;
+
+    const valor = manual.value.trim();
+    btn.style.display = valor ? 'none' : '';
+
+    if (!valor && manual.style.display === 'block') {
+        const salvarRow = document.getElementById(`desc-manual-save-row-${id}`);
+        const dropdown = document.getElementById(`desc-dropdown-${id}`);
+        btn.textContent = 'Selecione o serviço';
+        manual.style.display = 'none';
+        if (salvarRow) salvarRow.style.display = 'none';
+        if (dropdown) {
+            dropdown.style.display = 'block';
+            _posicionarDropdown(dropdown, btn);
+        }
+    }
 }
 
 function getDescLinha(id) {
@@ -1014,13 +1048,13 @@ function adicionarLinha(desc = '', area = '', material = '', custoMaterial = '',
     tr.innerHTML = `
 <td class="col-desc">
   <div class="desc-dropdown-wrapper" style="position:relative">
-    <button type="button" id="desc-btn-${id}" class="desc-select-btn" onclick="toggleDropdownDesc(${id})">${escapeHtml(desc || 'Selecione o servi\u00e7o')}</button>
+    <button type="button" id="desc-btn-${id}" class="desc-select-btn" onclick="toggleDropdownDesc(${id})" style="${descManualVal ? 'display:none' : ''}">${escapeHtml(desc || 'Selecione o servi\u00e7o')}</button>
     <div id="desc-dropdown-${id}" class="desc-dropdown-panel" style="display:none;">
       <div class="desc-opt manual-option-row" onclick="toggleDescManual(${id})">Digitar manualmente...</div>
       ${renderOpcoesDesc(id, descPredefinida)}
     </div>
     <label class="manual-save-row" id="desc-manual-save-row-${id}" style="display:${descManualVal ? 'flex' : 'none'}"><input type="checkbox" id="desc-manual-salvar-${id}" onchange="salvarManualSeMarcado('desc',${id})"><span>Salvar na lista</span><span class="tooltip-wrap tooltip-manual-save" data-tooltip="Salva o serviço descrito manualmente na lista de serviços para uso posterior."><button type="button" class="manual-save-help-btn" aria-label="Ajuda sobre salvar serviço na lista" onclick="event.preventDefault();event.stopPropagation();">?</button></span></label>
-    <input type="text" id="desc-manual-${id}" placeholder="Digite o servi&ccedil;o..." value="${escapeAttr(descManualVal)}" oninput="atualizarDescManual(${id});calcularLinha(${id})" onblur="salvarManualSeMarcado('desc',${id})" style="display:${descManualVal ? 'block' : 'none'};margin-top:4px;width:100%;box-sizing:border-box;padding:5px 8px;border:1px solid #c0bdb8;border-radius:6px;font-size:13px">
+    <input type="text" id="desc-manual-${id}" placeholder="Digite o servi&ccedil;o..." value="${escapeAttr(descManualVal)}" oninput="atualizarDescManual(${id});sincronizarDescManualVisivel(${id});calcularLinha(${id})" onblur="salvarManualSeMarcado('desc',${id})" style="display:${descManualVal ? 'block' : 'none'};margin-top:4px;width:100%;box-sizing:border-box;padding:5px 8px;border:1px solid #c0bdb8;border-radius:6px;font-size:13px">
   </div>
 </td>
 <td class="col-area">
@@ -3827,7 +3861,7 @@ Object.assign(window, {
     renderizarOpcoesObservacao, removerObservacaoPreset, salvarObservacaoManualPreset,
     // Descrição do serviço (dropdown + manual)
     recarregarOpcoesEditaveisUsuario, removerOpcaoEditavel, adicionarOpcaoEditavel, salvarManualSeMarcado,
-    toggleDropdownDesc, selecionarDesc, toggleDescManual, atualizarDescManual, getDescLinha,
+    toggleDropdownDesc, selecionarDesc, toggleDescManual, atualizarDescManual, sincronizarDescManualVisivel, getDescLinha,
     // Área (dropdown + manual)
     toggleDropdownArea, selecionarArea, toggleAreaManual, atualizarAreaManual,
     // Material (multi-checkbox + manual)

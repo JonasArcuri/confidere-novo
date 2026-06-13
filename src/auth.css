@@ -742,3 +742,102 @@
     grid-template-columns: 1fr;
   }
 }
+
+@media (max-width: 640px) {
+  .nav-usuario {
+    order: 2;
+    width: auto;
+    flex: 1 1 auto;
+    min-width: 0;
+    margin-left: 0;
+    padding: 0;
+    display: flex;
+    flex-wrap: nowrap;
+    justify-content: flex-end;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .nav-logo-direita {
+    order: 1;
+    flex: 1 1 auto;
+    min-width: 0;
+    max-width: none;
+    padding: 0;
+    justify-content: center;
+  }
+
+  .nav-logo-direita .nav-brand {
+    max-width: 100%;
+    min-width: 0;
+    justify-content: center;
+  }
+
+  .nav-logo-direita .nav-brand-texto {
+    min-width: 0;
+  }
+
+  .nav-logo-direita .logo-nav {
+    max-width: min(170px, 36vw);
+    font-size: 1rem;
+    line-height: 1;
+    text-align: center;
+    letter-spacing: 1.4px;
+  }
+
+  .nav-logo-direita .nav-marca-sub {
+    display: none;
+  }
+
+  .nav-logo-direita .nav-logo-img {
+    max-width: min(150px, 34vw);
+    max-height: 34px;
+    object-fit: contain;
+  }
+
+  .config-menu-wrap {
+    order: 2;
+    position: static;
+    flex: 0 0 auto;
+  }
+
+  .btn-config {
+    width: 40px;
+    min-width: 40px;
+    height: 40px;
+    border-radius: 10px;
+  }
+
+  .btn-logout {
+    order: 3;
+    flex: 0 0 auto;
+    min-height: 40px;
+    height: 40px;
+    padding: 6px 12px;
+    border-radius: 9px;
+  }
+
+  .config-menu {
+    top: 66px;
+    left: 10px;
+    right: 10px;
+    max-width: calc(100vw - 20px);
+    max-height: calc(100dvh - 78px);
+  }
+}
+
+@media (max-width: 390px) {
+  .nav-logo-direita .logo-nav {
+    max-width: 120px;
+    font-size: 0.88rem;
+    letter-spacing: 1px;
+  }
+
+  .nav-logo-direita .nav-logo-img {
+    max-width: 116px;
+  }
+
+  .btn-logout {
+    padding: 6px 10px;
+  }
+}

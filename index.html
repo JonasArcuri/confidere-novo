@@ -8,10 +8,10 @@
   <link
     href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap"
     rel="stylesheet">
-  <link rel="stylesheet" href="src/style.css?v=20260612-tooltip-agenda-dia">
+  <link rel="stylesheet" href="src/style.css?v=20260612-tooltips-acima-de-tudo">
   <link rel="stylesheet" href="src/gestao.css?v=20260605-etapas-obra">
-  <link rel="stylesheet" href="src/auth.css?v=20260612-mobile-nav-tooltips">
-  <link rel="stylesheet" href="src/insumos_obras.css?v=20260612-mobile-nav-tooltips">
+  <link rel="stylesheet" href="src/auth.css?v=20260612-mobile-header-menu">
+  <link rel="stylesheet" href="src/insumos_obras.css?v=20260612-obra-whatsapp-responsavel">
   <link rel="icon" href="src/assets/obraflux-favicon-rounded.png?v=20260612-rounded-favicon" type="image/png">
   <link rel="shortcut icon" href="src/assets/obraflux-favicon-rounded.png?v=20260612-rounded-favicon" type="image/png">
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
@@ -224,8 +224,8 @@
                 <input type="text" id="campo-cliente" placeholder="Nome completo ou razão social">
               </div>
               <div class="campo">
-                <label>Assunto</label>
-                <input type="text" id="campo-obra" placeholder="Ex: Impermeabilização terraço, Piscina cobertura...">
+                <label>Assunto/Obra</label>
+                <input type="text" id="campo-obra" placeholder="Digite o nome da obra ou o assunto deste orçamento..." title="Digite o nome da obra ou o assunto ao qual este orçamento se refere.">
               </div>
               <div class="campo">
                 <label>Endereço / Cidade</label>
@@ -854,7 +854,12 @@
         <!-- SUB-ABA: RELATÓRIOS -->
         <div id="sub-relatorios" class="gestao-sub-aba">
           <div class="rel-topo">
-            <div class="func-topo-titulo">Relatórios de Obra</div>
+            <div class="func-title-help">
+              <div class="func-topo-titulo">Relatórios de Obra</div>
+              <span class="tooltip-wrap tooltip-relatorios-obra" data-tooltip="Menu para registrar a execução das obras. Cadastre relatórios por obra, data, funcionários, rendimento, observações e imagens. Esses registros ficam vinculados à obra selecionada, aparecem no cronograma da obra e ajudam a compor relatórios de andamento e o acompanhamento financeiro.">
+                <button type="button" class="manual-save-help-btn" aria-label="Ajuda sobre relatórios de obra">?</button>
+              </span>
+            </div>
             <div class="rel-acoes-topo">
               <button class="btn-primario" onclick="abrirModalRelatorio()" style="padding:8px 16px;font-size:13px;">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
@@ -896,7 +901,12 @@
         <!-- SUB-ABA: INSUMOS / DESPESAS -->
         <div id="sub-insumos" class="gestao-sub-aba">
           <div class="ins-topo">
-            <div class="func-topo-titulo">Insumos / Despesas</div>
+            <div class="func-title-help">
+              <div class="func-topo-titulo">Insumos / Despesas</div>
+              <span class="tooltip-wrap tooltip-insumos-despesas" data-tooltip="Menu para lançar gastos da operação, como materiais, ferramentas, veículos, trajetos e despesas gerais. Você pode criar tipos personalizados, vincular a um funcionário, anexar comprovante ou nota fiscal e usar esses valores como saídas no Fluxo Financeiro.">
+                <button type="button" class="manual-save-help-btn" aria-label="Ajuda sobre insumos e despesas">?</button>
+              </span>
+            </div>
             <button class="btn-primario" onclick="abrirModalInsumo()" style="padding:8px 16px;font-size:13px;">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
                 <line x1="12" y1="5" x2="12" y2="19" />
@@ -1304,11 +1314,11 @@
       }, 7000);
     });
   </script>
-  <script type="module" src="src/script.js?v=20260612-novo-orcamento-confirmacao"></script>
+  <script type="module" src="src/script.js?v=20260612-desc-manual-sem-duplicar"></script>
   <script type="module" src="src/gestao.js?v=20260605-textos-utf8"></script>
   <script type="module" src="src/funcionario_status.js?v=20260602-login-logo-transparent"></script>
   <script type="module" src="src/insumos.js?v=20260612-insumo-tipo-manual"></script>
-  <script type="module" src="src/obras.js?v=20260612-pdf-andamento-obra-paginacao"></script>
+  <script type="module" src="src/obras.js?v=20260612-obra-whatsapp-responsavel"></script>
   <script type="module" src="src/financeiro.js?v=20260612-financeiro-empresa-config"></script>
   <script type="module" src="src/auth.js?v=20260609-docs-obras"></script>
 
