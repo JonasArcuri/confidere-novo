@@ -814,17 +814,27 @@
 }
 
 .obra-relatorio-periodo-modal {
-  max-width: min(1120px, 96vw);
-  height: min(98vh, 960px);
+  width: min(1380px, calc(100vw - 20px));
+  max-width: min(1380px, calc(100vw - 20px));
+  height: min(96vh, 960px);
+  display: grid;
+  grid-template-columns: minmax(260px, 340px) minmax(0, 1fr);
+  grid-template-rows: auto minmax(0, 1fr);
+  align-items: stretch;
 }
 
 .obra-relatorio-config {
   display: grid;
-  gap: 4px;
-  padding: 0;
+  align-content: start;
+  gap: 7px;
+  padding: 8px;
+  background: #f6f8fb;
+  border-right: 1px solid var(--cinza-borda);
+  overflow: auto;
 }
 
 .obra-relatorio-periodo-modal .pdf-preview-topo {
+  grid-column: 1 / -1;
   padding: 0.42rem 0.85rem;
 }
 
@@ -844,8 +854,12 @@
 }
 
 .obra-relatorio-periodo-modal .pdf-preview-toolbar {
-  padding: 0.35rem 0.85rem;
-  gap: 8px;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  padding: 0;
+  gap: 6px;
+  border: 0;
+  background: transparent;
 }
 
 .obra-relatorio-periodo-modal .pdf-preview-toolbar label {
@@ -864,13 +878,14 @@
   padding: 5px 12px;
   border-radius: 8px;
   font-size: 11px;
+  width: 100%;
 }
 
 .obra-relatorio-opcoes {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  grid-template-columns: 1fr;
   gap: 4px;
-  padding: 0 0.85rem;
+  padding: 0;
 }
 
 .obra-relatorio-opcoes label,
@@ -901,9 +916,9 @@
   background: #fff;
   display: grid;
   gap: 4px;
-  max-height: 68px;
+  max-height: 150px;
   overflow: auto;
-  margin: 0 0.85rem 6px;
+  margin: 0;
 }
 
 .obra-relatorio-documentos-topo {
@@ -935,6 +950,9 @@
 
 .obra-relatorio-periodo-modal .pdf-preview-frame {
   min-height: 0;
+  height: 100%;
+  grid-column: 2;
+  grid-row: 2;
 }
 
 .obra-relatorio-check-item span {
@@ -1308,6 +1326,10 @@
     width: calc(100vw - 12px);
     height: calc(100dvh - 12px);
     border-radius: 10px;
+    max-width: calc(100vw - 12px);
+    display: grid;
+    grid-template-columns: 1fr;
+    grid-template-rows: auto auto minmax(0, 1fr);
   }
 
   .obra-relatorio-periodo-modal .pdf-preview-topo {
@@ -1321,7 +1343,7 @@
   .obra-relatorio-periodo-modal .pdf-preview-toolbar {
     display: grid;
     grid-template-columns: 1fr 1fr;
-    padding: 0.35rem 0.65rem;
+    padding: 0;
     gap: 5px;
   }
 
@@ -1335,7 +1357,7 @@
 
   .obra-relatorio-opcoes {
     grid-template-columns: repeat(2, minmax(0, 1fr));
-    padding: 0 0.65rem;
+    padding: 0;
     gap: 4px;
   }
 
@@ -1348,7 +1370,22 @@
 
   .obra-relatorio-documentos {
     max-height: 54px;
-    margin: 0 0.65rem 5px;
+    margin: 0;
     padding: 5px 6px;
+  }
+
+  .obra-relatorio-config {
+    grid-column: 1;
+    grid-row: 2;
+    max-height: 42dvh;
+    border-right: 0;
+    border-bottom: 1px solid var(--cinza-borda);
+    padding: 6px;
+  }
+
+  .obra-relatorio-periodo-modal .pdf-preview-frame {
+    grid-column: 1;
+    grid-row: 3;
+    min-height: 0;
   }
 }
