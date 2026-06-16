@@ -689,6 +689,62 @@ function arquivoParaPreview(file) {
   });
 }
 
+function compactarImagemRelatorio(src, larguraOriginal = 0, alturaOriginal = 0) {
+  return new Promise(resolve => {
+    if (!src || !String(src).startsWith('data:image/')) {
+      resolve(src || '');
+      return;
+    }
+    const img = new Image();
+    img.onload = () => {
+      try {
+        const larguraBase = Number(larguraOriginal) || img.naturalWidth || img.width || 0;
+        const alturaBase = Number(alturaOriginal) || img.naturalHeight || img.height || 0;
+        if (!larguraBase || !alturaBase) {
+          resolve(src);
+          return;
+        }
+        const maxLado = 1200;
+        const escala = Math.min(1, maxLado / Math.max(larguraBase, alturaBase));
+        const canvas = document.createElement('canvas');
+        canvas.width = Math.max(1, Math.round(larguraBase * escala));
+        canvas.height = Math.max(1, Math.round(alturaBase * escala));
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+
+        let qualidade = 0.82;
+        let dataUrl = canvas.toDataURL('image/jpeg', qualidade);
+        while (dataUrl.length > 450000 && qualidade > 0.42) {
+          qualidade -= 0.08;
+          dataUrl = canvas.toDataURL('image/jpeg', qualidade);
+        }
+        resolve(dataUrl);
+      } catch (err) {
+        console.error('Erro ao compactar imagem do relatório:', err);
+        resolve(src);
+      }
+    };
+    img.onerror = () => resolve(src);
+    img.src = src;
+  });
+}
+
+function carregarDimensoesImagem(src) {
+  return new Promise(resolve => {
+    const img = new Image();
+    img.onload = () => resolve({ largura: img.naturalWidth || img.width || 0, altura: img.naturalHeight || img.height || 0 });
+    img.onerror = () => resolve({ largura: 0, altura: 0 });
+    img.src = src;
+  });
+}
+
+function promiseComTimeout(promise, ms, mensagem = 'Tempo limite excedido.') {
+  return Promise.race([
+    promise,
+    new Promise((_, reject) => window.setTimeout(() => reject(new Error(mensagem)), ms))
+  ]);
+}
+
 async function handleImagensRelatorio(input) {
   const arquivos = Array.from(input?.files || []);
   input.value = '';
@@ -698,31 +754,39 @@ async function handleImagensRelatorio(input) {
       mostrarToast('Use apenas imagens PNG ou JPEG.', 'erro');
       continue;
     }
+    const preview = await arquivoParaPreview(file);
+    const dimensoes = await carregarDimensoesImagem(preview);
+    const fallbackSrc = await compactarImagemRelatorio(preview, dimensoes.largura, dimensoes.altura);
     const item = {
       nome: file.name,
       tipo: file.type,
       tamanho: file.size,
-      preview: await arquivoParaPreview(file),
-      status: 'pending'
+      preview,
+      src: fallbackSrc || preview,
+      status: 'done'
     };
     relImagensSelecionadas.push(item);
     renderizarImagensRelatorioModal();
     try {
-      const uploaded = await DB.salvarImagemRelatorioArquivo(file);
+      const uploaded = await promiseComTimeout(
+        DB.salvarImagemRelatorioArquivo(file),
+        25000,
+        'Tempo limite ao enviar imagem do relatório.'
+      );
       item.url = uploaded.url;
       item.path = uploaded.path;
       item.status = 'done';
     } catch (err) {
       console.error('Erro ao enviar imagem do relatório:', err);
-      item.status = 'error';
-      mostrarToast('Erro ao enviar uma imagem do relatório.', 'erro');
+      item.status = 'done';
+      mostrarToast('Imagem adicionada com salvamento local. O envio ao Storage falhou, mas o relatório pode ser salvo.', 'sucesso');
     }
     renderizarImagensRelatorioModal();
   }
 }
 
 function relatorioTemImagemPendente() {
-  return relImagensSelecionadas.some(img => img.status === 'pending');
+  return relImagensSelecionadas.some(img => img.status === 'pending' && !img.url && !img.src);
 }
 
 function relatorioTemImagemComErro() {
