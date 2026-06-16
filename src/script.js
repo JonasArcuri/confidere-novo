@@ -2648,6 +2648,44 @@ function renderizarHistorico() {
     cont.innerHTML = `<div class="hist-lista">${filtrados.map(o => renderItemHistorico(o)).join('')}</div>`;
 }
 
+function parseValorPagamentoCobranca(valor) {
+    if (typeof valor === 'number') return Number.isFinite(valor) ? valor : 0;
+    const texto = String(valor || '').trim();
+    if (!texto) return 0;
+    return Number(texto.replace(/[^\d,.-]/g, '').replace(/\./g, '').replace(',', '.')) || 0;
+}
+
+function valorPagoCobrancaHistorico(doc) {
+    const registrado = parseValorPagamentoCobranca(doc?.valorPagamento);
+    if (registrado > 0) return registrado;
+    if (doc?.statusPagamento === 'pago' || doc?.pago === true) return calcularTotalHistorico(doc);
+    return 0;
+}
+
+function saldoPagamentoCobrancaHistorico(doc) {
+    return Math.max(calcularTotalHistorico(doc) - valorPagoCobrancaHistorico(doc), 0);
+}
+
+function statusPagamentoCobrancaHistorico(doc) {
+    const total = calcularTotalHistorico(doc);
+    const pago = valorPagoCobrancaHistorico(doc);
+    if (doc?.statusPagamento === 'pago' || doc?.pago === true || (total > 0 && pago >= total - 0.01)) return 'pago';
+    if (doc?.statusPagamento === 'parcial' || pago > 0) return 'parcial';
+    return 'pendente';
+}
+
+function textoValorPagamento(valor) {
+    return (Number(valor) || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+
+function renderResumoPagamentoCobranca(doc) {
+    const valorPago = valorPagoCobrancaHistorico(doc);
+    if (valorPago <= 0) return '';
+    const saldo = saldoPagamentoCobrancaHistorico(doc);
+    const saldoHtml = saldo > 0.01 ? ` <span>Saldo pendente: <strong>${formatarMoeda(saldo)}</strong></span>` : '<span>Quitado</span>';
+    return `<div class="hist-pagamento-resumo"><span>Pago: <strong>${formatarMoeda(valorPago)}</strong></span>${saldoHtml}</div>`;
+}
+
 function renderItemHistorico(o) {
     const nRevs = (o.revisoes || []).length;
     const dataFmt = o.data ? new Date(o.data + 'T12:00:00').toLocaleDateString('pt-BR') : '-';
@@ -2657,7 +2695,9 @@ function renderItemHistorico(o) {
     const tipoDoc = getTipoDocumento(o);
     const isOrcamento = tipoDoc === 'orcamento';
     const isCobranca = tipoDoc === 'cobranca';
-    const cobrancaPaga = o.statusPagamento === 'pago' || o.pago === true;
+    const statusPagamento = statusPagamentoCobrancaHistorico(o);
+    const cobrancaPaga = statusPagamento === 'pago';
+    const cobrancaParcial = statusPagamento === 'parcial';
     const dataPagamento = o.dataPagamento || '';
     const dataPagamentoFmt = dataPagamento ? new Date(dataPagamento + 'T12:00:00').toLocaleDateString('pt-BR') : '';
     const tipoBadge = `<span class="hist-rev-badge" style="background:${tipoDoc === 'cobranca' ? '#2563a8' : '#6b6660'}">${escapeHtml(getLabelTipoDocumento(tipoDoc))}</span>`;
@@ -2665,7 +2705,11 @@ function renderItemHistorico(o) {
         ? (aprovado ? `<span class="hist-status-badge aprovado">Aprovado${dataAprovacaoFmt ? ' em ' + escapeHtml(dataAprovacaoFmt) : ''}</span>` : `<span class="hist-status-badge pendente">Pendente</span>`)
         : '';
     const pagamentoBadge = isCobranca
-        ? (cobrancaPaga ? `<span class="hist-status-badge aprovado">Pago${dataPagamentoFmt ? ' em ' + escapeHtml(dataPagamentoFmt) : ''}</span>` : `<span class="hist-status-badge pendente">Pendente</span>`)
+        ? (cobrancaPaga
+            ? `<span class="hist-status-badge aprovado">Pago${dataPagamentoFmt ? ' em ' + escapeHtml(dataPagamentoFmt) : ''}</span>`
+            : cobrancaParcial
+                ? `<span class="hist-status-badge parcial">Parcial${dataPagamentoFmt ? ' em ' + escapeHtml(dataPagamentoFmt) : ''}</span>`
+                : `<span class="hist-status-badge pendente">Pendente</span>`)
         : '';
     const revBadge = o.revisao ? `<span class="hist-rev-badge">${escapeHtml(o.revisao)}</span>` : '';
     const nRevBadge = nRevs > 0 ? `<span class="hist-rev-badge" style="background:#6b6660">${nRevs} rev.</span>` : '';
@@ -2679,6 +2723,7 @@ function renderItemHistorico(o) {
           <div class="hist-item-num">#${String(o.numero).padStart(3, '0')} ${tipoBadge} ${aprovacaoBadge} ${pagamentoBadge} ${revBadge} ${nRevBadge}</div>
           <div class="hist-item-cliente">${escapeHtml(o.cliente || '(sem nome)')}</div>
           <div class="hist-item-meta">${assuntoHtml} ${o.estado ? ' - ' + escapeHtml(o.estado) : ''} ${dataFmt ? ' - ' + escapeHtml(dataFmt) : ''} ${savedFmt ? ' - Salvo em ' + escapeHtml(savedFmt) : ''}</div>
+          ${isCobranca ? renderResumoPagamentoCobranca(o) : ''}
         </div>
         <div class="hist-item-total">${formatarMoeda(totalHistorico)}</div>
         <div class="hist-item-acoes">
@@ -2702,10 +2747,13 @@ function renderItemHistorico(o) {
           ` : ''}
           ${isCobranca ? `
           <div class="hist-aprovacao-wrap">
-            <button class="btn-aprovacao ${cobrancaPaga ? 'aprovado' : 'pendente'}" onclick="togglePagamentoCobrancaHistorico('${escapeAttr(o.id)}')">${cobrancaPaga ? 'Pago' : 'Pendente'}</button>
+            <button class="btn-aprovacao ${cobrancaPaga ? 'aprovado' : cobrancaParcial ? 'parcial' : 'pendente'}" onclick="togglePagamentoCobrancaHistorico('${escapeAttr(o.id)}')">${cobrancaPaga ? 'Pago' : cobrancaParcial ? 'Parcial' : 'Pendente'}</button>
             <div class="aprovacao-menu" id="pagamento-menu-${escapeAttr(o.id)}">
               <label>Data do pagamento</label>
               <input type="date" id="pagamento-data-${escapeAttr(o.id)}" value="${escapeAttr(dataPagamento || new Date().toISOString().slice(0, 10))}">
+              <label>Valor do pagamento</label>
+              <input type="text" id="pagamento-valor-${escapeAttr(o.id)}" value="${escapeAttr(textoValorPagamento(valorPagoCobrancaHistorico(o) || totalHistorico))}" oninput="atualizarPreviewSaldoPagamento('${escapeAttr(o.id)}')">
+              <small class="pagamento-saldo-info" id="pagamento-saldo-${escapeAttr(o.id)}"></small>
               <div class="aprovacao-menu-acoes">
                 <button type="button" class="btn-mini editar" onclick="confirmarPagamentoCobrancaHistorico('${escapeAttr(o.id)}')">Registrar</button>
                 <button type="button" class="btn-mini excluir" onclick="fecharMenuPagamentoCobranca('${escapeAttr(o.id)}')">Cancelar</button>
@@ -2771,7 +2819,7 @@ async function confirmarAprovacaoHistorico(id) {
 function togglePagamentoCobrancaHistorico(id) {
     const doc = getHistorico().find(o => o.id === id);
     if (!doc) return;
-    const pago = doc.statusPagamento === 'pago' || doc.pago === true;
+    const pago = statusPagamentoCobrancaHistorico(doc) === 'pago';
 
     if (pago) {
         abrirModal('Marcar como pendente', 'Deseja voltar este relatório de cobrança para pendente?', () => atualizarPagamentoCobrancaHistorico(id, 'pendente', ''));
@@ -2785,43 +2833,86 @@ function togglePagamentoCobrancaHistorico(id) {
     if (!estavaAberto) {
         menu.classList.add('aberto');
         menu.closest('.hist-item')?.classList.add('menu-aprovacao-aberto');
+        atualizarPreviewSaldoPagamento(id);
     }
 }
 
 async function confirmarPagamentoCobrancaHistorico(id) {
     const data = document.getElementById(`pagamento-data-${id}`)?.value;
+    const doc = getHistorico().find(o => o.id === id);
+    const total = doc ? calcularTotalHistorico(doc) : 0;
+    const valorPagamento = parseValorPagamentoCobranca(document.getElementById(`pagamento-valor-${id}`)?.value);
     if (!data) {
         mostrarToast('Informe a data do pagamento.', 'erro');
         return;
     }
-    await atualizarPagamentoCobrancaHistorico(id, 'pago', data);
+    if (valorPagamento <= 0) {
+        mostrarToast('Informe um valor de pagamento maior que zero.', 'erro');
+        return;
+    }
+    const status = valorPagamento >= total - 0.01 ? 'pago' : 'parcial';
+    await atualizarPagamentoCobrancaHistorico(id, status, data, valorPagamento);
 }
 
-async function atualizarPagamentoCobrancaHistorico(id, status, dataPagamento) {
+function atualizarPreviewSaldoPagamento(id) {
+    const doc = getHistorico().find(o => o.id === id);
+    const info = document.getElementById(`pagamento-saldo-${id}`);
+    if (!doc || !info) return;
+    const total = calcularTotalHistorico(doc);
+    const valor = parseValorPagamentoCobranca(document.getElementById(`pagamento-valor-${id}`)?.value);
+    const saldo = Math.max(total - valor, 0);
+    info.classList.toggle('pendente', saldo > 0.01);
+    info.classList.toggle('ok', valor > 0 && saldo <= 0.01);
+    if (valor <= 0) {
+        info.textContent = 'Informe o valor recebido do cliente.';
+    } else if (saldo > 0.01) {
+        info.textContent = `Saldo pendente para o cliente pagar: ${formatarMoeda(saldo)}`;
+    } else {
+        info.textContent = 'Este pagamento quita o relat\u00F3rio de cobran\u00E7a.';
+    }
+}
+
+async function atualizarPagamentoCobrancaHistorico(id, status, dataPagamento = '', valorPagamento = 0) {
     const hist = getHistorico();
     const idx = hist.findIndex(o => o.id === id);
     if (idx < 0) return;
 
     const pago = status === 'pago';
+    const parcial = status === 'parcial';
+    const total = calcularTotalHistorico(hist[idx]);
+    const valorPago = (pago || parcial) ? Math.min(Math.max(parseValorPagamentoCobranca(valorPagamento), 0), total || parseValorPagamentoCobranca(valorPagamento)) : 0;
+    const saldoPagamento = (pago || parcial) ? Math.max(total - valorPago, 0) : 0;
     const atualizado = {
         ...hist[idx],
         statusPagamento: status,
         pago,
-        dataPagamento: pago ? dataPagamento : ''
+        dataPagamento: (pago || parcial) ? dataPagamento : '',
+        valorPagamento: valorPago,
+        saldoPagamento,
+        pagamentoParcial: parcial
     };
 
     try {
         await DB.salvarOrcamento({
             statusPagamento: atualizado.statusPagamento,
             pago: atualizado.pago,
-            dataPagamento: atualizado.dataPagamento
+            dataPagamento: atualizado.dataPagamento,
+            valorPagamento: atualizado.valorPagamento,
+            saldoPagamento: atualizado.saldoPagamento,
+            pagamentoParcial: atualizado.pagamentoParcial
         }, id);
         hist[idx] = atualizado;
         setHistorico(hist);
         renderizarHistorico();
         window.renderizarFluxoFinanceiro?.();
         window.renderizarInicio?.();
-        mostrarToast(pago ? 'Relatório de cobrança marcado como pago.' : 'Relatório de cobrança marcado como pendente.', 'sucesso');
+        const mensagem = pago
+            ? 'Relat\u00F3rio de cobran\u00E7a marcado como pago.'
+            : parcial
+                ? `Pagamento registrado. Saldo pendente: ${formatarMoeda(saldoPagamento)}.`
+                : 'Relat\u00F3rio de cobran\u00E7a marcado como pendente.';
+        mostrarToast(mensagem, 'sucesso');
+        return;
     } catch (err) {
         console.error(err);
         mostrarToast('Erro ao atualizar pagamento.', 'erro');
@@ -3847,7 +3938,7 @@ Object.assign(window, {
     iniciarOrcamentoParaObra,
     filtrarHistorico, renderizarHistorico, setTipoHistorico,
     toggleAprovacaoHistorico, confirmarAprovacaoHistorico, fecharMenuAprovacao, gerarRelatorioCobrancaDeOrcamento,
-    togglePagamentoCobrancaHistorico, confirmarPagamentoCobrancaHistorico, fecharMenuPagamentoCobranca,
+    togglePagamentoCobrancaHistorico, confirmarPagamentoCobrancaHistorico, fecharMenuPagamentoCobranca, atualizarPreviewSaldoPagamento,
     handleImagemOrcamento, adicionarImagemOrcamento, removerImagemOrcamento,
     toggleMenuOpcao, adicionarOpcaoSelecionada,
     toggleTipoDocumento, aplicarTipoDocumento,

@@ -559,6 +559,11 @@
   color: #9a6500;
 }
 
+.obra-doc-resumo-badge.parcial {
+  background: #fff7e6;
+  color: #9a6500;
+}
+
 .obra-orc-item span,
 .obra-relatorio-item span,
 .obra-relatorio-item em {

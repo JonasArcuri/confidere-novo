@@ -41,6 +41,11 @@ function moedaObra(valor) {
   return (Number(valor) || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 }
 
+function numeroObra(valor) {
+  if (typeof valor === 'number') return Number.isFinite(valor) ? valor : 0;
+  return Number(String(valor || '').replace(/[^\d,.-]/g, '').replace(/\./g, '').replace(',', '.')) || 0;
+}
+
 function linkWhatsappResponsavelObra(contato = '') {
   const digitos = String(contato || '').replace(/\D/g, '');
   if (!digitos) return '';
@@ -71,10 +76,17 @@ function formatarDataCampoObra(valor) {
 function resumoStatusDocumentoObra(doc = {}) {
   if (isCobrancaObra(doc)) {
     const pago = doc.statusPagamento === 'pago' || doc.pago === true;
+    const valorPago = numeroObra(doc.valorPagamento);
+    const saldoPagamento = numeroObra(doc.saldoPagamento) || Math.max(totalOrcamentoObra(doc) - valorPago, 0);
+    const parcial = doc.statusPagamento === 'parcial' || (valorPago > 0 && !pago);
     const dataPago = formatarDataCampoObra(doc.dataPagamento || doc.pagoEm || doc.dataPago);
     return {
-      classe: pago ? 'pago' : 'pendente',
-      texto: pago ? `Pago${dataPago ? ' em ' + dataPago : ''}` : 'Pagamento pendente'
+      classe: pago ? 'pago' : parcial ? 'parcial' : 'pendente',
+      texto: pago
+        ? `Pago${dataPago ? ' em ' + dataPago : ''}`
+        : parcial
+          ? `Parcial${dataPago ? ' em ' + dataPago : ''}${saldoPagamento > 0 ? ' · saldo ' + moedaObra(saldoPagamento) : ''}`
+          : 'Pagamento pendente'
     };
   }
   const aprovado = doc.statusAprovacao === 'aprovado' || doc.aprovado === true;

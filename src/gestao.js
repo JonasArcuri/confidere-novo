@@ -704,7 +704,7 @@ function compactarImagemRelatorio(src, larguraOriginal = 0, alturaOriginal = 0) 
           resolve(src);
           return;
         }
-        const maxLado = 1200;
+        const maxLado = 900;
         const escala = Math.min(1, maxLado / Math.max(larguraBase, alturaBase));
         const canvas = document.createElement('canvas');
         canvas.width = Math.max(1, Math.round(larguraBase * escala));
@@ -712,9 +712,9 @@ function compactarImagemRelatorio(src, larguraOriginal = 0, alturaOriginal = 0) 
         const ctx = canvas.getContext('2d');
         ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
 
-        let qualidade = 0.82;
+        let qualidade = 0.78;
         let dataUrl = canvas.toDataURL('image/jpeg', qualidade);
-        while (dataUrl.length > 450000 && qualidade > 0.42) {
+        while (dataUrl.length > 180000 && qualidade > 0.32) {
           qualidade -= 0.08;
           dataUrl = canvas.toDataURL('image/jpeg', qualidade);
         }
@@ -749,10 +749,10 @@ async function handleImagensRelatorio(input) {
   const arquivos = Array.from(input?.files || []);
   input.value = '';
   if (!arquivos.length) return;
-  for (const file of arquivos) {
+  const tarefas = arquivos.map(async (file) => {
     if (!['image/png', 'image/jpeg'].includes(file.type)) {
       mostrarToast('Use apenas imagens PNG ou JPEG.', 'erro');
-      continue;
+      return;
     }
     const preview = await arquivoParaPreview(file);
     const dimensoes = await carregarDimensoesImagem(preview);
@@ -763,7 +763,7 @@ async function handleImagensRelatorio(input) {
       tamanho: file.size,
       preview,
       src: fallbackSrc || preview,
-      status: 'done'
+      status: 'pending'
     };
     relImagensSelecionadas.push(item);
     renderizarImagensRelatorioModal();
@@ -782,7 +782,8 @@ async function handleImagensRelatorio(input) {
       mostrarToast('Imagem adicionada com salvamento local. O envio ao Storage falhou, mas o relatório pode ser salvo.', 'sucesso');
     }
     renderizarImagensRelatorioModal();
-  }
+  });
+  await Promise.allSettled(tarefas);
 }
 
 function relatorioTemImagemPendente() {
@@ -873,21 +874,41 @@ async function handleImagensResumoRelatorio(id, input) {
   input.value = '';
   if (!rel || !arquivos.length) return;
   const alvo = document.getElementById('rel-resumo-imagens');
-  if (alvo) alvo.innerHTML = '<div class="rel-resumo-vazio">Enviando imagens...</div>';
-  for (const file of arquivos) {
+  rel.imagens = normalizarImagensRelatorio(rel);
+  if (alvo) alvo.innerHTML = '<div class="rel-resumo-vazio">Preparando imagens...</div>';
+  const tarefas = arquivos.map(async (file) => {
     if (!['image/png', 'image/jpeg'].includes(file.type)) {
       mostrarToast('Use apenas imagens PNG ou JPEG.', 'erro');
-      continue;
+      return;
     }
+    const preview = await arquivoParaPreview(file);
+    const dimensoes = await carregarDimensoesImagem(preview);
+    const fallbackSrc = await compactarImagemRelatorio(preview, dimensoes.largura, dimensoes.altura);
+    const item = {
+      url: fallbackSrc || preview,
+      src: fallbackSrc || preview,
+      path: '',
+      nome: file.name,
+      tipo: file.type,
+      tamanho: file.size
+    };
+    rel.imagens.push(item);
+    if (alvo) alvo.innerHTML = renderizarGaleriaResumoRelatorio(rel);
     try {
-      const uploaded = await DB.salvarImagemRelatorioArquivo(file);
-      rel.imagens = normalizarImagensRelatorio(rel);
-      rel.imagens.push({ url: uploaded.url, path: uploaded.path, nome: file.name, tipo: file.type, tamanho: file.size });
+      const uploaded = await promiseComTimeout(
+        DB.salvarImagemRelatorioArquivo(file),
+        25000,
+        'Tempo limite ao enviar imagem do relatório.'
+      );
+      item.url = uploaded.url;
+      item.src = fallbackSrc || preview;
+      item.path = uploaded.path;
     } catch (err) {
       console.error('Erro ao enviar imagem do relatório:', err);
-      mostrarToast('Erro ao enviar uma imagem.', 'erro');
+      mostrarToast('Imagem adicionada com salvamento local. O envio ao Storage falhou, mas o relatório pode ser salvo.', 'sucesso');
     }
-  }
+  });
+  await Promise.allSettled(tarefas);
   await persistirImagensResumoRelatorio(rel);
   abrirResumoRelatorio(id);
   mostrarToast('Imagens atualizadas.', 'sucesso');

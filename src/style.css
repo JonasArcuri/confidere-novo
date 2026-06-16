@@ -1081,6 +1081,11 @@ table tbody td select:focus {
   background: #1f8a4c;
 }
 
+.hist-status-badge.parcial {
+  background: #d6a72f;
+  color: #14324f;
+}
+
 .hist-item-cliente {
   font-size: 16px;
   font-weight: 600;
@@ -1091,6 +1096,19 @@ table tbody td select:focus {
   font-size: 13px;
   color: var(--cinza-texto);
   margin-top: 2px;
+}
+
+.hist-pagamento-resumo {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 5px;
+  font-size: 12px;
+  color: var(--cinza-texto);
+}
+
+.hist-pagamento-resumo strong {
+  color: var(--azul);
 }
 
 .hist-assunto {
@@ -1168,6 +1186,17 @@ table tbody td select:focus {
   color: #fff;
 }
 
+.btn-aprovacao.parcial {
+  color: #7a5c16;
+  border-color: #d6a72f;
+  background: #fff7df;
+}
+
+.btn-aprovacao.parcial:hover {
+  background: #d6a72f;
+  color: #14324f;
+}
+
 .btn-cobranca-hist {
   width: 100%;
   min-width: 180px;
@@ -1221,6 +1250,25 @@ table tbody td select:focus {
   border: 1px solid var(--cinza-borda);
   border-radius: 7px;
   font: inherit;
+  margin-bottom: 8px;
+}
+
+.pagamento-saldo-info {
+  display: block;
+  margin-top: 2px;
+  font-size: 12px;
+  line-height: 1.35;
+  color: var(--cinza-texto);
+}
+
+.pagamento-saldo-info.pendente {
+  color: #c94f1a;
+  font-weight: 700;
+}
+
+.pagamento-saldo-info.ok {
+  color: #1f8a4c;
+  font-weight: 700;
 }
 
 .aprovacao-menu-acoes {

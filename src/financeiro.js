@@ -152,6 +152,12 @@ function isRelatorioCobrancaPago(doc) {
   return isRelatorioCobrancaFinanceiro(doc) && (doc?.statusPagamento === 'pago' || doc?.pago === true);
 }
 
+function valorPagoCobrancaFinanceiro(doc) {
+  const registrado = parseValor(doc?.valorPagamento);
+  if (registrado > 0) return registrado;
+  return isRelatorioCobrancaPago(doc) ? entradaOrcamento(doc) : 0;
+}
+
 function dataPagamentoCobranca(doc) {
   const valor = doc?.dataPagamento || doc?.pagoEm || doc?.dataPago;
   if (!valor) return null;
@@ -163,7 +169,7 @@ function dataPagamentoCobranca(doc) {
 
 function cobrancaPagaNoMes(doc, mes) {
   const data = dataPagamentoCobranca(doc);
-  return isRelatorioCobrancaPago(doc) && data ? mesChave(data) === mes : false;
+  return isRelatorioCobrancaFinanceiro(doc) && valorPagoCobrancaFinanceiro(doc) > 0 && data ? mesChave(data) === mes : false;
 }
 
 function orcamentoRealizadoNoMes(orc, mes) {
@@ -218,6 +224,19 @@ function entradaOrcamento(orc) {
   return desconto ? subtotalLinhas * (1 - desconto / 100) : subtotalLinhas;
 }
 
+function totaisMaterialMaoObraPagoCobranca(doc) {
+  const totais = totaisMaterialMaoObraOrcamento(doc);
+  const somaDetalhada = totais.material + totais.maoObra;
+  const totalBase = somaDetalhada || entradaOrcamento(doc);
+  const pago = Math.min(valorPagoCobrancaFinanceiro(doc), totalBase || valorPagoCobrancaFinanceiro(doc));
+  if (pago <= 0) return { material: 0, maoObra: 0 };
+  if (!somaDetalhada) return { material: pago, maoObra: 0 };
+  return {
+    material: pago * (totais.material / totalBase),
+    maoObra: pago * (totais.maoObra / totalBase)
+  };
+}
+
 function saidaInsumo(insumo) {
   const direto = primeiroValor(insumo, ['valorTotal', 'total', 'valor', 'custo', 'preco', 'precoTotal']);
   if (direto > 0) return direto;
@@ -270,7 +289,7 @@ function montarAnaliseOrcamentos(mes) {
 function montarAnaliseCobrancas(mes) {
   const cobrancas = getOrcamentos().filter(o => cobrancaPagaNoMes(o, mes));
   const totais = cobrancas.reduce((acc, doc) => {
-    const t = totaisMaterialMaoObraOrcamento(doc);
+    const t = totaisMaterialMaoObraPagoCobranca(doc);
     acc.material += t.material;
     acc.maoObra += t.maoObra;
     return acc;
@@ -292,7 +311,7 @@ function montarMovimentos(mes) {
       grupo: 'Relat\u00F3rio de cobran\u00E7a',
       data: dataPagamentoCobranca(o),
       descricao: descricao(o, `Relat\u00F3rio de cobran\u00E7a #${String(o.numero || '').padStart(3, '0')}`),
-      valor: entradaOrcamento(o)
+      valor: valorPagoCobrancaFinanceiro(o)
     }))
     .filter(m => m.valor > 0);
 
