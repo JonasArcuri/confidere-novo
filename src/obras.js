@@ -159,6 +159,25 @@ function dataDocumentoFinanceiroObra(doc = {}) {
   return (doc.data || doc.dataOrcamento || doc.dataCobranca || doc.savedAt || doc.criadoEm || doc.createdAt || '').slice(0, 10);
 }
 
+function campoExatoDaObra(obra, valor) {
+  const nome = normalizarTexto(obra?.nome);
+  return !!nome && normalizarTexto(valor) === nome;
+}
+
+function financeiroPertenceObra(obra, doc = {}) {
+  if (!obra?.id || !doc) return false;
+  if (doc.obraId && doc.obraId === obra.id) return true;
+  if (campoExatoDaObra(obra, doc.obra) || campoExatoDaObra(obra, doc.obraNome) || campoExatoDaObra(obra, doc.assunto)) return true;
+
+  const origemId = doc.orcamentoOrigemId || doc.origemOrcamentoId || '';
+  if (origemId) {
+    const origem = (window._orcamentosFirestore || []).find(item => item.id === origemId);
+    if (origem && origem !== doc) return financeiroPertenceObra(obra, origem);
+  }
+
+  return false;
+}
+
 function getFinanceirosPeriodoObra(obra, inicio, fim) {
   const dentro = data => (!inicio || data >= inicio) && (!fim || data <= fim);
   const docs = getOrcamentosDaObra(obra);
@@ -283,20 +302,16 @@ function totalOrcamentoObra(orc) {
 }
 
 function getRelatoriosDaObra(obra) {
-  const nome = normalizarTexto(obra?.nome);
   return (window.relatorios || []).filter(rel => {
     if (rel.obraId && rel.obraId === obra.id) return true;
-    return nome && normalizarTexto(rel.obra) === nome;
+    return campoExatoDaObra(obra, rel.obra) || campoExatoDaObra(obra, rel.obraNome);
   }).sort((a, b) => (a.data || '').localeCompare(b.data || ''));
 }
 
 function getAgendamentosDaObra(obra) {
-  const nome = normalizarTexto(obra?.nome);
-  const construtora = normalizarTexto(obra?.construtora);
   return (window.agendamentos || []).filter(ag => {
     if (ag.obraId && ag.obraId === obra.id) return true;
-    const texto = normalizarTexto([ag.cliente, ag.local, ag.obs].filter(Boolean).join(' '));
-    return (nome && texto.includes(nome)) || (construtora && texto.includes(construtora));
+    return campoExatoDaObra(obra, ag.obra) || campoExatoDaObra(obra, ag.obraNome);
   }).sort((a, b) => (a.data || '').localeCompare(b.data || '') || (a.hora || '').localeCompare(b.hora || ''));
 }
 
@@ -305,13 +320,9 @@ function isEtapaObra(ag) {
 }
 
 function getOrcamentosDaObra(obra) {
-  const nome = normalizarTexto(obra?.nome);
-  const construtora = normalizarTexto(obra?.construtora);
-  return (window._orcamentosFirestore || []).filter(orc => {
-    if (orc.obraId && orc.obraId === obra.id) return true;
-    const texto = normalizarTexto([orc.obra, orc.assunto, orc.cliente, orc.endereco].filter(Boolean).join(' '));
-    return (nome && texto.includes(nome)) || (construtora && texto.includes(construtora));
-  }).sort((a, b) => (b.data || b.savedAt || '').localeCompare(a.data || a.savedAt || ''));
+  return (window._orcamentosFirestore || [])
+    .filter(orc => financeiroPertenceObra(obra, orc))
+    .sort((a, b) => (b.data || b.savedAt || '').localeCompare(a.data || a.savedAt || ''));
 }
 
 function getMesBaseCronogramaObra(obra, rels = [], agendamentosObra = []) {
