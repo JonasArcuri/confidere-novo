@@ -309,10 +309,9 @@ function getRelatoriosDaObra(obra) {
 }
 
 function getAgendamentosDaObra(obra) {
-  return (window.agendamentos || []).filter(ag => {
-    if (ag.obraId && ag.obraId === obra.id) return true;
-    return campoExatoDaObra(obra, ag.obra) || campoExatoDaObra(obra, ag.obraNome);
-  }).sort((a, b) => (a.data || '').localeCompare(b.data || '') || (a.hora || '').localeCompare(b.hora || ''));
+  return (window.agendamentos || [])
+    .filter(ag => !!obra?.id && ag.obraId === obra.id)
+    .sort((a, b) => (a.data || '').localeCompare(b.data || '') || (a.hora || '').localeCompare(b.hora || ''));
 }
 
 function isEtapaObra(ag) {
@@ -569,7 +568,7 @@ function renderizarDetalheObra(id) {
             ${ag.local ? `<p>${escapeHtml(ag.local)}</p>` : ''}
             ${ag.obs ? `<p>${escapeHtml(ag.obs)}</p>` : ''}
           </div>`).join('') : ''}
-          ${rels.length ? rels.map(rel => `<div class="obra-relatorio-item">
+          ${rels.length ? rels.map(rel => `<div class="obra-relatorio-item relatorio">
             <strong>${formatarDataObra(rel.data)}</strong>
             <span>${escapeHtml(rel.funcionariosNomes || rel.funcionarioNome || 'Sem funcionário')}</span>
             <em>${moedaObra(rel.rendimento || 0)}</em>

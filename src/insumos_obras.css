@@ -497,6 +497,11 @@
   background: #f1fbf5;
 }
 
+.obra-relatorio-item.relatorio {
+  border-left: 4px solid #e9581f;
+  background: #fff4ec;
+}
+
 .obra-orc-item {
   display: flex;
   justify-content: space-between;
