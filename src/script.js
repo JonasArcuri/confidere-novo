@@ -19,20 +19,40 @@ let empresaConfig = {
 };
 
 const MASTER_ADMIN_EMAIL = 'sanojsistemas@gmail.com';
+const GESTAO_SUBMODULOS_IDS = [
+    'gestao_calendario',
+    'gestao_funcionarios',
+    'gestao_relatorios',
+    'gestao_insumos',
+    'gestao_despesas',
+    'gestao_obras'
+];
 const PLANOS_MODULOS = {
     essencial: ['inicio', 'orcamento', 'historico'],
-    profissional: ['inicio', 'orcamento', 'historico', 'gestao'],
-    completo: ['inicio', 'orcamento', 'historico', 'leads', 'gestao', 'financeiro']
+    profissional: ['inicio', 'orcamento', 'historico', ...GESTAO_SUBMODULOS_IDS],
+    completo: ['inicio', 'orcamento', 'historico', 'leads', ...GESTAO_SUBMODULOS_IDS, 'financeiro']
 };
 const MODULOS_ADMIN = [
-    { id: 'orcamento', label: 'Novo Orcamento' },
-    { id: 'historico', label: 'Historico' },
-    { id: 'leads', label: 'Leads do Site' },
-    { id: 'gestao', label: 'Gestao de Equipe' },
-    { id: 'financeiro', label: 'Fluxo Financeiro' }
+    { id: 'orcamento', label: 'Novo Orcamento', grupo: 'Principal' },
+    { id: 'historico', label: 'Historico', grupo: 'Principal' },
+    { id: 'leads', label: 'Leads do Site', grupo: 'Principal' },
+    { id: 'gestao_calendario', label: 'Calendario e Agendamentos', grupo: 'Gestao de Equipe' },
+    { id: 'gestao_funcionarios', label: 'Funcionarios', grupo: 'Gestao de Equipe' },
+    { id: 'gestao_relatorios', label: 'Relatorio de Obra', grupo: 'Gestao de Equipe' },
+    { id: 'gestao_insumos', label: 'Insumos', grupo: 'Gestao de Equipe' },
+    { id: 'gestao_despesas', label: 'Despesas', grupo: 'Gestao de Equipe' },
+    { id: 'gestao_obras', label: 'Obras', grupo: 'Gestao de Equipe' },
+    { id: 'financeiro', label: 'Fluxo Financeiro', grupo: 'Principal' }
 ];
+const GESTAO_SUB_ABAS = {
+    calendario: ['gestao_calendario'],
+    funcionarios: ['gestao_funcionarios'],
+    relatorios: ['gestao_relatorios'],
+    insumos: ['gestao_insumos', 'gestao_despesas'],
+    obras: ['gestao_obras']
+};
 let perfilUsuarioAtual = {};
-let modulosLiberadosAtuais = new Set(['inicio', 'orcamento', 'historico', 'leads', 'gestao', 'financeiro', 'guia']);
+let modulosLiberadosAtuais = new Set(['inicio', 'orcamento', 'historico', 'leads', ...GESTAO_SUBMODULOS_IDS, 'financeiro', 'guia']);
 let usuarioMasterAtual = false;
 let adminUsuariosCache = [];
 let planoVencidoAtual = false;
@@ -416,16 +436,52 @@ function modulosDoPlano(plano) {
     return PLANOS_MODULOS[chave] || PLANOS_MODULOS.essencial;
 }
 
+function expandirModulosGestao(modulos = []) {
+    const set = new Set((Array.isArray(modulos) ? modulos : []).filter(Boolean));
+    if (set.has('gestao')) {
+        set.delete('gestao');
+        GESTAO_SUBMODULOS_IDS.forEach(id => set.add(id));
+    }
+    return [...set];
+}
+
+function temAlgumModuloGestao(modulos = modulosLiberadosAtuais) {
+    const set = modulos instanceof Set ? modulos : new Set(expandirModulosGestao(modulos));
+    return GESTAO_SUBMODULOS_IDS.some(id => set.has(id));
+}
+
+function subModuloGestaoPermitido(sub) {
+    const ids = GESTAO_SUB_ABAS[sub] || [];
+    return ids.some(id => modulosLiberadosAtuais.has(id));
+}
+
+function primeiraSubAbaGestaoPermitida() {
+    return Object.keys(GESTAO_SUB_ABAS).find(subModuloGestaoPermitido) || '';
+}
+
+function aplicarPermissoesSubAbasGestao() {
+    document.querySelectorAll('.gestao-sub-tab').forEach(btn => {
+        const match = (btn.getAttribute('onclick') || '').match(/mudarSubAba\('([^']+)'/);
+        const sub = match ? match[1] : '';
+        btn.style.display = sub && subModuloGestaoPermitido(sub) ? '' : 'none';
+    });
+    document.querySelectorAll('.gestao-sub-aba').forEach(el => {
+        const sub = (el.id || '').replace('sub-', '');
+        el.style.display = sub && subModuloGestaoPermitido(sub) ? '' : 'none';
+    });
+}
+
 function getModulosPermitidos(perfil = {}) {
     const definidos = Array.isArray(perfil.modulosLiberados) ? perfil.modulosLiberados.filter(Boolean) : [];
-    if (!definidos.length) return modulosDoPlano(perfil.plano);
+    if (!definidos.length) return expandirModulosGestao(modulosDoPlano(perfil.plano));
 
     const plano = String(perfil.plano || '').toLowerCase();
-    const completoLegado = ['orcamento', 'historico', 'gestao', 'financeiro'];
-    if (plano === 'completo' && !definidos.includes('leads') && completoLegado.every(mod => definidos.includes(mod))) {
-        return [...definidos, 'leads'];
+    const expandidos = expandirModulosGestao(definidos);
+    const completoLegado = ['orcamento', 'historico', 'financeiro', ...GESTAO_SUBMODULOS_IDS];
+    if (plano === 'completo' && !expandidos.includes('leads') && completoLegado.every(mod => expandidos.includes(mod))) {
+        return [...expandidos, 'leads'];
     }
-    return definidos;
+    return expandidos;
 }
 
 function hojeISOPlano() {
@@ -504,8 +560,9 @@ function aplicarPermissoesUsuario(perfil = {}, user = {}) {
             btn.style.display = '';
             return;
         }
-        btn.style.display = modulosLiberadosAtuais.has(aba) ? '' : 'none';
+        btn.style.display = (aba === 'gestao' ? temAlgumModuloGestao() : modulosLiberadosAtuais.has(aba)) ? '' : 'none';
     });
+    aplicarPermissoesSubAbasGestao();
 
     const abaAtiva = document.querySelector('.aba.ativo')?.id?.replace('aba-', '') || 'inicio';
     if (usuarioMasterAtual || !modulosLiberadosAtuais.has(abaAtiva)) {
@@ -517,6 +574,7 @@ function aplicarPermissoesUsuario(perfil = {}, user = {}) {
 
 function moduloPermitido(aba) {
     const modulo = normalizarModuloAba(aba);
+    if (modulo === 'gestao') return temAlgumModuloGestao();
     return modulo === 'inicio' || modulo === 'guia' || modulosLiberadosAtuais.has(modulo);
 }
 
@@ -537,7 +595,12 @@ function mudarAba(aba, btn) {
     if (aba === 'acessos') renderizarAcessos();
     if (aba === 'admin') renderizarAdminMaster();
     if (aba === 'gestao') {
-        renderizarCalendario();
+        aplicarPermissoesSubAbasGestao();
+        const subAtiva = document.querySelector('.gestao-sub-aba.ativo')?.id?.replace('sub-', '') || '';
+        const subInicial = subModuloGestaoPermitido(subAtiva) ? subAtiva : primeiraSubAbaGestaoPermitida();
+        if (subInicial && window.mudarSubAba) {
+            window.mudarSubAba(subInicial, document.querySelector('.gestao-sub-tab[onclick*="' + subInicial + '"]'));
+        }
         popularSelectFuncionariosRel();
     }
     setTimeout(aplicarBloqueioEdicaoPlanoVencido, 0);
@@ -3715,14 +3778,23 @@ function truncarTexto(doc, texto, maxW) {
 }
 
 // ===== INICIO ADMIN MASTER =====
-function renderizarCheckboxesAcessos(modulos = [], prefixo = 'acesso-modulo') {
+function renderizarCheckboxesModulos(modulos = [], prefixo = 'admin-modulo', opcoes = {}) {
     const selecionados = new Set(modulos);
-    const permitidosEmpresa = new Set(getModulosPermitidos(perfilUsuarioAtual));
-    return MODULOS_ADMIN.filter(mod => permitidosEmpresa.has(mod.id) || selecionados.has(mod.id)).map(mod => {
-        const checked = selecionados.has(mod.id) ? 'checked' : '';
-        const disabled = permitidosEmpresa.has(mod.id) ? '' : 'disabled';
-        return '<label class="admin-check"><input type="checkbox" data-' + prefixo + '="' + mod.id + '" ' + checked + ' ' + disabled + '><span>' + escapeHtml(mod.label) + '</span></label>';
+    const permitidosEmpresa = opcoes.limitarAoPerfilAtual ? new Set(getModulosPermitidos(perfilUsuarioAtual)) : null;
+    const mods = MODULOS_ADMIN.filter(mod => !permitidosEmpresa || permitidosEmpresa.has(mod.id) || selecionados.has(mod.id));
+    const grupos = [...new Set(mods.map(mod => mod.grupo || 'Modulos'))];
+    return grupos.map(grupo => {
+        const itens = mods.filter(mod => (mod.grupo || 'Modulos') === grupo).map(mod => {
+            const checked = selecionados.has(mod.id) ? 'checked' : '';
+            const disabled = permitidosEmpresa && !permitidosEmpresa.has(mod.id) ? 'disabled' : '';
+            return '<label class="admin-check"><input type="checkbox" data-' + prefixo + '="' + mod.id + '" ' + checked + ' ' + disabled + '><span>' + escapeHtml(mod.label) + '</span></label>';
+        }).join('');
+        return '<div class="admin-modulos-grupo"><div class="admin-modulos-grupo-titulo">' + escapeHtml(grupo) + '</div><div class="admin-modulos-grid">' + itens + '</div></div>';
     }).join('');
+}
+
+function renderizarCheckboxesAcessos(modulos = [], prefixo = 'acesso-modulo') {
+    return renderizarCheckboxesModulos(modulos, prefixo, { limitarAoPerfilAtual: true });
 }
 
 function limparFormularioAcesso() {
@@ -3834,10 +3906,7 @@ async function salvarSubusuario(uid) {
 
 function renderizarModulosAdminInicio(user) {
     const modulos = new Set(getModulosPermitidos(user));
-    return MODULOS_ADMIN.map(mod => {
-        const checked = modulos.has(mod.id) ? 'checked' : '';
-        return '<label class="admin-check"><input type="checkbox" data-admin-modulo="' + mod.id + '" ' + checked + '><span>' + escapeHtml(mod.label) + '</span></label>';
-    }).join('');
+    return renderizarCheckboxesModulos([...modulos], 'admin-modulo');
 }
 
 function renderizarUsuarioAdminInicio(user) {
@@ -3954,10 +4023,7 @@ function nomePlanoAdmin(plano) {
 
 function renderizarModulosAdmin(user) {
     const modulos = new Set(getModulosPermitidos(user));
-    return MODULOS_ADMIN.map(mod => {
-        const checked = modulos.has(mod.id) ? 'checked' : '';
-        return '<label class="admin-check"><input type="checkbox" data-admin-modulo="' + mod.id + '" ' + checked + '><span>' + escapeHtml(mod.label) + '</span></label>';
-    }).join('');
+    return renderizarCheckboxesModulos([...modulos], 'admin-modulo');
 }
 
 async function renderizarAdminMaster() {
@@ -4061,6 +4127,7 @@ async function salvarPermissoesAdmin(userId) {
 Object.assign(window, {
     mudarAba, renderizarInicio, navegarKpiInicio, aplicarPermissoesUsuario, renderizarAdminMaster, salvarPermissoesAdmin,
     renderizarAcessos, criarSubusuario, salvarSubusuario,
+    subModuloGestaoPermitido, primeiraSubAbaGestaoPermitida, aplicarPermissoesSubAbasGestao,
     adicionarLinha, removerLinha, calcularLinha, calcularTotais,
     adicionarCabecalho, removerCabecalho, selecionarCabecalho, filtrarCabecalhoOpcoes, abrirDropdownCabecalho,
     toggleDesconto, aplicarDesconto, limparDesconto, atualizarDescontoPorPercentual, atualizarDescontoPorValor,

@@ -42,6 +42,14 @@ function formatarHora(hora) {
 }
 
 function mudarSubAba(sub, btn) {
+  if (window.subModuloGestaoPermitido && !window.subModuloGestaoPermitido(sub)) {
+    mostrarToast('Submodulo indisponivel para este usuario.', 'erro');
+    const primeiro = window.primeiraSubAbaGestaoPermitida?.();
+    if (primeiro && primeiro !== sub) {
+      mudarSubAba(primeiro, document.querySelector('.gestao-sub-tab[onclick*="' + primeiro + '"]'));
+    }
+    return;
+  }
   document.querySelectorAll('.gestao-sub-aba').forEach(a => a.classList.remove('ativo'));
   document.querySelectorAll('.gestao-sub-tab').forEach(b => b.classList.remove('ativo'));
   document.getElementById('sub-' + sub)?.classList.add('ativo');

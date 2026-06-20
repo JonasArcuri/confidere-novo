@@ -4510,9 +4510,28 @@ table {
 
 .admin-modulos {
   display: grid;
+  grid-template-columns: 1fr;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+
+.admin-modulos-grupo {
+  display: grid;
+  gap: 8px;
+}
+
+.admin-modulos-grupo-titulo {
+  color: var(--azul);
+  font-size: 0.76rem;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.admin-modulos-grid {
+  display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 8px;
-  margin-bottom: 14px;
 }
 
 .admin-check {
@@ -4768,8 +4787,8 @@ table {
 
 .acessos-modulos {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 8px;
+  grid-template-columns: 1fr;
+  gap: 12px;
 }
 
 .acessos-form-acoes {
@@ -5154,7 +5173,8 @@ table {
   .leads-config-grid,
   .leads-resumo,
   .acessos-form-grid,
-  .acessos-modulos {
+  .acessos-modulos,
+  .admin-modulos-grid {
     grid-template-columns: 1fr;
   }
 

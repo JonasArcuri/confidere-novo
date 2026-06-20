@@ -130,21 +130,28 @@ async function carregarDadosIniciais() {
     const modulosFuncionario = new Set(Array.isArray(perfil?.modulosLiberados) ? perfil.modulosLiberados : []);
     const isFuncionario = perfil?.tipoUsuario === 'funcionario';
     const funcionarioAtivo = !isFuncionario || perfil?.ativo !== false;
-    const podeGestao = !isFuncionario || (funcionarioAtivo && modulosFuncionario.has('gestao'));
+    const temModulo = (...mods) => !isFuncionario || (funcionarioAtivo && mods.some(mod => modulosFuncionario.has(mod) || (mod.startsWith('gestao_') && modulosFuncionario.has('gestao'))));
+    const podeCalendario = temModulo('gestao_calendario');
+    const podeFuncionarios = temModulo('gestao_funcionarios');
+    const podeRelatorios = temModulo('gestao_relatorios');
+    const podeInsumosDespesas = temModulo('gestao_insumos', 'gestao_despesas');
+    const podeObras = temModulo('gestao_obras');
+    const podeLerFuncionariosApoio = !isFuncionario || podeFuncionarios || podeCalendario || podeRelatorios || podeInsumosDespesas;
+    const podeLerObrasApoio = !isFuncionario || podeObras || podeCalendario || podeRelatorios;
     const podeLeads = !isFuncionario || (funcionarioAtivo && modulosFuncionario.has('leads'));
     const podeOrcamentos = !isFuncionario || (funcionarioAtivo && (modulosFuncionario.has('orcamento') || modulosFuncionario.has('historico')));
 
     [agendamentos, funcionarios, relatorios] = await Promise.all([
-      podeGestao ? DB.listarAgendamentos() : Promise.resolve([]),
-      podeGestao ? DB.listarFuncionarios() : Promise.resolve([]),
-      podeGestao ? DB.listarRelatorios() : Promise.resolve([])
+      podeCalendario ? DB.listarAgendamentos() : Promise.resolve([]),
+      podeLerFuncionariosApoio ? DB.listarFuncionarios() : Promise.resolve([]),
+      podeRelatorios ? DB.listarRelatorios() : Promise.resolve([])
     ]);
 
     // Carregar insumos e obras
     const [insumosData, obrasData, obraDocumentosData, leadsData] = await Promise.all([
-      podeGestao ? DB.listarInsumos() : Promise.resolve([]),
-      podeGestao ? DB.listarObras() : Promise.resolve([]),
-      podeGestao && DB.listarDocumentosObra ? DB.listarDocumentosObra().catch(() => []) : Promise.resolve([]),
+      podeInsumosDespesas ? DB.listarInsumos() : Promise.resolve([]),
+      podeLerObrasApoio ? DB.listarObras() : Promise.resolve([]),
+      podeObras && DB.listarDocumentosObra ? DB.listarDocumentosObra().catch(() => []) : Promise.resolve([]),
       podeLeads && DB.listarLeads ? DB.listarLeads().catch(() => []) : Promise.resolve([])
     ]);
     window.insumos = insumosData;

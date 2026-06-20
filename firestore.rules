@@ -23,15 +23,36 @@ service cloud.firestore {
              && get(/databases/$(database)/documents/users/$(userId)/subusuarios/$(request.auth.uid)).data.modulosLiberados.hasAny([modulo]);
     }
 
-    function funcionarioPodeColecao(userId, collectionName) {
+    function funcionarioTemSubmoduloGestao(userId, modulo) {
+      return funcionarioTemModulo(userId, modulo) || funcionarioTemModulo(userId, 'gestao');
+    }
+
+    function funcionarioPodeLerColecao(userId, collectionName) {
       return (collectionName == 'orcamentos' && (funcionarioTemModulo(userId, 'orcamento') || funcionarioTemModulo(userId, 'historico')))
-             || ((collectionName == 'funcionarios'
-                  || collectionName == 'agendamentos'
-                  || collectionName == 'relatorios'
-                  || collectionName == 'insumos'
-                  || collectionName == 'obras'
-                  || collectionName == 'obraDocumentos')
-                 && funcionarioTemModulo(userId, 'gestao'));
+             || (collectionName == 'agendamentos' && funcionarioTemSubmoduloGestao(userId, 'gestao_calendario'))
+             || (collectionName == 'funcionarios'
+                 && (funcionarioTemSubmoduloGestao(userId, 'gestao_funcionarios')
+                     || funcionarioTemSubmoduloGestao(userId, 'gestao_calendario')
+                     || funcionarioTemSubmoduloGestao(userId, 'gestao_relatorios')
+                     || funcionarioTemSubmoduloGestao(userId, 'gestao_insumos')
+                     || funcionarioTemSubmoduloGestao(userId, 'gestao_despesas')))
+             || (collectionName == 'relatorios' && funcionarioTemSubmoduloGestao(userId, 'gestao_relatorios'))
+             || (collectionName == 'insumos' && (funcionarioTemSubmoduloGestao(userId, 'gestao_insumos') || funcionarioTemSubmoduloGestao(userId, 'gestao_despesas')))
+             || (collectionName == 'obras'
+                 && (funcionarioTemSubmoduloGestao(userId, 'gestao_obras')
+                     || funcionarioTemSubmoduloGestao(userId, 'gestao_calendario')
+                     || funcionarioTemSubmoduloGestao(userId, 'gestao_relatorios')))
+             || (collectionName == 'obraDocumentos' && funcionarioTemSubmoduloGestao(userId, 'gestao_obras'));
+    }
+
+    function funcionarioPodeEscreverColecao(userId, collectionName) {
+      return (collectionName == 'orcamentos' && funcionarioTemModulo(userId, 'orcamento'))
+             || (collectionName == 'agendamentos' && funcionarioTemSubmoduloGestao(userId, 'gestao_calendario'))
+             || (collectionName == 'funcionarios' && funcionarioTemSubmoduloGestao(userId, 'gestao_funcionarios'))
+             || (collectionName == 'relatorios' && funcionarioTemSubmoduloGestao(userId, 'gestao_relatorios'))
+             || (collectionName == 'insumos' && (funcionarioTemSubmoduloGestao(userId, 'gestao_insumos') || funcionarioTemSubmoduloGestao(userId, 'gestao_despesas')))
+             || (collectionName == 'obras' && funcionarioTemSubmoduloGestao(userId, 'gestao_obras'))
+             || (collectionName == 'obraDocumentos' && funcionarioTemSubmoduloGestao(userId, 'gestao_obras'));
     }
 
     function canAccessCompany(userId) {
@@ -63,8 +84,10 @@ service cloud.firestore {
       }
 
       match /{collection}/{docId} {
-        allow read, write: if collection != 'subusuarios'
-                           && (isOwner(userId) || isMasterAdmin() || funcionarioPodeColecao(userId, collection));
+        allow read: if collection != 'subusuarios'
+                    && (isOwner(userId) || isMasterAdmin() || funcionarioPodeLerColecao(userId, collection));
+        allow write: if collection != 'subusuarios'
+                     && (isOwner(userId) || isMasterAdmin() || funcionarioPodeEscreverColecao(userId, collection));
       }
     }
 
