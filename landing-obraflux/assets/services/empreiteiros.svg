@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 360" role="img" aria-labelledby="title">
+  <title id="title">Empreiteiro coordenando múltiplas frentes de obra</title>
+  <defs>
+    <linearGradient id="bg" x1="0" x2="1" y1="0" y2="1">
+      <stop offset="0" stop-color="#061b49"/>
+      <stop offset="1" stop-color="#1269e2"/>
+    </linearGradient>
+  </defs>
+  <rect width="640" height="360" rx="28" fill="url(#bg)"/>
+  <path d="M94 260h452v36H94z" fill="#15c99c"/>
+  <path d="M140 260V148l92-62 92 62v112" fill="#fff" opacity=".95"/>
+  <path d="M326 260V118h136v142" fill="#d8fff2"/>
+  <path d="M132 152 232 84l100 68M326 118h136" fill="none" stroke="#f3b23f" stroke-width="16" stroke-linecap="round" stroke-linejoin="round"/>
+  <rect x="176" y="178" width="56" height="82" rx="8" fill="#061b49"/>
+  <rect x="358" y="150" width="32" height="34" rx="6" fill="#1269e2"/>
+  <rect x="410" y="150" width="32" height="34" rx="6" fill="#1269e2"/>
+  <rect x="358" y="205" width="84" height="55" rx="8" fill="#061b49"/>
+  <circle cx="500" cy="116" r="34" fill="#15c99c"/>
+  <path d="M485 117h30M500 102v30" stroke="#061b49" stroke-width="10" stroke-linecap="round"/>
+</svg>

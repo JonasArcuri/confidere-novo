@@ -81,10 +81,12 @@
       </div>
       <div class="nav-tabs">
         <button class="nav-home-btn nav-tab ativo" onclick="mudarAba('inicio', this)" title="Início ObraFlux" aria-label="Início ObraFlux"><img src="landing-obraflux/assets/obraflux-somentelogo-crop.png" alt=""></button>
+        <button class="nav-tab" onclick="mudarAba('leads', this)">Leads</button>
         <button class="nav-tab" onclick="mudarAba('orcamento', this)">Novo Orçamento</button>
         <button class="nav-tab" onclick="mudarAba('historico', this)">Histórico</button>
         <button class="nav-tab" onclick="mudarAba('gestao', this)">Gestão de Equipe</button>
         <button class="nav-tab" onclick="mudarAba('financeiro', this)">Fluxo Financeiro</button>
+        <button class="nav-tab nav-acessos-tab" onclick="mudarAba('acessos', this)">Acessos</button>
         <button class="nav-tab nav-guia-tab" onclick="mudarAba('guia', this)">Guia de Uso</button>
         <button class="nav-tab nav-admin-tab" style="display:none" onclick="mudarAba('admin', this)">Admin Master</button>
       </div>
@@ -587,6 +589,66 @@
       </div>
     </div>
 
+    <!-- ===== ABA: LEADS ===== -->
+    <div id="aba-leads" class="aba">
+      <div class="leads-wrapper">
+        <div class="leads-topo">
+          <div>
+            <div class="leads-kicker">Captação e triagem</div>
+            <h1>Leads do site</h1>
+            <p>Receba contatos do formulário público, acompanhe a triagem no kanban e converta oportunidades em obras.</p>
+          </div>
+          <div class="leads-topo-acoes">
+            <button class="btn-secundario" type="button" onclick="inicializarLeads()">Atualizar</button>
+            <button class="btn-primario" type="button" onclick="abrirModalLead()">Novo Lead</button>
+          </div>
+        </div>
+
+        <section class="leads-config-card">
+          <div class="leads-config-head">
+            <div>
+              <h2>Formulário de captação</h2>
+              <p>Configure a experiência pública usada no site da empresa.</p>
+            </div>
+            <label class="leads-switch">
+              <input type="checkbox" id="lead-config-ativo">
+              <span>Ativo</span>
+            </label>
+          </div>
+          <div class="leads-config-grid">
+            <label class="campo">
+              <span>Título público</span>
+              <input type="text" id="lead-config-titulo" placeholder="Solicite seu orçamento">
+            </label>
+            <label class="campo">
+              <span>Origem padrão</span>
+              <input type="text" id="lead-config-origem" placeholder="Site">
+            </label>
+            <label class="campo leads-config-full">
+              <span>Descrição pública</span>
+              <textarea id="lead-config-descricao" rows="2" placeholder="Conte um pouco sobre o serviço que precisa."></textarea>
+            </label>
+          </div>
+          <div class="leads-config-options">
+            <label><input type="checkbox" id="lead-config-endereco"> Solicitar endereço/local</label>
+            <label><input type="checkbox" id="lead-config-mensagem" checked> Solicitar mensagem</label>
+          </div>
+          <div class="leads-public-row">
+            <label class="campo">
+              <span>Link público</span>
+              <input type="text" id="lead-public-link" readonly>
+            </label>
+            <button class="btn-secundario" type="button" onclick="copiarLinkLeads()">Copiar link</button>
+            <button class="btn-secundario" type="button" onclick="copiarEmbedLeads()">Copiar iframe</button>
+            <button class="btn-primario" type="button" onclick="salvarConfiguracaoLeads()">Salvar configuração</button>
+          </div>
+        </section>
+
+        <div id="leads-resumo" class="leads-resumo"></div>
+        <div id="leads-kanban" class="leads-kanban"></div>
+      </div>
+    </div>
+
     <!-- ===== ABA: FLUXO FINANCEIRO ===== -->
     <div id="aba-financeiro" class="aba">
       <div class="financeiro-wrapper">
@@ -721,6 +783,36 @@
 
     <!-- ===== ABA: GESTÃO DE EQUIPE ===== -->
     <!-- ===== ABA: ADMIN MASTER ===== -->
+    <div id="aba-acessos" class="aba">
+      <div class="acessos-wrapper">
+        <div class="acessos-topo">
+          <div>
+            <div class="acessos-kicker">Usuarios e permissoes</div>
+            <h1>Acessos da equipe</h1>
+            <p>Crie logins para funcionarios e escolha quais modulos cada um pode acessar dentro dos dados da sua empresa.</p>
+          </div>
+          <button class="btn-primario" type="button" onclick="renderizarAcessos()">Atualizar</button>
+        </div>
+
+        <section class="acessos-form-card">
+          <h2>Novo funcionario</h2>
+          <div class="acessos-form-grid">
+            <label><span>Nome</span><input type="text" id="acesso-nome" placeholder="Nome do funcionario"></label>
+            <label><span>E-mail de login</span><input type="email" id="acesso-email" placeholder="funcionario@empresa.com"></label>
+            <label><span>Senha inicial</span><input type="password" id="acesso-senha" placeholder="Minimo 6 caracteres"></label>
+          </div>
+          <div class="acessos-modulos" id="acesso-modulos-form"></div>
+          <div class="acessos-form-acoes">
+            <button class="btn-primario" type="button" onclick="criarSubusuario()">Criar acesso</button>
+          </div>
+        </section>
+
+        <section class="acessos-lista" id="acessos-lista">
+          <div class="admin-vazio">Carregando acessos...</div>
+        </section>
+      </div>
+    </div>
+
     <div id="aba-admin" class="aba">
       <div class="admin-wrapper">
         <div class="admin-topo">
@@ -1253,6 +1345,62 @@
       </div>
     </div>
 
+    <!-- MODAL LEAD -->
+    <div class="modal-overlay" id="modal-lead" onclick="if(event.target===this)fecharModalLead()">
+      <div class="modal-gestao">
+        <h3 id="lead-modal-titulo">Novo Lead</h3>
+        <input type="hidden" id="lead-id-edit">
+        <div style="display:flex;flex-direction:column;gap:1rem;">
+          <div class="campo">
+            <label>Nome *</label>
+            <input type="text" id="lead-nome" placeholder="Nome do contato">
+          </div>
+          <div class="grid-2">
+            <div class="campo">
+              <label>Telefone / WhatsApp *</label>
+              <input type="text" id="lead-contato" placeholder="(00) 00000-0000">
+            </div>
+            <div class="campo">
+              <label>E-mail</label>
+              <input type="email" id="lead-email" placeholder="cliente@email.com">
+            </div>
+          </div>
+          <div class="campo">
+            <label>Serviço / Obra</label>
+            <input type="text" id="lead-servico" placeholder="Ex: Impermeabilização de laje">
+          </div>
+          <div class="campo">
+            <label>Local</label>
+            <input type="text" id="lead-local" placeholder="Cidade, bairro ou endereço">
+          </div>
+          <div class="grid-2">
+            <div class="campo">
+              <label>Origem</label>
+              <input type="text" id="lead-origem" placeholder="Site">
+            </div>
+            <div class="campo">
+              <label>Status</label>
+              <select id="lead-status">
+                <option value="novo">Novo</option>
+                <option value="contato">Em contato</option>
+                <option value="proposta">Proposta</option>
+                <option value="convertido">Convertido</option>
+                <option value="perdido">Perdido</option>
+              </select>
+            </div>
+          </div>
+          <div class="campo">
+            <label>Observações</label>
+            <textarea id="lead-observacoes" rows="3" placeholder="Necessidade, prazo, melhor horário para contato..."></textarea>
+          </div>
+        </div>
+        <div class="modal-acoes" style="margin-top:1.5rem;">
+          <button class="btn-secundario" onclick="fecharModalLead()">Cancelar</button>
+          <button class="btn-primario" onclick="salvarLead()">Salvar Lead</button>
+        </div>
+      </div>
+    </div>
+
     <!-- MODAL FOTO INSUMO (tela cheia) -->
     <div id="modal-foto-insumo" onclick="fecharFotoInsumo()">
       <button class="fechar-foto" onclick="fecharFotoInsumo()">×</button>
@@ -1332,6 +1480,7 @@
   <script type="module" src="src/insumos.js?v=20260612-insumo-tipo-manual"></script>
   <script type="module" src="src/obras.js?v=20260618-relatorios-obra-laranja"></script>
   <script type="module" src="src/financeiro.js?v=20260616-pagamento-parcial-cobranca"></script>
+  <script type="module" src="src/leads.js?v=20260620-leads-kanban"></script>
   <script type="module" src="src/auth.js?v=20260609-docs-obras"></script>
 
   <footer id="footer">

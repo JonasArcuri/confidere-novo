@@ -22,20 +22,22 @@ const MASTER_ADMIN_EMAIL = 'sanojsistemas@gmail.com';
 const PLANOS_MODULOS = {
     essencial: ['inicio', 'orcamento', 'historico'],
     profissional: ['inicio', 'orcamento', 'historico', 'gestao'],
-    completo: ['inicio', 'orcamento', 'historico', 'gestao', 'financeiro']
+    completo: ['inicio', 'orcamento', 'historico', 'leads', 'gestao', 'financeiro']
 };
 const MODULOS_ADMIN = [
     { id: 'orcamento', label: 'Novo Orcamento' },
     { id: 'historico', label: 'Historico' },
+    { id: 'leads', label: 'Leads do Site' },
     { id: 'gestao', label: 'Gestao de Equipe' },
     { id: 'financeiro', label: 'Fluxo Financeiro' }
 ];
 let perfilUsuarioAtual = {};
-let modulosLiberadosAtuais = new Set(['inicio', 'orcamento', 'historico', 'gestao', 'financeiro', 'guia']);
+let modulosLiberadosAtuais = new Set(['inicio', 'orcamento', 'historico', 'leads', 'gestao', 'financeiro', 'guia']);
 let usuarioMasterAtual = false;
 let adminUsuariosCache = [];
 let planoVencidoAtual = false;
 let observerPlanoVencido = null;
+let podeGerenciarAcessosAtual = true;
 
 // ===== INICIALIZAÇÃO =====
 document.addEventListener('DOMContentLoaded', () => {
@@ -406,7 +408,7 @@ function navegarKpiInicio(destino) {
 // ===== ABAS =====
 function normalizarModuloAba(aba) {
     if (aba === 'admin') return 'admin';
-    return ['inicio', 'orcamento', 'historico', 'gestao', 'financeiro', 'guia'].includes(aba) ? aba : 'inicio';
+    return ['inicio', 'orcamento', 'historico', 'leads', 'gestao', 'financeiro', 'acessos', 'guia'].includes(aba) ? aba : 'inicio';
 }
 
 function modulosDoPlano(plano) {
@@ -416,7 +418,14 @@ function modulosDoPlano(plano) {
 
 function getModulosPermitidos(perfil = {}) {
     const definidos = Array.isArray(perfil.modulosLiberados) ? perfil.modulosLiberados.filter(Boolean) : [];
-    return definidos.length ? definidos : modulosDoPlano(perfil.plano);
+    if (!definidos.length) return modulosDoPlano(perfil.plano);
+
+    const plano = String(perfil.plano || '').toLowerCase();
+    const completoLegado = ['orcamento', 'historico', 'gestao', 'financeiro'];
+    if (plano === 'completo' && !definidos.includes('leads') && completoLegado.every(mod => definidos.includes(mod))) {
+        return [...definidos, 'leads'];
+    }
+    return definidos;
 }
 
 function hojeISOPlano() {
@@ -472,14 +481,17 @@ function aplicarBloqueioEdicaoPlanoVencido() {
 function aplicarPermissoesUsuario(perfil = {}, user = {}) {
     perfilUsuarioAtual = perfil || {};
     usuarioMasterAtual = String(user?.email || '').toLowerCase() === MASTER_ADMIN_EMAIL;
+    const usuarioBloqueado = !!perfilUsuarioAtual.bloqueado || (perfilUsuarioAtual.tipoUsuario === 'funcionario' && perfilUsuarioAtual.ativo === false);
+    podeGerenciarAcessosAtual = !usuarioMasterAtual && perfilUsuarioAtual.tipoUsuario !== 'funcionario' && !usuarioBloqueado;
     planoVencidoAtual = !usuarioMasterAtual && planoEstaVencido(perfilUsuarioAtual);
-    const permitidos = (!usuarioMasterAtual && perfilUsuarioAtual.bloqueado)
+    const permitidos = (!usuarioMasterAtual && usuarioBloqueado)
         ? ['inicio']
         : usuarioMasterAtual
         ? ['inicio']
         : getModulosPermitidos(perfilUsuarioAtual);
-    modulosLiberadosAtuais = new Set(['inicio', 'guia', ...permitidos]);
+    modulosLiberadosAtuais = new Set(['inicio', 'guia', ...permitidos, ...(podeGerenciarAcessosAtual ? ['acessos'] : [])]);
     document.body.classList.toggle('admin-master-mode', usuarioMasterAtual);
+    document.body.classList.toggle('funcionario-mode', perfilUsuarioAtual.tipoUsuario === 'funcionario');
 
     document.querySelectorAll('.nav-admin-tab').forEach(btn => {
         btn.style.display = 'none';
@@ -520,7 +532,9 @@ function mudarAba(aba, btn) {
     botao?.classList.add('ativo');
     if (aba === 'inicio') renderizarInicio();
     if (aba === 'historico') renderizarHistorico();
+    if (aba === 'leads' && window.renderizarLeads) window.renderizarLeads();
     if (aba === 'financeiro' && window.renderizarFluxoFinanceiro) window.renderizarFluxoFinanceiro();
+    if (aba === 'acessos') renderizarAcessos();
     if (aba === 'admin') renderizarAdminMaster();
     if (aba === 'gestao') {
         renderizarCalendario();
@@ -3701,6 +3715,123 @@ function truncarTexto(doc, texto, maxW) {
 }
 
 // ===== INICIO ADMIN MASTER =====
+function renderizarCheckboxesAcessos(modulos = [], prefixo = 'acesso-modulo') {
+    const selecionados = new Set(modulos);
+    const permitidosEmpresa = new Set(getModulosPermitidos(perfilUsuarioAtual));
+    return MODULOS_ADMIN.filter(mod => permitidosEmpresa.has(mod.id) || selecionados.has(mod.id)).map(mod => {
+        const checked = selecionados.has(mod.id) ? 'checked' : '';
+        const disabled = permitidosEmpresa.has(mod.id) ? '' : 'disabled';
+        return '<label class="admin-check"><input type="checkbox" data-' + prefixo + '="' + mod.id + '" ' + checked + ' ' + disabled + '><span>' + escapeHtml(mod.label) + '</span></label>';
+    }).join('');
+}
+
+function limparFormularioAcesso() {
+    ['acesso-nome', 'acesso-email', 'acesso-senha'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.value = '';
+    });
+    renderizarFormularioAcesso();
+}
+
+function renderizarFormularioAcesso() {
+    const alvo = document.getElementById('acesso-modulos-form');
+    if (!alvo) return;
+    alvo.innerHTML = renderizarCheckboxesAcessos(getModulosPermitidos(perfilUsuarioAtual), 'acesso-modulo');
+}
+
+function renderizarCardSubusuario(user) {
+    const uid = escapeAttr(user.id);
+    const nome = escapeHtml(user.nome || 'Funcionario sem nome');
+    const email = escapeHtml(user.email || '');
+    const ativo = user.ativo !== false;
+    const status = ativo ? 'Ativo' : 'Bloqueado';
+    return '<article class="acesso-card" data-subusuario="' + uid + '">' +
+        '<div class="acesso-card-head">' +
+            '<div><strong>' + nome + '</strong><span>' + email + '</span></div>' +
+            '<label class="admin-bloqueio acesso-status"><input type="checkbox" data-sub-ativo ' + (ativo ? 'checked' : '') + '><span>' + status + '</span></label>' +
+        '</div>' +
+        '<div class="acessos-modulos">' + renderizarCheckboxesAcessos(user.modulosLiberados || [], 'sub-modulo') + '</div>' +
+        '<div class="admin-acoes"><button type="button" class="btn-primario" data-sub-salvar="' + uid + '">Salvar acesso</button></div>' +
+    '</article>';
+}
+
+async function renderizarAcessos() {
+    renderizarFormularioAcesso();
+    const lista = document.getElementById('acessos-lista');
+    if (!lista) return;
+    if (!podeGerenciarAcessosAtual) {
+        lista.innerHTML = '<div class="admin-vazio">Apenas o usuario principal da empresa pode gerenciar acessos.</div>';
+        return;
+    }
+    lista.innerHTML = '<div class="admin-vazio">Carregando acessos...</div>';
+    try {
+        const usuarios = await DB.listarSubusuarios();
+        lista.innerHTML = usuarios.length
+            ? usuarios.map(renderizarCardSubusuario).join('')
+            : '<div class="admin-vazio">Nenhum funcionario com login criado ainda.</div>';
+        lista.querySelectorAll('[data-sub-salvar]').forEach(btn => {
+            btn.addEventListener('click', () => salvarSubusuario(btn.dataset.subSalvar));
+        });
+        lista.querySelectorAll('[data-sub-ativo]').forEach(cb => {
+            cb.addEventListener('change', () => {
+                const span = cb.closest('label')?.querySelector('span');
+                if (span) span.textContent = cb.checked ? 'Ativo' : 'Bloqueado';
+            });
+        });
+    } catch (err) {
+        console.error('Erro ao carregar acessos:', err);
+        lista.innerHTML = '<div class="admin-vazio">Nao foi possivel carregar os acessos. Verifique as regras do Firestore.</div>';
+    }
+}
+
+async function criarSubusuario() {
+    if (!podeGerenciarAcessosAtual) {
+        mostrarToast('Apenas o usuario principal pode criar acessos.', 'erro');
+        return;
+    }
+    const nome = document.getElementById('acesso-nome')?.value.trim() || '';
+    const email = document.getElementById('acesso-email')?.value.trim() || '';
+    const senha = document.getElementById('acesso-senha')?.value || '';
+    const modulosLiberados = [...document.querySelectorAll('[data-acesso-modulo]:checked:not(:disabled)')].map(cb => cb.dataset.acessoModulo);
+    if (!nome || !email || senha.length < 6) {
+        mostrarToast('Informe nome, email e senha com minimo de 6 caracteres.', 'erro');
+        return;
+    }
+    if (!modulosLiberados.length) {
+        mostrarToast('Selecione ao menos um modulo para o funcionario.', 'erro');
+        return;
+    }
+    try {
+        await DB.criarSubusuario({ nome, email, senha, modulosLiberados, ativo: true, empresaNome: empresaConfig.empresaNome || '' });
+        limparFormularioAcesso();
+        await renderizarAcessos();
+        mostrarToast('Acesso criado com sucesso.', 'sucesso');
+    } catch (err) {
+        console.error('Erro ao criar acesso:', err);
+        const msg = err?.code === 'auth/email-already-in-use'
+            ? 'Este email ja possui login no sistema.'
+            : 'Erro ao criar acesso do funcionario.';
+        mostrarToast(msg, 'erro');
+    }
+}
+
+async function salvarSubusuario(uid) {
+    const card = document.querySelector('[data-subusuario="' + CSS.escape(uid) + '"]');
+    if (!card) return;
+    const ativo = !!card.querySelector('[data-sub-ativo]')?.checked;
+    const nome = card.querySelector('strong')?.textContent || '';
+    const email = card.querySelector('span')?.textContent || '';
+    const modulosLiberados = [...card.querySelectorAll('[data-sub-modulo]:checked:not(:disabled)')].map(cb => cb.dataset.subModulo);
+    try {
+        await DB.salvarSubusuario(uid, { nome, email, ativo, modulosLiberados });
+        mostrarToast('Acesso atualizado.', 'sucesso');
+        await renderizarAcessos();
+    } catch (err) {
+        console.error('Erro ao salvar acesso:', err);
+        mostrarToast('Erro ao salvar acesso.', 'erro');
+    }
+}
+
 function renderizarModulosAdminInicio(user) {
     const modulos = new Set(getModulosPermitidos(user));
     return MODULOS_ADMIN.map(mod => {
@@ -3929,6 +4060,7 @@ async function salvarPermissoesAdmin(userId) {
 // Exportar funções para uso global (onclick no HTML)
 Object.assign(window, {
     mudarAba, renderizarInicio, navegarKpiInicio, aplicarPermissoesUsuario, renderizarAdminMaster, salvarPermissoesAdmin,
+    renderizarAcessos, criarSubusuario, salvarSubusuario,
     adicionarLinha, removerLinha, calcularLinha, calcularTotais,
     adicionarCabecalho, removerCabecalho, selecionarCabecalho, filtrarCabecalhoOpcoes, abrirDropdownCabecalho,
     toggleDesconto, aplicarDesconto, limparDesconto, atualizarDescontoPorPercentual, atualizarDescontoPorValor,

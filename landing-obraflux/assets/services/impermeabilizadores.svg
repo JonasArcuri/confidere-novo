@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 360" role="img" aria-labelledby="title">
+  <title id="title">Impermeabilização com proteção contra água</title>
+  <defs>
+    <linearGradient id="bg" x1="0" x2="1" y1="0" y2="1">
+      <stop offset="0" stop-color="#eef7ff"/>
+      <stop offset="1" stop-color="#e9fbff"/>
+    </linearGradient>
+    <linearGradient id="water" x1="0" x2="1">
+      <stop offset="0" stop-color="#1fbed6"/>
+      <stop offset="1" stop-color="#1269e2"/>
+    </linearGradient>
+  </defs>
+  <rect width="640" height="360" rx="28" fill="url(#bg)"/>
+  <path d="M92 252h456v34H92z" fill="#061b49"/>
+  <path d="M120 222h400v30H120z" fill="#15c99c"/>
+  <path d="M156 180h328v42H156z" fill="#fff"/>
+  <path d="M224 176c0-50 42-90 96-90s96 40 96 90c-32-18-64-27-96-27s-64 9-96 27Z" fill="#061b49"/>
+  <path d="M320 91v160" stroke="#1269e2" stroke-width="16" stroke-linecap="round"/>
+  <path d="M237 218c45-30 120-30 166 0" fill="none" stroke="url(#water)" stroke-width="18" stroke-linecap="round"/>
+  <path d="M485 112c25 29 37 53 37 72 0 25-17 42-38 42s-38-17-38-42c0-19 13-43 39-72Z" fill="url(#water)" opacity=".9"/>
+</svg>

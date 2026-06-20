@@ -14,6 +14,7 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/fireba
 import {
   getAuth,
   signInWithEmailAndPassword,
+  createUserWithEmailAndPassword,
   signOut,
   onAuthStateChanged
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
@@ -22,6 +23,7 @@ import {
   collection,
   doc,
   getDocs,
+  getDoc,
   addDoc,
   setDoc,
   updateDoc,
@@ -42,6 +44,7 @@ import {
 // ===== INICIALIZAÇÃO =====
 const app = initializeApp(FIREBASE_CONFIG);
 const auth = getAuth(app);
+const authCadastroFuncionarios = getAuth(initializeApp(FIREBASE_CONFIG, "cadastro-funcionarios"));
 const db = getFirestore(app);
 const storage = getStorage(app);
 
@@ -49,6 +52,7 @@ const MASTER_ADMIN_EMAIL = 'sanojsistemas@gmail.com';
 
 // ===== ESTADO DO USUÁRIO =====
 let currentUser = null;
+let currentDataOwnerUid = null;
 
 function isAdminMasterAtual() {
   return !!currentUser && String(currentUser.email || '').toLowerCase() === MASTER_ADMIN_EMAIL;
@@ -59,9 +63,11 @@ function initAuth(onLogin, onLogout) {
   onAuthStateChanged(auth, (user) => {
     if (user) {
       currentUser = user;
+      currentDataOwnerUid = user.uid;
       onLogin(user);
     } else {
       currentUser = null;
+      currentDataOwnerUid = null;
       onLogout();
     }
   });
@@ -84,15 +90,36 @@ function getUid() {
   return currentUser.uid;
 }
 
+function getDataOwnerUid() {
+  if (!currentUser) throw new Error("Usuário não autenticado.");
+  return currentDataOwnerUid || currentUser.uid;
+}
+
+function setDataOwnerUid(uid) {
+  currentDataOwnerUid = uid || getUid();
+}
+
 // ===== HELPER: COLEÇÃO DO USUÁRIO =====
 // Todos os dados ficam em /users/{uid}/{collection}
 // Isso garante isolamento total por usuário via Firestore Security Rules
 function userCol(colName) {
-  return collection(db, "users", getUid(), colName);
+  return collection(db, "users", getDataOwnerUid(), colName);
 }
 
 function userDoc(colName, id) {
-  return doc(db, "users", getUid(), colName, id);
+  return doc(db, "users", getDataOwnerUid(), colName, id);
+}
+
+function publicLeadFormDoc(userId = getDataOwnerUid()) {
+  return doc(db, "publicLeadForms", userId);
+}
+
+function publicLeadFormLeadsCol(userId = getDataOwnerUid()) {
+  return collection(db, "publicLeadForms", userId, "leads");
+}
+
+function publicLeadFormLeadDoc(leadId, userId = getDataOwnerUid()) {
+  return doc(db, "publicLeadForms", userId, "leads", leadId);
 }
 
 //Sanitizar Objeto, caso algum dado esteja null ou undefined
@@ -104,7 +131,7 @@ function storagePath(prefix, file) {
   const safeName = (file?.name || 'arquivo')
     .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
     .replace(/[^a-zA-Z0-9._-]/g, '_');
-  return `users/${getUid()}/${prefix}/${Date.now()}_${safeName}`;
+  return `users/${getDataOwnerUid()}/${prefix}/${Date.now()}_${safeName}`;
 }
 
 async function uploadArquivo(file, prefix) {
@@ -213,7 +240,7 @@ const DB = {
   async salvarLogoArquivo(file) {
     const atual = await this.carregarPerfilUsuario();
     const uploaded = await uploadArquivo(file, "logos");
-    await setDoc(doc(db, "users", getUid()), {
+    await setDoc(doc(db, "users", getDataOwnerUid()), {
       logoUrl: uploaded.url,
       logoPath: uploaded.path,
       logo: null
@@ -223,7 +250,7 @@ const DB = {
   },
 
   async salvarLogoFallback(dataUrl) {
-    await setDoc(doc(db, "users", getUid()), {
+    await setDoc(doc(db, "users", getDataOwnerUid()), {
       logoFallback: dataUrl || ''
     }, { merge: true });
   },
@@ -237,8 +264,20 @@ const DB = {
 
   async carregarPerfilUsuario() {
     const { getDoc } = await import("https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js");
-    const snap = await getDoc(doc(db, "users", getUid()));
-    return snap.exists() ? snap.data() : null;
+    const authSnap = await getDoc(doc(db, "users", getUid()));
+    const authPerfil = authSnap.exists() ? authSnap.data() : null;
+    const ownerUid = authPerfil?.tipoUsuario === 'funcionario' ? authPerfil.ownerUid : getUid();
+    setDataOwnerUid(ownerUid || getUid());
+    if (ownerUid && ownerUid !== getUid()) {
+      const ownerSnap = await getDoc(doc(db, "users", ownerUid));
+      return {
+        ...(ownerSnap.exists() ? ownerSnap.data() : {}),
+        ...(authPerfil || {}),
+        ownerUid,
+        uidFuncionario: getUid()
+      };
+    }
+    return authPerfil;
   },
 
   async salvarMetadadosUsuario(user) {
@@ -250,7 +289,7 @@ const DB = {
   },
 
   async salvarConfiguracoesEmpresa(config) {
-    await setDoc(doc(db, "users", getUid()), {
+    await setDoc(doc(db, "users", getDataOwnerUid()), {
       empresaNome: config.empresaNome || '',
       empresaLocal: config.empresaLocal || '',
       empresaContato: config.empresaContato || '',
@@ -260,10 +299,60 @@ const DB = {
     }, { merge: true });
   },
 
+  // Leads captados pelo formulario publico de cada empresa
+  async carregarCaptacaoLeads(userId = getDataOwnerUid()) {
+    const snap = await getDoc(publicLeadFormDoc(userId));
+    return snap.exists() ? snap.data() : null;
+  },
+
+  async salvarCaptacaoLeads(config) {
+    await setDoc(publicLeadFormDoc(), sanitizar({
+      ativo: !!config.ativo,
+      titulo: config.titulo || '',
+      descricao: config.descricao || '',
+      origemPadrao: config.origemPadrao || 'Site',
+      solicitarEndereco: !!config.solicitarEndereco,
+      solicitarMensagem: config.solicitarMensagem !== false,
+      empresaNome: config.empresaNome || '',
+      empresaContato: config.empresaContato || '',
+      empresaUrl: config.empresaUrl || '',
+      atualizadoEm: serverTimestamp()
+    }), { merge: true });
+  },
+
+  async listarLeads(userId = getDataOwnerUid()) {
+    const snap = await getDocs(query(publicLeadFormLeadsCol(userId), orderBy("criadoEm", "desc")));
+    return snap.docs.map(d => ({ id: d.id, ...d.data() }));
+  },
+
+  async salvarLead(dados, id = null) {
+    const dadosLimpos = sanitizar(dados);
+    if (id) {
+      await setDoc(publicLeadFormLeadDoc(id), { ...dadosLimpos, atualizadoEm: serverTimestamp() }, { merge: true });
+      return id;
+    }
+    const ref = await addDoc(publicLeadFormLeadsCol(), { ...dadosLimpos, criadoEm: serverTimestamp() });
+    return ref.id;
+  },
+
+  async salvarLeadPublico(userId, dados) {
+    const ref = await addDoc(publicLeadFormLeadsCol(userId), sanitizar({
+      ...dados,
+      status: 'novo',
+      origem: dados.origem || 'Site',
+      criadoEm: serverTimestamp()
+    }));
+    return ref.id;
+  },
+
+  async excluirLead(id) {
+    await deleteDoc(publicLeadFormLeadDoc(id));
+  },
+
   async removerLogo() {
-    const { updateDoc, deleteField } = await import("https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js");
+    const { deleteField } = await import("https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js");
     const atual = await this.carregarPerfilUsuario();
-    await updateDoc(doc(db, "users", getUid()), {
+    await updateDoc(doc(db, "users", getDataOwnerUid()), {
       logo: deleteField(),
       logoUrl: deleteField(),
       logoPath: deleteField(),
@@ -358,10 +447,67 @@ const DB = {
   },
 
   // — Administração Master —
+  // Acessos / subusuarios
+  async listarSubusuarios() {
+    if (getDataOwnerUid() !== getUid() && !isAdminMasterAtual()) {
+      throw new Error('Acesso restrito ao usuario principal da empresa.');
+    }
+    const snap = await getDocs(query(collection(db, "users", getDataOwnerUid(), "subusuarios"), orderBy("nome")));
+    return snap.docs.map(d => ({ id: d.id, ...d.data() }));
+  },
+
+  async criarSubusuario(dados) {
+    if (getDataOwnerUid() !== getUid() && !isAdminMasterAtual()) {
+      throw new Error('Acesso restrito ao usuario principal da empresa.');
+    }
+    const email = String(dados.email || '').trim().toLowerCase();
+    const senha = String(dados.senha || '');
+    if (!email || !senha) throw new Error('Informe email e senha.');
+
+    const cred = await createUserWithEmailAndPassword(authCadastroFuncionarios, email, senha);
+    const subUid = cred.user.uid;
+    await signOut(authCadastroFuncionarios).catch(() => {});
+
+    const registro = sanitizar({
+      nome: dados.nome || '',
+      email,
+      ativo: dados.ativo !== false,
+      modulosLiberados: Array.isArray(dados.modulosLiberados) ? dados.modulosLiberados : [],
+      ownerUid: getDataOwnerUid(),
+      tipoUsuario: 'funcionario',
+      criadoEm: serverTimestamp()
+    });
+
+    await setDoc(doc(db, "users", getDataOwnerUid(), "subusuarios", subUid), registro, { merge: true });
+    await setDoc(doc(db, "users", subUid), {
+      ...registro,
+      empresaNome: dados.empresaNome || '',
+      criadoPor: getUid()
+    }, { merge: true });
+    return subUid;
+  },
+
+  async salvarSubusuario(subUid, dados) {
+    if (getDataOwnerUid() !== getUid() && !isAdminMasterAtual()) {
+      throw new Error('Acesso restrito ao usuario principal da empresa.');
+    }
+    const payload = sanitizar({
+      nome: dados.nome || '',
+      email: String(dados.email || '').trim().toLowerCase(),
+      ativo: dados.ativo !== false,
+      modulosLiberados: Array.isArray(dados.modulosLiberados) ? dados.modulosLiberados : [],
+      ownerUid: getDataOwnerUid(),
+      tipoUsuario: 'funcionario',
+      atualizadoEm: serverTimestamp()
+    });
+    await setDoc(doc(db, "users", getDataOwnerUid(), "subusuarios", subUid), payload, { merge: true });
+    await setDoc(doc(db, "users", subUid), payload, { merge: true });
+  },
+
   async listarUsuariosAdmin() {
     if (!isAdminMasterAtual()) throw new Error('Acesso restrito ao administrador master.');
     const snap = await getDocs(collection(db, "users"));
-    return snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    return snap.docs.map(d => ({ id: d.id, ...d.data() })).filter(user => user.tipoUsuario !== 'funcionario');
   },
 
   async salvarPermissoesUsuarioAdmin(userId, dados) {

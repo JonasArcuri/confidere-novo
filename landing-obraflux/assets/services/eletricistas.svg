@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 360" role="img" aria-labelledby="title">
+  <title id="title">Eletricista e conexão elétrica</title>
+  <defs>
+    <linearGradient id="bg" x1="0" x2="1" y1="0" y2="1">
+      <stop offset="0" stop-color="#fff7e6"/>
+      <stop offset="1" stop-color="#eaf3ff"/>
+    </linearGradient>
+  </defs>
+  <rect width="640" height="360" rx="28" fill="url(#bg)"/>
+  <rect x="118" y="82" width="404" height="210" rx="22" fill="#fff" opacity=".94"/>
+  <circle cx="250" cy="188" r="58" fill="#061b49"/>
+  <path d="M264 111 204 202h50l-16 65 75-98h-52l3-58Z" fill="#f3b23f"/>
+  <path d="M326 147h86M326 188h126M326 229h70" stroke="#1269e2" stroke-width="18" stroke-linecap="round"/>
+  <circle cx="472" cy="188" r="24" fill="#15c99c"/>
+  <path d="M472 130v36M472 210v36M414 188h36M494 188h36" stroke="#061b49" stroke-width="10" stroke-linecap="round"/>
+</svg>

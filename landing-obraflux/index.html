@@ -3,21 +3,25 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="description" content="ObraFlux: sistema adaptavel para empresas prestadoras de servico, de pintores e eletricistas a empreiteiros em geral.">
+  <meta name="description" content="ObraFlux: abandone planilhas problemáticas e migre para um sistema automatizado, inteligente e simples para empresas prestadoras de serviço.">
   <title>ObraFlux | Gestão para prestadores de serviço</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="icon" href="assets/favicon-32.png" sizes="32x32" type="image/png">
+  <link rel="icon" href="assets/favicon.png" sizes="512x512" type="image/png">
+  <link rel="apple-touch-icon" href="assets/favicon-180.png">
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
   <header class="site-header">
     <a class="brand" href="#inicio" aria-label="ObraFlux">
-      <img src="assets/obraflux-logo-e-nome-crop.png" alt="ObraFlux">
+      <img src="assets/obraflux-logo-e-nome-transparent.png" alt="ObraFlux">
     </a>
     <nav class="nav" aria-label="Navegação principal">
       <a href="#para-quem">Para quem</a>
       <a href="#recursos">Recursos</a>
+      <a href="#modulos">Módulos</a>
       <a href="#planos">Planos</a>
       <a href="#contato">Contato</a>
     </nav>
@@ -27,10 +31,17 @@
   <main id="inicio">
     <section class="hero" aria-labelledby="hero-title">
       <div class="hero-content">
-        <p class="eyebrow">Gestão adaptável para serviços em campo</p>
-        <h1 id="hero-title">ObraFlux</h1>
+        <p class="eyebrow">Gestão inteligente para prestadores de serviço que atuam em campo.</p>
+        <h1 id="hero-title">Abandone as planilhas problemáticas.<br>Entre no FLUXO.</h1>
         <p class="hero-copy">
-          Uma operação mais clara para empresas que vendem, executam e acompanham serviços em obras, instalações e manutenções.
+          Migre para um sistema totalmente automatizado, inteligente e simples, com um fluxo dinâmico para vender, executar e acompanhar serviços sem depender de controles quebrados.
+        </p>
+        <div class="hero-actions">
+          <button class="button primary" type="button" data-open-lead-modal>Solicitar apresentação</button>
+          <a class="button secondary" href="#para-quem">Ver segmentos</a>
+        </div>
+        <p class="hero-hook">
+          Do orçamento ao financeiro, cada etapa conversa com a próxima para sua empresa parar de apagar incêndios e começar a operar com previsibilidade.
         </p>
         <div class="proof-row" aria-label="Principais áreas do sistema">
           <span>Orçamentos</span>
@@ -38,60 +49,12 @@
           <span>Insumos</span>
           <span>Financeiro</span>
         </div>
-        <div class="hero-actions">
-          <button class="button primary" type="button" data-open-lead-modal>Solicitar apresentação</button>
-          <a class="button secondary" href="#para-quem">Ver segmentos</a>
-        </div>
       </div>
 
-      <div class="hero-visual" aria-label="Visão geral do ObraFlux">
-        <div class="dashboard-shell">
-          <div class="dashboard-top">
-            <img src="assets/obraflux-somentelogo-crop.png" alt="">
-            <div>
-              <span>Central da operação</span>
-              <strong>Resumo de hoje</strong>
-            </div>
-          </div>
-          <div class="metric-row">
-            <div>
-              <span>Orçamentos</span>
-              <strong>24</strong>
-              <small>6 em negociação</small>
-            </div>
-            <div>
-              <span>Equipes</span>
-              <strong>8</strong>
-              <small>alocadas</small>
-            </div>
-            <div>
-              <span>Etapas</span>
-              <strong>62%</strong>
-              <small>concluídas</small>
-            </div>
-          </div>
-          <div class="board-preview">
-            <div class="board-column">
-              <b>Propostas</b>
-              <p>Pintura comercial</p>
-              <p>Instalação elétrica</p>
-            </div>
-            <div class="board-column active">
-              <b>Execução</b>
-              <p>Impermeabilização</p>
-              <p>Revestimento</p>
-            </div>
-            <div class="board-column">
-              <b>Entrega</b>
-              <p>Vistoria final</p>
-              <p>Medição aprovada</p>
-            </div>
-          </div>
-          <div class="insight-strip">
-            <span></span>
-            <p><b>Próxima ação:</b> confirmar equipe e materiais antes do início da obra.</p>
-          </div>
-        </div>
+      <div class="hero-visual" aria-label="Painel inicial do ObraFlux">
+        <figure class="hero-product-shot">
+          <img src="assets/prints/hero-painel-inicial.png" alt="Painel inicial do ObraFlux com resumo de orçamentos, obras, funcionários, agenda e financeiro">
+        </figure>
       </div>
     </section>
 
@@ -108,6 +71,10 @@
         <strong>Operação flexível</strong>
         <span>Adaptável ao jeito de trabalhar de cada prestador.</span>
       </div>
+      <div>
+        <strong>Acesso pelo celular</strong>
+        <span>Consulte obras, custos e informações importantes direto do campo.</span>
+      </div>
     </section>
 
     <section id="para-quem" class="section target-section" aria-labelledby="target-title">
@@ -120,27 +87,37 @@
       </div>
       <div class="segments-grid">
         <article class="segment">
-          <span class="segment-mark">P</span>
+          <figure class="segment-visual">
+            <img src="assets/services-real/pintores-real.png" alt="Pintor aplicando tinta em uma parede com rolo">
+          </figure>
           <h3>Pintores</h3>
           <p>Controle de propostas, equipes, cronogramas e materiais por serviço.</p>
         </article>
         <article class="segment">
-          <span class="segment-mark">I</span>
+          <figure class="segment-visual">
+            <img src="assets/services-real/impermeabilizadores-real.png" alt="Profissional aplicando impermeabilização em uma laje">
+          </figure>
           <h3>Impermeabilizadores</h3>
           <p>Registro de etapas, insumos, medições e acompanhamento por obra.</p>
         </article>
         <article class="segment">
-          <span class="segment-mark">A</span>
+          <figure class="segment-visual">
+            <img src="assets/services-real/azulejistas-real.png" alt="Azulejista assentando revestimento em ambiente interno">
+          </figure>
           <h3>Azulejistas</h3>
           <p>Organização de demandas, ambientes, mão de obra e consumo de peças.</p>
         </article>
         <article class="segment">
-          <span class="segment-mark">E</span>
+          <figure class="segment-visual">
+            <img src="assets/services-real/eletricistas-real.png" alt="Eletricista trabalhando em quadro elétrico organizado">
+          </figure>
           <h3>Eletricistas</h3>
           <p>Planejamento de serviços técnicos, materiais e responsáveis por execução.</p>
         </article>
         <article class="segment wide">
-          <span class="segment-mark">+</span>
+          <figure class="segment-visual">
+            <img src="assets/services-real/empreiteiros-real.png" alt="Empreiteiro coordenando equipe em obra com tablet">
+          </figure>
           <h3>Empreiteiros em geral</h3>
           <p>Um sistema flexível para empresas que precisam gerir múltiplas frentes, equipes, custos e entregas.</p>
         </article>
@@ -158,19 +135,110 @@
       <div class="features-grid">
         <article class="feature">
           <span class="feature-number">01</span>
+          <h3>Cadastre o serviço</h3>
+          <p>Registre cliente, escopo, local e informações importantes para começar com clareza.</p>
+        </article>
+        <article class="feature">
+          <span class="feature-number">02</span>
+          <h3>Planeje a execução</h3>
+          <p>Organize equipe, materiais, etapas e previsões antes de colocar o time em campo.</p>
+        </article>
+        <article class="feature">
+          <span class="feature-number">03</span>
           <h3>Gestão de obras</h3>
           <p>Acompanhe status, etapas, responsáveis e histórico para reduzir ruídos na execução.</p>
         </article>
         <article class="feature">
-          <span class="feature-number">02</span>
+          <span class="feature-number">04</span>
           <h3>Controle de insumos</h3>
           <p>Preveja materiais, acompanhe consumo e enxergue custos com mais clareza.</p>
         </article>
         <article class="feature">
-          <span class="feature-number">03</span>
+          <span class="feature-number">05</span>
           <h3>Financeiro organizado</h3>
           <p>Centralize receitas, despesas e informações importantes para decidir com segurança.</p>
         </article>
+        <article class="feature">
+          <span class="feature-number">06</span>
+          <h3>Acompanhe resultados</h3>
+          <p>Veja andamento, custos e financeiro para manter a empresa no controle.</p>
+        </article>
+      </div>
+    </section>
+
+    <section id="modulos" class="section modules-section" aria-labelledby="modules-title">
+      <div class="section-heading">
+        <p class="eyebrow">Módulos na prática</p>
+        <h2 id="modules-title">Veja como o ObraFlux organiza a rotina da empresa</h2>
+        <p>
+          As telas abaixo mostram os principais módulos do sistema em uso: orçamento, equipe, obras, insumos e financeiro.
+        </p>
+      </div>
+
+      <div class="module-lab" data-module-lab>
+        <div class="module-tabs" role="tablist" aria-label="Escolha um módulo do ObraFlux">
+          <button class="module-tab is-active" type="button" data-module-key="orcamentos">
+            <span>01</span>
+            <strong>Orçamentos</strong>
+            <small>Propostas prontas para enviar</small>
+          </button>
+          <button class="module-tab" type="button" data-module-key="obras">
+            <span>02</span>
+            <strong>Obras</strong>
+            <small>Frentes, status e responsáveis</small>
+          </button>
+          <button class="module-tab" type="button" data-module-key="agenda">
+            <span>03</span>
+            <strong>Agenda</strong>
+            <small>Equipe e compromissos em campo</small>
+          </button>
+          <button class="module-tab" type="button" data-module-key="insumos">
+            <span>04</span>
+            <strong>Insumos</strong>
+            <small>Custos, comprovantes e controle</small>
+          </button>
+          <button class="module-tab" type="button" data-module-key="relatorios">
+            <span>05</span>
+            <strong>Relatórios</strong>
+            <small>Execução registrada por obra</small>
+          </button>
+          <button class="module-tab" type="button" data-module-key="financeiro">
+            <span>06</span>
+            <strong>Financeiro</strong>
+            <small>Entradas, saídas e comparativos</small>
+          </button>
+        </div>
+
+        <div class="module-stage">
+          <div class="module-screen">
+            <div class="module-screen-bar">
+              <span></span>
+              <span></span>
+              <span></span>
+              <strong data-module-screen-label>Orçamentos</strong>
+            </div>
+            <figure>
+              <button class="module-zoom-trigger" type="button" data-open-module-zoom aria-label="Ampliar imagem do módulo">
+                <img data-module-image src="assets/prints/01-novo-orcamento-editor.png" alt="Tela de novo orçamento do ObraFlux com dados do cliente e itens do orçamento">
+                <span>Ampliar tela</span>
+              </button>
+            </figure>
+          </div>
+        </div>
+
+        <aside class="module-panel" aria-live="polite">
+          <span data-module-category>Orçamentos</span>
+          <h3 data-module-title>Monte propostas com itens, áreas, materiais e mão de obra</h3>
+          <p data-module-description>
+            Centralize dados do cliente, endereço, validade e composição do serviço para chegar ao total com mais segurança.
+          </p>
+          <ul data-module-points>
+            <li>Envie o PDF do orçamento diretamente ao cliente.</li>
+            <li>Escolha o formato em modo retrato ou paisagem.</li>
+            <li>Mantenha materiais, mão de obra e totais no mesmo fluxo.</li>
+          </ul>
+          <button class="button primary" type="button" data-open-lead-modal>Solicitar apresentação</button>
+        </aside>
       </div>
     </section>
 
@@ -190,11 +258,16 @@
             <p>Ideal para prestadores que querem sair das anotações soltas e centralizar o básico da operação.</p>
           </div>
           <div class="price">
-            <strong>R$75,00</strong>
+            <span class="old-price">R$119,90</span>
+            <strong>R$74,90</strong>
             <span>/mês</span>
           </div>
-          <p class="annual-price">Anual com 10%: R$810,00/ano</p>
+          <p class="annual-price">Anual com 10%: R$808,92/ano</p>
           <ul class="module-list">
+            <li>1 usuário</li>
+            <li>Obras ilimitadas</li>
+            <li>Orçamentos ilimitados</li>
+            <li>5 GB de armazenamento</li>
             <li>Cadastro de clientes e serviços</li>
             <li>Orçamentos e propostas</li>
             <li>Gestão básica de obras</li>
@@ -211,11 +284,16 @@
             <p>Feito para empresas que têm mais frentes em andamento e precisam acompanhar custos com mais clareza.</p>
           </div>
           <div class="price">
-            <strong>R$120,00</strong>
+            <span class="old-price">R$149,90</span>
+            <strong>R$119,90</strong>
             <span>/mês</span>
           </div>
-          <p class="annual-price">Anual com 10%: R$1.296,00/ano</p>
+          <p class="annual-price">Anual com 10%: R$1.294,92/ano</p>
           <ul class="module-list">
+            <li>Até 3 usuários</li>
+            <li>Obras ilimitadas</li>
+            <li>Orçamentos ilimitados</li>
+            <li>10 GB de armazenamento</li>
             <li>Tudo do Essencial</li>
             <li>Controle de insumos e materiais</li>
             <li>Gestão de equipes e responsáveis</li>
@@ -231,11 +309,15 @@
             <p>Para quem quer conectar operação, custos e financeiro em um fluxo mais previsível.</p>
           </div>
           <div class="price">
-            <strong>R$150,00</strong>
+            <span class="old-price">R$199,90</span>
+            <strong>R$149,90</strong>
             <span>/mês</span>
           </div>
-          <p class="annual-price">Anual com 10%: R$1.620,00/ano</p>
+          <p class="annual-price">Anual com 10%: R$1.618,92/ano</p>
           <ul class="module-list">
+            <li>Obras ilimitadas</li>
+            <li>Orçamentos ilimitados</li>
+            <li>50 GB de armazenamento</li>
             <li>Tudo do Profissional</li>
             <li>Financeiro completo</li>
             <li>Receitas, despesas e saldos</li>
@@ -248,29 +330,25 @@
         <strong>Planos mensais:</strong>
         <span>em caso de atraso no pagamento, seus dados não são perdidos.</span>
       </div>
-    </section>
-
-    <section class="workflow-section" aria-labelledby="workflow-title">
-      <div class="section-heading">
-        <p class="eyebrow">Fluxo simples</p>
-        <h2 id="workflow-title">Da primeira conversa à entrega final</h2>
+      <div class="migration-note">
+        <div>
+          <span>Migração assistida</span>
+          <h3>Tem dados em papel ou planilhas?</h3>
+          <p>
+            A migração de dados físicos ou de planilhas pode ser cotada junto na solicitação de apresentação do ObraFlux. Esse serviço é opcional e possui valores separados dos planos.
+          </p>
+        </div>
+        <button class="button primary" type="button" data-open-lead-modal>Solicitar cotação da migração</button>
       </div>
-      <div class="workflow-grid">
+      <div class="migration-note addon-note">
         <div>
-          <span>1</span>
-          <h3>Cadastre o serviço</h3>
-          <p>Registre cliente, escopo, local e informações importantes para começar com clareza.</p>
+          <span>Módulo adicional</span>
+          <h3>Leads do site direto no ObraFlux</h3>
+          <p>
+            Faça a captação de clientes diretamente do seu site, integrando um módulo adicional no ObraFlux. Ideal para conversão direta de clientes, esse módulo facilita o contato e triagem com o cliente.
+          </p>
         </div>
-        <div>
-          <span>2</span>
-          <h3>Planeje a execução</h3>
-          <p>Organize equipe, materiais, etapas e previsões antes de colocar o time em campo.</p>
-        </div>
-        <div>
-          <span>3</span>
-          <h3>Acompanhe resultados</h3>
-          <p>Veja andamento, custos e financeiro para manter a empresa no controle.</p>
-        </div>
+        <button class="button primary" type="button" data-open-lead-modal>Consultar módulo de leads</button>
       </div>
     </section>
 
@@ -315,12 +393,35 @@
     </section>
   </div>
 
+  <div class="image-zoom-backdrop" data-image-zoom hidden>
+    <section class="image-zoom-modal" role="dialog" aria-modal="true" aria-labelledby="image-zoom-title">
+      <div class="image-zoom-header">
+        <div>
+          <span>Visualização ampliada</span>
+          <h2 id="image-zoom-title" data-zoom-title>Orçamentos</h2>
+        </div>
+        <button class="icon-button" type="button" aria-label="Fechar visualização ampliada" data-close-image-zoom>×</button>
+      </div>
+      <figure>
+        <img data-zoom-image src="assets/prints/01-novo-orcamento-editor.png" alt="Tela de novo orçamento do ObraFlux com dados do cliente e itens do orçamento">
+      </figure>
+    </section>
+  </div>
+
   <footer class="site-footer">
-    <img src="assets/obraflux-somentelogo-crop.png" alt="" aria-hidden="true">
-    <p>
-      Desenvolvido pela
-      <a href="https://www.sanojsistemas.com.br" target="_blank" rel="noopener">Sanoj Sistemas</a>
-    </p>
+    <img src="assets/obraflux-somentelogo-transparent.png" alt="" aria-hidden="true">
+    <div class="footer-legal">
+      <p>ObraFlux. Todos os direitos reservados © 2026.</p>
+      <div class="footer-links" aria-label="Documentos legais">
+        <a href="assets/legal/obraflux-termos-de-uso.pdf" target="_blank" rel="noopener">Termos de uso</a>
+        <a href="assets/legal/obraflux-politica-de-privacidade.pdf" target="_blank" rel="noopener">Política de privacidade</a>
+      </div>
+      <p>
+        Desenvolvido pela
+        <a href="https://www.sanojsistemas.com.br" target="_blank" rel="noopener">Sanoj Sistemas</a>.
+        Todos os direitos reservados © 2026.
+      </p>
+    </div>
   </footer>
   <script src="script.js"></script>
 </body>

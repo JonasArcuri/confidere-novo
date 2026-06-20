@@ -352,6 +352,10 @@
   display: block;
 }
 
+.funcionario-mode .config-menu-wrap {
+  display: none;
+}
+
 .config-menu-titulo {
   font-family: 'Bebas Neue', sans-serif;
   color: var(--azul);

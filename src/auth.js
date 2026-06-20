@@ -106,6 +106,7 @@ async function handleLogout() {
     window.insumos = [];
     window.obras = [];
     window.obraDocumentos = [];
+    window.leads = [];
     window._orcamentosFirestore = [];
     await logout();
     mostrarToast('Sessão encerrada.', '');
@@ -118,38 +119,48 @@ async function handleLogout() {
 async function carregarDadosIniciais() {
   mostrarToast('Carregando dados...', '');
   try {
-    [agendamentos, funcionarios, relatorios] = await Promise.all([
-      DB.listarAgendamentos(),
-      DB.listarFuncionarios(),
-      DB.listarRelatorios()
-    ]);
-
-    // Carregar insumos e obras
-    const [insumosData, obrasData, obraDocumentosData] = await Promise.all([
-      DB.listarInsumos(),
-      DB.listarObras(),
-      DB.listarDocumentosObra ? DB.listarDocumentosObra().catch(() => []) : Promise.resolve([])
-    ]);
-    window.insumos = insumosData;
-    window.obras   = obrasData;
-    window.obraDocumentos = obraDocumentosData || [];
-    window.agendamentos = agendamentos;
-    window.funcionarios = funcionarios;
-    window.relatorios   = relatorios;
-
-    // Carregar histórico de orçamentos
-    const orcamentos = await DB.listarOrcamentos();
-    window._orcamentosFirestore = orcamentos;
-
-    window.recarregarOpcoesEditaveisUsuario?.();
-
-    // Carregar perfil/logotipo do Firestore
+    // Carregar o perfil primeiro define se o login atual e a conta principal
+    // ou um funcionario vinculado aos dados da empresa.
     const perfil = await DB.carregarPerfilUsuario();
     await DB.salvarMetadadosUsuario?.(auth.currentUser);
     if (window.aplicarConfiguracoesEmpresa) {
       window.aplicarConfiguracoesEmpresa(perfil || {});
     }
     window.aplicarPermissoesUsuario?.(perfil || {}, auth.currentUser || {});
+    const modulosFuncionario = new Set(Array.isArray(perfil?.modulosLiberados) ? perfil.modulosLiberados : []);
+    const isFuncionario = perfil?.tipoUsuario === 'funcionario';
+    const funcionarioAtivo = !isFuncionario || perfil?.ativo !== false;
+    const podeGestao = !isFuncionario || (funcionarioAtivo && modulosFuncionario.has('gestao'));
+    const podeLeads = !isFuncionario || (funcionarioAtivo && modulosFuncionario.has('leads'));
+    const podeOrcamentos = !isFuncionario || (funcionarioAtivo && (modulosFuncionario.has('orcamento') || modulosFuncionario.has('historico')));
+
+    [agendamentos, funcionarios, relatorios] = await Promise.all([
+      podeGestao ? DB.listarAgendamentos() : Promise.resolve([]),
+      podeGestao ? DB.listarFuncionarios() : Promise.resolve([]),
+      podeGestao ? DB.listarRelatorios() : Promise.resolve([])
+    ]);
+
+    // Carregar insumos e obras
+    const [insumosData, obrasData, obraDocumentosData, leadsData] = await Promise.all([
+      podeGestao ? DB.listarInsumos() : Promise.resolve([]),
+      podeGestao ? DB.listarObras() : Promise.resolve([]),
+      podeGestao && DB.listarDocumentosObra ? DB.listarDocumentosObra().catch(() => []) : Promise.resolve([]),
+      podeLeads && DB.listarLeads ? DB.listarLeads().catch(() => []) : Promise.resolve([])
+    ]);
+    window.insumos = insumosData;
+    window.obras   = obrasData;
+    window.obraDocumentos = obraDocumentosData || [];
+    window.leads = leadsData || [];
+    window.agendamentos = agendamentos;
+    window.funcionarios = funcionarios;
+    window.relatorios   = relatorios;
+
+    // Carregar histórico de orçamentos
+    const orcamentos = podeOrcamentos ? await DB.listarOrcamentos() : [];
+    window._orcamentosFirestore = orcamentos;
+
+    window.recarregarOpcoesEditaveisUsuario?.();
+
     await window.carregarLogoSalva?.(perfil || {});
 
     mostrarToast('', '');
@@ -161,6 +172,8 @@ async function carregarDadosIniciais() {
 
 // ===== INICIALIZAR AUTH =====
 function initAuthController() {
+  if (window.ObraFluxPublicLeadMode) return;
+
   // Loading inicial — aguarda Firebase resolver o estado
   document.getElementById('app-loading').classList.remove('oculto');
 
@@ -187,6 +200,7 @@ function initAuthController() {
         popularSelectFuncionariosRel();
         atualizarNumeroDisplay();
         if (window.inicializarFluxoFinanceiro) window.inicializarFluxoFinanceiro();
+        if (window.inicializarLeads) window.inicializarLeads();
         window.renderizarInicio?.();
       },
       // Callback: usuário deslogado
