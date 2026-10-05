@@ -1,2 +1,7 @@
 .env
 *.local
+assistente-local/.venv/
+assistente-local/models/
+assistente-local/__pycache__/
+assistente-local/.pairing-token
+assistente-local/.config.json

@@ -1,6 +1,7 @@
 // ===== ESTADO =====
 import { DB, getUid } from './firebase.js';
 import { escapeHtml, escapeAttr } from './utils.js';
+import { prepararOrcamentoVoz } from './obraflux-budget.js';
 
 let linhaId = 0;
 let orcamentoEditandoId = null;
@@ -570,6 +571,7 @@ function aplicarPermissoesUsuario(perfil = {}, user = {}) {
     }
     configurarObserverPlanoVencido();
     setTimeout(aplicarBloqueioEdicaoPlanoVencido, 0);
+    window.dispatchEvent(new Event('obraflux:permissoes'));
 }
 
 function moduloPermitido(aba) {
@@ -2147,7 +2149,7 @@ function aplicarPagamento() {
 
     const linhasPDF = _gerarLinhasPagamentoPDF(opcoes, pagamentoSelecionado);
     const resumoHtml = linhasPDF.map(l =>
-        `<div class="desc-cartao" style="background:#1a3a5c"><span class="dc-label" style="font-size:13px;font-weight:600">${l}</span></div>`
+        `<div class="desc-cartao" style="background:#1a3a5c"><span class="dc-label" style="font-size:13px;font-weight:600">${escapeHtml(l)}</span></div>`
     ).join('');
 
     document.getElementById('pagamento-cartoes').innerHTML = resumoHtml;
@@ -2186,7 +2188,7 @@ function restaurarPagamento(pgto) {
 
     const linhasPDF = _gerarLinhasPagamentoPDF(pgto.opcoes, pagamentoSelecionado);
     document.getElementById('pagamento-cartoes').innerHTML = linhasPDF.map(l =>
-        `<div class="desc-cartao" style="background:#1a3a5c"><span class="dc-label" style="font-size:13px;font-weight:600">${l}</span></div>`
+        `<div class="desc-cartao" style="background:#1a3a5c"><span class="dc-label" style="font-size:13px;font-weight:600">${escapeHtml(l)}</span></div>`
     ).join('');
     document.getElementById('resultados-pagamento').classList.add('visivel');
 }
@@ -2285,6 +2287,46 @@ function getHistorico() {
 function setHistorico(lista) {
     window._orcamentosFirestore = lista;
 }
+
+// O assistente só cria novos documentos; nunca altera um orçamento existente.
+const tentativasOrcamentoVoz = new Map();
+window.obrafluxOrcamentos = {
+    limparSessao() { tentativasOrcamentoVoz.clear(); },
+    permitido() {
+        try { getUid(); } catch { return false; }
+        return moduloPermitido('orcamento') && !planoVencidoAtual && !usuarioMasterAtual;
+    },
+    preparar: prepararOrcamentoVoz,
+    async salvar(entrada, pedidoId, usuarioEsperado) {
+        if (!this.permitido() || getUid() !== usuarioEsperado) throw new Error('Sua sessão não permite criar orçamentos.');
+        if (!/^[a-f0-9-]{36}$/.test(pedidoId)) throw new Error('Identificador do comando inválido.');
+        const chave = `${usuarioEsperado}:${pedidoId}`;
+        if (!tentativasOrcamentoVoz.has(chave)) {
+            const dados = prepararOrcamentoVoz(entrada);
+            const documento = prepararOrcamentoParaFirestore({ ...dados, numero: proximoNumero('orcamento'),
+                savedAt: new Date().toISOString(), revisao: null, revisoes: [], statusAprovacao: 'pendente', aprovado: false, dataAprovacao: '' });
+            const operacao = DB.criarOrcamentoVoz(documento, `voz-${pedidoId}`).then(salvo => {
+                let mesmaSessao = false;
+                try { mesmaSessao = getUid() === usuarioEsperado; } catch { /* sessão encerrada durante o envio */ }
+                if (mesmaSessao) {
+                    const historico = getHistorico();
+                    if (!historico.some(o => o.id === salvo.id)) setHistorico([...historico, salvo]);
+                    window.renderizarObras?.();
+                }
+                return { id: salvo.id, numero: salvo.numero, total: salvo.totalComDesconto };
+            }).catch(erro => { tentativasOrcamentoVoz.delete(chave); throw erro; });
+            tentativasOrcamentoVoz.set(chave, operacao);
+        }
+        return tentativasOrcamentoVoz.get(chave);
+    },
+    abrir(id) {
+        if (!this.permitido()) return;
+        const abrir = () => editarOrcamento(id);
+        if (orcamentoAtualTemDadosNaoSalvos()) abrirModal('Abrir orçamento', 'Abrir o orçamento criado substituirá os campos do editor. Deseja continuar?', abrir);
+        else abrir();
+    }
+};
+window.dispatchEvent(new Event('obraflux:permissoes'));
 
 // ===== SALVAR ORÇAMENTO =====
 function normalizarLinhaParaFirestore(linha) {

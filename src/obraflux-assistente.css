@@ -1,0 +1,27 @@
+.obraflux-assistente[hidden], .obraflux-painel[hidden] { display: none !important; }
+.obraflux-assistente { position: fixed; right: 24px; bottom: 24px; z-index: 950; font-family: 'DM Sans', sans-serif; }
+.obraflux-botao { width: 64px; height: 64px; border: 2px solid #fff; border-radius: 16px; background: var(--azul-claro, #4a90d9); display: flex; align-items: center; justify-content: center; cursor: pointer; box-shadow: 0 5px 22px #102b4655; position: relative; }
+.obraflux-botao img { width: 44px; height: 44px; object-fit: contain; background: #fff; padding: 2px; border-radius: 8px; }
+.obraflux-botao::after { content: ''; width: 12px; height: 12px; border-radius: 50%; background: #a6b4c3; border: 2px solid white; position: absolute; right: -3px; bottom: -3px; }
+.obraflux-assistente[data-ouvindo='true'] .obraflux-botao::after { background: #3bdd92; box-shadow: 0 0 0 4px #3bdd9233; }
+.obraflux-botao:focus-visible, .obraflux-painel button:focus-visible { outline: 3px solid #f5a623; outline-offset: 3px; }
+.obraflux-painel { position: absolute; right: 0; bottom: 78px; width: min(380px, calc(100vw - 32px)); max-height: min(620px, calc(100dvh - 125px)); overflow-y: auto; background: #fff; color: #18334d; border: 1px solid #d9e2ec; border-radius: 18px; box-shadow: 0 12px 48px #102b4638; }
+.obraflux-painel header { display: flex; align-items: center; justify-content: space-between; background: #173e63; color: #fff; padding: 18px 20px; }
+.obraflux-painel header strong { font-size: 20px; }
+.obraflux-painel header button { background: transparent; color: white; border: 0; font-size: 24px; cursor: pointer; }
+.obraflux-corpo { padding: 18px; }
+.obraflux-corpo p { margin: 0 0 14px; line-height: 1.5; font-size: 14px; }
+.obraflux-status { padding: 12px; background: #eef4fa; border-radius: 10px; }
+.obraflux-acoes { display: flex; gap: 8px; flex-wrap: wrap; margin: 14px 0; }
+.obraflux-acoes button { border: 0; border-radius: 9px; padding: 11px 14px; background: #173e63; color: white; font: inherit; cursor: pointer; }
+.obraflux-acoes button:disabled { opacity: .5; cursor: wait; }
+.obraflux-acoes .obraflux-pausar { background: #e9eef4; color: #18334d; }
+.obraflux-painel details { font-size: 13px; margin-top: 18px; }
+.obraflux-painel summary { cursor: pointer; }
+.obraflux-painel label { display: block; margin-top: 12px; }
+.obraflux-painel input { display: block; box-sizing: border-box; width: 100%; padding: 10px; margin-top: 6px; border: 1px solid #c6d1dd; border-radius: 8px; }
+.obraflux-historico { max-height: 200px; overflow: auto; }
+.obraflux-historico p { border-left: 3px solid #d6e3ef; padding-left: 10px; overflow-wrap: anywhere; }
+.obraflux-resumo { background: #f5f8fb; padding: 12px; border-radius: 10px; margin-top: 12px; font-size: 14px; white-space: pre-wrap; }
+@media (max-width: 600px) { .obraflux-assistente { right: 16px; bottom: max(16px, env(safe-area-inset-bottom)); } .obraflux-botao { width: 58px; height: 58px; } .obraflux-painel { width: calc(100vw - 48px); } }
+@media print { .obraflux-assistente { display: none !important; } }

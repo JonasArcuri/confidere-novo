@@ -28,6 +28,7 @@ import {
   setDoc,
   updateDoc,
   deleteDoc,
+  runTransaction,
   query,
   where,
   orderBy,
@@ -153,6 +154,17 @@ async function removerArquivoSeExistir(path) {
 
 // ===== ORÇAMENTOS =====
 const DB = {
+  // Uma tentativa de voz mantém o mesmo ID mesmo se a resposta de rede se perder.
+  async criarOrcamentoVoz(dados, id) {
+    const ref = userDoc('orcamentos', id);
+    return runTransaction(db, async transaction => {
+      const existente = await transaction.get(ref);
+      if (existente.exists()) return { id, ...existente.data() };
+      const limpos = sanitizar(dados);
+      transaction.set(ref, { ...limpos, criadoEm: serverTimestamp() });
+      return { id, ...limpos };
+    });
+  },
   // — Orçamentos —
   async listarOrcamentos() {
     const q = query(userCol("orcamentos"), orderBy("criadoEm", "desc"));

@@ -1,0 +1,7 @@
+fastapi==0.142.2
+starlette==1.7.0
+uvicorn[standard]==0.54.0
+httpx==0.28.1
+faster-whisper==1.2.1
+numpy==2.4.6
+pyttsx3==2.99
