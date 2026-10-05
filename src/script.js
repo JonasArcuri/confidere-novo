@@ -2409,11 +2409,11 @@ async function salvarOrcamento() {
         if (orcamentoEditandoId) {
             const hist = getHistorico();
             const atual = hist.find(o => o.id === orcamentoEditandoId);
+            if (!atual) throw new Error('Orçamento em edição não encontrado no histórico.');
             if (atual) {
                 const tipoNovo = getTipoDocumento(dados);
                 const revBase = (atual.revisoes || []).length + 1;
-                if (!atual.revisoes) atual.revisoes = [];
-                atual.revisoes.push({ ...atual, revisoes: undefined, savedAt: atual.savedAt });
+                const revisoes = [...(atual.revisoes || []), { ...atual, revisoes: undefined, savedAt: atual.savedAt }];
                 const revLabel = 'REV ' + numeroRomano(revBase);
                 const updated = {
                     ...dados,
@@ -2421,7 +2421,7 @@ async function salvarOrcamento() {
                     numero: atual.numero,
                     savedAt: new Date().toISOString(),
                     revisao: revLabel,
-                    revisoes: atual.revisoes,
+                    revisoes,
                     statusAprovacao: atual.statusAprovacao || (atual.aprovado ? 'aprovado' : 'pendente'),
                     aprovado: !!atual.aprovado || atual.statusAprovacao === 'aprovado',
                     dataAprovacao: atual.dataAprovacao || '',
@@ -2450,11 +2450,14 @@ async function salvarOrcamento() {
             const hist = getHistorico();
             hist.push({ id: newId, ...novoOrc });
             setHistorico(hist);
+            orcamentoEditandoId = newId;
         }
         window.renderizarObras?.();
         mostrarToast(`${getLabelTipoDocumento(dados.tipoDocumento)} salvo com sucesso!`, 'sucesso');
-        orcamentoEditandoId = null;
-        document.getElementById('display-rev').innerHTML = '';
+        const salvo = getHistorico().find(o => o.id === orcamentoEditandoId);
+        document.getElementById('display-rev').innerHTML = salvo?.revisao
+            ? `<div class="orca-rev-badge">${escapeHtml(salvo.revisao)}</div>`
+            : '';
         atualizarBotaoSalvarComoNovo();
         atualizarNumeroDisplay();
     } catch (err) {
