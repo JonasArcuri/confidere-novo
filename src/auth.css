@@ -331,6 +331,8 @@
 .config-menu {
   position: absolute;
   top: calc(100% + 10px);
+  max-height: calc(100dvh - 90px);
+  overflow-y: auto;
   right: 0;
   width: 310px;
   padding: 14px;

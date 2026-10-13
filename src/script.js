@@ -16,6 +16,8 @@ let empresaConfig = {
     empresaContato: '',
     empresaContatoWhatsapp: false,
     empresaGestor: '',
+    empresaResponsavelTecnico: '',
+    empresaCrea: '',
     empresaUrl: ''
 };
 
@@ -280,6 +282,8 @@ function aplicarConfiguracoesEmpresa(perfil = {}) {
         empresaContato: perfil.empresaContato || '',
         empresaContatoWhatsapp: !!perfil.empresaContatoWhatsapp,
         empresaGestor: perfil.empresaGestor || '',
+        empresaResponsavelTecnico: perfil.empresaResponsavelTecnico || '',
+        empresaCrea: perfil.empresaCrea || '',
         empresaUrl: perfil.empresaUrl || ''
     };
     const empresa = document.getElementById('config-empresa');
@@ -287,12 +291,16 @@ function aplicarConfiguracoesEmpresa(perfil = {}) {
     const contato = document.getElementById('config-contato');
     const contatoWhatsapp = document.getElementById('config-contato-whatsapp');
     const gestor = document.getElementById('config-gestor');
+    const responsavelTecnico = document.getElementById('config-responsavel-tecnico');
+    const crea = document.getElementById('config-crea');
     const url = document.getElementById('config-url');
     if (empresa) empresa.value = empresaConfig.empresaNome || '';
     if (local) local.value = empresaConfig.empresaLocal || '';
     if (contato) contato.value = empresaConfig.empresaContato || '';
     if (contatoWhatsapp) contatoWhatsapp.checked = empresaConfig.empresaContatoWhatsapp;
     if (gestor) gestor.value = empresaConfig.empresaGestor || '';
+    if (responsavelTecnico) responsavelTecnico.value = empresaConfig.empresaResponsavelTecnico;
+    if (crea) crea.value = empresaConfig.empresaCrea;
     if (url) url.value = empresaConfig.empresaUrl || '';
     aplicarMarcaEmpresa();
 }
@@ -304,6 +312,8 @@ async function salvarConfiguracoesEmpresa() {
         empresaContato: document.getElementById('config-contato')?.value.trim() || '',
         empresaContatoWhatsapp: !!document.getElementById('config-contato-whatsapp')?.checked,
         empresaGestor: document.getElementById('config-gestor')?.value.trim() || '',
+        empresaResponsavelTecnico: document.getElementById('config-responsavel-tecnico')?.value.trim() || '',
+        empresaCrea: document.getElementById('config-crea')?.value.trim() || '',
         empresaUrl: document.getElementById('config-url')?.value.trim() || ''
     };
 
@@ -3706,14 +3716,22 @@ function gerarPDF(baixar = true) {
         }
     }
 
-    const footerLineY = PH - 20;
-    const footerInfoY = PH - 14;
+    doc.setFont('helvetica', 'normal'); doc.setFontSize(8);
+    const tecnicoTexto = [
+        empresaConfig.empresaResponsavelTecnico || '',
+        empresaConfig.empresaCrea ? `CREA: ${empresaConfig.empresaCrea}` : ''
+    ].filter(Boolean).join(' - ');
+    const tecnicoLinhas = tecnicoTexto ? doc.splitTextToSize(tecnicoTexto, CW) : [];
+    const tecnicoAltura = tecnicoLinhas.length * 4;
+    const footerLineY = PH - 20 - tecnicoAltura;
+    const footerInfoY = PH - 14 - tecnicoAltura;
     const devY = PH - 7;
     if (y > footerLineY - 4) { doc.addPage(); y = 14; }
     doc.setDrawColor(...C_BORDA); doc.setLineWidth(0.3); doc.line(ML, footerLineY, ML + CW, footerLineY);
     doc.setFont('helvetica', 'normal'); doc.setFontSize(8); doc.setTextColor(...C_CINZA);
     _pdfTextoEmpresaComLink(doc, empresaConfig.empresaNome || 'Empresa', ML, footerInfoY, {});
     doc.text(isCobranca ? `Mes referencia: ${validFmt}` : `Orcamento valido ate ${validFmt}`, ML + CW, footerInfoY, { align: 'right' });
+    tecnicoLinhas.forEach((linha, indice) => doc.text(linha, ML, footerInfoY + 4 * (indice + 1)));
     const devPrefix = 'Desenvolvido por ';
     const devLink = 'Sanoj Sistemas';
     const devX = ML + CW / 2 - (doc.getTextWidth(devPrefix + devLink) / 2);

@@ -307,6 +307,8 @@ const DB = {
       empresaContato: config.empresaContato || '',
       empresaContatoWhatsapp: !!config.empresaContatoWhatsapp,
       empresaGestor: config.empresaGestor || '',
+      empresaResponsavelTecnico: config.empresaResponsavelTecnico || '',
+      empresaCrea: config.empresaCrea || '',
       empresaUrl: config.empresaUrl || ''
     }, { merge: true });
   },
