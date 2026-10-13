@@ -20,6 +20,7 @@ let empresaConfig = {
     empresaCrea: '',
     empresaUrl: ''
 };
+let valoresFinanceirosInicioVisiveis = false;
 
 const MASTER_ADMIN_EMAIL = 'sanojsistemas@gmail.com';
 const GESTAO_SUBMODULOS_IDS = [
@@ -355,6 +356,15 @@ function mesAtualInicio() {
     return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0');
 }
 
+function valorFinanceiroInicio(valor) {
+    return valoresFinanceirosInicioVisiveis ? moedaInicio(valor) : '••••••';
+}
+
+function alternarValoresFinanceirosInicio() {
+    valoresFinanceirosInicioVisiveis = !valoresFinanceirosInicioVisiveis;
+    renderizarInicio();
+}
+
 function renderizarInicio() {
     if (usuarioMasterAtual) {
         renderizarInicioAdminMaster();
@@ -388,10 +398,12 @@ function renderizarInicio() {
             { label: 'Orçamentos', valor: orcamentos.length, destino: 'historico-orcamentos' },
             { label: 'Obras em execução', valor: obras.filter(o => o.status !== 'finalizada').length, destino: 'obras' },
             { label: 'Funcionários ativos', valor: funcionariosAtivos.length, destino: 'funcionarios' },
-            { label: 'Entradas do mês', valor: moedaInicio(entradasMes) }
+            { label: 'Entradas do mês', valor: valorFinanceiroInicio(entradasMes), financeiro: true }
         ];
         kpis.innerHTML = dados.map(item => {
-            const conteudo = '<span>' + escapeHtml(String(item.label)) + '</span><strong>' + escapeHtml(String(item.valor)) + '</strong>';
+            const acaoOlho = valoresFinanceirosInicioVisiveis ? 'Ocultar valores financeiros' : 'Mostrar valores financeiros';
+            const olho = item.financeiro ? '<button type="button" class="inicio-olho" onclick="alternarValoresFinanceirosInicio()" aria-label="' + acaoOlho + '" title="' + acaoOlho + '" aria-pressed="' + valoresFinanceirosInicioVisiveis + '"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12Z"/><circle cx="12" cy="12" r="3"/>' + (valoresFinanceirosInicioVisiveis ? '' : '<path d="m3 3 18 18"/>') + '</svg></button>' : '';
+            const conteudo = '<span>' + escapeHtml(String(item.label)) + '</span>' + olho + '<strong>' + escapeHtml(String(item.valor)) + '</strong>';
             return item.destino
                 ? '<button type="button" class="inicio-kpi inicio-kpi-btn" onclick="navegarKpiInicio(\'' + escapeAttr(item.destino) + '\')" aria-label="Abrir ' + escapeAttr(String(item.label)) + '">' + conteudo + '</button>'
                 : '<div class="inicio-kpi">' + conteudo + '</div>';
@@ -407,9 +419,9 @@ function renderizarInicio() {
 
     const finEl = document.getElementById('inicio-financeiro');
     if (finEl) {
-        finEl.innerHTML = '<div class="inicio-fin-linha positivo"><span>Entradas do mês</span><strong>' + moedaInicio(entradasMes) + '</strong></div>' +
-            '<div class="inicio-fin-linha negativo"><span>Insumos / despesas</span><strong>' + moedaInicio(insumosMes) + '</strong></div>' +
-            '<div class="inicio-fin-linha ' + (saldoMes >= 0 ? 'positivo' : 'negativo') + '"><span>Saldo operacional</span><strong>' + moedaInicio(saldoMes) + '</strong></div>';
+        finEl.innerHTML = '<div class="inicio-fin-linha positivo"><span>Entradas do mês</span><strong>' + valorFinanceiroInicio(entradasMes) + '</strong></div>' +
+            '<div class="inicio-fin-linha negativo"><span>Insumos / despesas</span><strong>' + valorFinanceiroInicio(insumosMes) + '</strong></div>' +
+            '<div class="inicio-fin-linha ' + (saldoMes >= 0 ? 'positivo' : 'negativo') + '"><span>Saldo operacional</span><strong>' + valorFinanceiroInicio(saldoMes) + '</strong></div>';
     }
 }
 
@@ -4208,7 +4220,7 @@ async function salvarPermissoesAdmin(userId) {
 
 // Exportar funções para uso global (onclick no HTML)
 Object.assign(window, {
-    mudarAba, renderizarInicio, navegarKpiInicio, aplicarPermissoesUsuario, renderizarAdminMaster, salvarPermissoesAdmin,
+    mudarAba, renderizarInicio, alternarValoresFinanceirosInicio, navegarKpiInicio, aplicarPermissoesUsuario, renderizarAdminMaster, salvarPermissoesAdmin,
     renderizarAcessos, criarSubusuario, salvarSubusuario,
     subModuloGestaoPermitido, primeiraSubAbaGestaoPermitida, aplicarPermissoesSubAbasGestao,
     adicionarLinha, removerLinha, calcularLinha, calcularTotais,

@@ -4188,9 +4188,31 @@ table {
 }
 
 .inicio-kpi {
+  position: relative;
   padding: 1.15rem;
   border-left: 4px solid var(--azul-claro);
 }
+
+.inicio-olho {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  padding: 7px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--azul-escuro, #1a3a5c);
+  cursor: pointer;
+}
+
+.inicio-olho:hover { background: var(--azul-fade); }
+.inicio-olho:focus-visible { outline: 2px solid var(--azul-meio); outline-offset: 2px; }
+.inicio-olho svg { width: 22px; height: 22px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+.inicio-kpi:has(.inicio-olho) > span { padding-right: 36px; }
 
 .inicio-kpi-btn {
   width: 100%;
