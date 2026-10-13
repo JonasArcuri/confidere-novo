@@ -3325,6 +3325,7 @@ function gerarPDF(baixar = true) {
     const docTitulo = getLabelTipoDocumento(dados.tipoDocumento).toUpperCase();
     const validFmt = formatarReferenciaDocumento(dados.validade, isCobranca);
     const revisaoPdf = obterRevisaoAtualPdf();
+    const mensagemWhatsappPdf = `Olá! Gostaria de falar sobre ${isCobranca ? 'o relatório de cobrança' : 'o orçamento'} ${numDisplay.trim()}${revisaoPdf ? ` (${revisaoPdf})` : ''} da empresa ${empresaConfig.empresaNome || 'Empresa'}, para o cliente ${dados.cliente}.`;
 
     const PW = isLandscape ? 297 : 210;
     const PH = isLandscape ? 210 : 297;
@@ -3343,10 +3344,10 @@ function gerarPDF(baixar = true) {
         try {
             const fmt = logoBase64.startsWith('data:image/png') ? 'PNG' : logoBase64.startsWith('data:image/svg') ? 'SVG' : 'JPEG';
             doc.addImage(logoBase64, fmt === 'SVG' ? 'PNG' : fmt, ML, 4, 38, 16, undefined, 'FAST');
-            _pdfMarcaDetalhes(doc, ML, 24, 6.5, [200, 210, 225]);
-        } catch { _pdfLogoTexto(doc, ML, C_BRANCO, C_AZUL_CLA); }
+            _pdfMarcaDetalhes(doc, ML, 24, 6.5, [200, 210, 225], mensagemWhatsappPdf);
+        } catch { _pdfLogoTexto(doc, ML, C_BRANCO, C_AZUL_CLA, mensagemWhatsappPdf); }
     } else {
-        _pdfLogoTexto(doc, ML, C_BRANCO, C_AZUL_CLA);
+        _pdfLogoTexto(doc, ML, C_BRANCO, C_AZUL_CLA, mensagemWhatsappPdf);
     }
 
     doc.setFont('helvetica', 'bold'); doc.setFontSize(10); doc.setTextColor(...C_AZUL_CLA);
@@ -3749,11 +3750,11 @@ function gerarPDF(baixar = true) {
     return { doc, nomeArq };
 }
 
-function _pdfLogoTexto(doc, ML, C_BRANCO, C_AZUL_CLA) {
+function _pdfLogoTexto(doc, ML, C_BRANCO, C_AZUL_CLA, mensagemWhatsapp = '') {
     const nome = empresaConfig.empresaNome || 'Empresa';
     doc.setFont('helvetica', 'bold'); doc.setFontSize(16); doc.setTextColor(...C_BRANCO);
     _pdfTextoEmpresaComLink(doc, nome, ML, 15, {});
-    _pdfMarcaDetalhes(doc, ML, 21, 7, [200, 210, 225]);
+    _pdfMarcaDetalhes(doc, ML, 21, 7, [200, 210, 225], mensagemWhatsapp);
 }
 
 function _pdfTextoEmpresaComLink(doc, texto, x, y, opcoes = {}) {
@@ -3792,10 +3793,13 @@ function criarIconeWhatsappPdfDataUrl() {
     return whatsappPdfIconDataUrl;
 }
 
-function _pdfMarcaDetalhes(doc, x, y, fontSize, textColor) {
+function _pdfMarcaDetalhes(doc, x, y, fontSize, textColor, mensagemWhatsapp = '') {
     const contato = empresaConfig.empresaContato || '';
     const local = empresaConfig.empresaLocal || '';
-    const whatsappUrl = /^[+\d\s().-]+$/.test(contato.trim()) ? getWhatsappEmpresaUrl(contato) : '';
+    const whatsappBaseUrl = /^[+\d\s().-]+$/.test(contato.trim()) ? getWhatsappEmpresaUrl(contato) : '';
+    const whatsappUrl = whatsappBaseUrl && mensagemWhatsapp
+        ? `${whatsappBaseUrl}?text=${encodeURIComponent(mensagemWhatsapp)}`
+        : whatsappBaseUrl;
     if (!contato && !local) return;
 
     let cursor = x;
