@@ -3795,6 +3795,7 @@ function criarIconeWhatsappPdfDataUrl() {
 function _pdfMarcaDetalhes(doc, x, y, fontSize, textColor) {
     const contato = empresaConfig.empresaContato || '';
     const local = empresaConfig.empresaLocal || '';
+    const whatsappUrl = /^[+\d\s().-]+$/.test(contato.trim()) ? getWhatsappEmpresaUrl(contato) : '';
     if (!contato && !local) return;
 
     let cursor = x;
@@ -3812,13 +3813,18 @@ function _pdfMarcaDetalhes(doc, x, y, fontSize, textColor) {
                 doc.setFillColor(37, 211, 102);
                 doc.circle(cursor + iconSize / 2, iconY + iconSize / 2, iconSize / 2, 'F');
             }
+            if (whatsappUrl) doc.link(cursor, iconY, iconSize, iconSize, { url: whatsappUrl });
             cursor += iconSize + 1.2;
             doc.setFont('helvetica', 'normal');
             doc.setFontSize(fontSize);
             doc.setTextColor(...textColor);
         }
         const contatoTxt = contato.toUpperCase();
-        doc.text(contatoTxt, cursor, y);
+        if (whatsappUrl) {
+            doc.textWithLink(contatoTxt, cursor, y, { url: whatsappUrl });
+        } else {
+            doc.text(contatoTxt, cursor, y);
+        }
         cursor += doc.getTextWidth(contatoTxt);
     }
 
