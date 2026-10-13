@@ -2695,7 +2695,7 @@ table {
   color: #fff;
 }
 
-.tooltip-manual-save::before {
+.tooltip-wrap.tooltip-manual-save::before {
   left: 50%;
   right: auto;
   top: auto;
@@ -2708,7 +2708,7 @@ table {
   transform: translate(-50%, -4px);
 }
 
-.tooltip-manual-save::after {
+.tooltip-wrap.tooltip-manual-save::after {
   left: 50%;
   right: auto;
   top: auto;
@@ -2718,10 +2718,10 @@ table {
   transform: translate(-50%, -4px);
 }
 
-.tooltip-manual-save:hover::before,
-.tooltip-manual-save:hover::after,
-.tooltip-manual-save:focus-within::before,
-.tooltip-manual-save:focus-within::after {
+.tooltip-wrap.tooltip-manual-save:hover::before,
+.tooltip-wrap.tooltip-manual-save:hover::after,
+.tooltip-wrap.tooltip-manual-save:focus-within::before,
+.tooltip-wrap.tooltip-manual-save:focus-within::after {
   transform: translate(-50%, 0);
 }
 
