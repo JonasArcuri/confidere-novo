@@ -271,15 +271,48 @@ function atualizarRotulosColunasOrcamento() {
         const el = document.getElementById(id);
         if (el) el.textContent = valor;
     };
-    definir('th-custo-material', empresaConfig.colunaCustoMaterial || 'Custo Mat. m²');
-    definir('th-custo-mao-obra', empresaConfig.colunaCustoMaoObra || 'Mão Obra m²');
-    const thMaterial = document.querySelector('#tabela-itens thead .col-material');
-    if (thMaterial) thMaterial.textContent = empresaConfig.colunaMaterial || 'Material';
+    definir('rotulo-coluna-material', empresaConfig.colunaMaterial || 'Material');
+    definir('rotulo-coluna-custo-material', empresaConfig.colunaCustoMaterial || 'Mat./m²');
+    definir('rotulo-coluna-custo-mao-obra', empresaConfig.colunaCustoMaoObra || 'M.O./m²');
     document.querySelectorAll('.linha-cabecalho').forEach((linha) => {
         const celulas = linha.querySelectorAll('.cab-col-label');
         [empresaConfig.colunaMaterial || 'Material', empresaConfig.colunaCustoMaterial || 'Mat./m²', empresaConfig.colunaCustoMaoObra || 'M.O./m²']
             .forEach((rotulo, i) => { if (celulas[i + 1]) celulas[i + 1].textContent = rotulo; });
     });
+}
+
+async function salvarRotuloColuna(elemento, chave) {
+    const padroes = {
+        colunaMaterial: 'Material',
+        colunaCustoMaterial: 'Mat./m²',
+        colunaCustoMaoObra: 'M.O./m²'
+    };
+    if (!Object.hasOwn(padroes, chave)) return;
+    const anterior = empresaConfig[chave] || padroes[chave];
+    const valor = String(elemento?.textContent || '').trim().slice(0, 40) || padroes[chave];
+    empresaConfig[chave] = valor;
+    const campos = {
+        colunaMaterial: 'config-coluna-material',
+        colunaCustoMaterial: 'config-coluna-material-m2',
+        colunaCustoMaoObra: 'config-coluna-mao-obra-m2'
+    };
+    const campo = document.getElementById(campos[chave]);
+    if (campo) campo.value = valor;
+    atualizarRotulosColunasOrcamento();
+    try {
+        await DB.salvarRotulosColunasOrcamento({
+            colunaMaterial: empresaConfig.colunaMaterial,
+            colunaCustoMaterial: empresaConfig.colunaCustoMaterial,
+            colunaCustoMaoObra: empresaConfig.colunaCustoMaoObra
+        });
+        mostrarToast('Nome da coluna salvo.', 'sucesso');
+    } catch (err) {
+        console.error('Erro ao salvar nome da coluna:', err);
+        empresaConfig[chave] = anterior;
+        if (campo) campo.value = anterior;
+        atualizarRotulosColunasOrcamento();
+        mostrarToast('Erro ao salvar o nome da coluna.', 'erro');
+    }
 }
 
 function aplicarMarcaEmpresa() {
@@ -4280,7 +4313,7 @@ Object.assign(window, {
     toggleMenuOpcao, adicionarOpcaoSelecionada,
     toggleTipoDocumento, aplicarTipoDocumento,
     carregarLogo, carregarLogoSalva, aplicarLogoNaTela, removerLogo,
-    aplicarConfiguracoesEmpresa, salvarConfiguracoesEmpresa,
+    aplicarConfiguracoesEmpresa, salvarConfiguracoesEmpresa, salvarRotuloColuna,
     gerarPDF, abrirPreviewPDF, atualizarPreviewPDF, baixarPDFPreview, fecharPreviewPDF,
     setPdfOrientacao, formatarMoeda, mostrarToast, abrirModal, fecharModal,
     getHistorico, setHistorico, proximoNumero, atualizarNumeroDisplay,

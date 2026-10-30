@@ -301,9 +301,9 @@
                   <tr>
                     <th class="col-desc">Descrição do Serviço</th>
                     <th class="col-area">Área</th>
-                    <th class="col-material">Material</th>
-                    <th class="col-qtd" id="th-custo-material">Custo Mat. m²</th>
-                    <th class="col-unit" id="th-custo-mao-obra">Mão Obra m²</th>
+                    <th class="col-material"><span id="rotulo-coluna-material" class="rotulo-coluna-editavel" contenteditable="true" role="textbox" aria-label="Editar nome da coluna Material" title="Clique para editar" onkeydown="if(event.key==='Enter'){event.preventDefault();this.blur()}" onblur="salvarRotuloColuna(this,'colunaMaterial')">Material</span></th>
+                    <th class="col-qtd"><span id="rotulo-coluna-custo-material" class="rotulo-coluna-editavel" contenteditable="true" role="textbox" aria-label="Editar nome da coluna Material por metro quadrado" title="Clique para editar" onkeydown="if(event.key==='Enter'){event.preventDefault();this.blur()}" onblur="salvarRotuloColuna(this,'colunaCustoMaterial')">Custo Mat. m²</span></th>
+                    <th class="col-unit"><span id="rotulo-coluna-custo-mao-obra" class="rotulo-coluna-editavel" contenteditable="true" role="textbox" aria-label="Editar nome da coluna Mão de Obra por metro quadrado" title="Clique para editar" onkeydown="if(event.key==='Enter'){event.preventDefault();this.blur()}" onblur="salvarRotuloColuna(this,'colunaCustoMaoObra')">Mão Obra m²</span></th>
                     <th class="col-subtmat">Total Material</th>
                     <th class="col-subtmao">Total M.O.</th>
                     <th class="col-total">Total (R$)</th>

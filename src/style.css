@@ -369,6 +369,17 @@ table thead th {
   white-space: nowrap;
 }
 
+.rotulo-coluna-editavel {
+  cursor: text;
+  border-bottom: 1px dashed transparent;
+  outline: none;
+}
+
+.rotulo-coluna-editavel:hover,
+.rotulo-coluna-editavel:focus {
+  border-bottom-color: currentColor;
+}
+
 table thead th:first-child {
   border-radius: 6px 0 0 6px;
 }

@@ -316,6 +316,14 @@ const DB = {
     }, { merge: true });
   },
 
+  async salvarRotulosColunasOrcamento(rotulos) {
+    await setDoc(doc(db, "users", getDataOwnerUid()), {
+      colunaMaterial: rotulos.colunaMaterial || 'Material',
+      colunaCustoMaterial: rotulos.colunaCustoMaterial || 'Mat./m²',
+      colunaCustoMaoObra: rotulos.colunaCustoMaoObra || 'M.O./m²'
+    }, { merge: true });
+  },
+
   // Leads captados pelo formulario publico de cada empresa
   async carregarCaptacaoLeads(userId = getDataOwnerUid()) {
     const snap = await getDoc(publicLeadFormDoc(userId));
