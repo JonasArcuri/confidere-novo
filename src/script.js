@@ -18,7 +18,10 @@ let empresaConfig = {
     empresaGestor: '',
     empresaResponsavelTecnico: '',
     empresaCrea: '',
-    empresaUrl: ''
+    empresaUrl: '',
+    colunaMaterial: 'Material',
+    colunaCustoMaterial: 'Mat./m²',
+    colunaCustoMaoObra: 'M.O./m²'
 };
 let valoresFinanceirosInicioVisiveis = false;
 
@@ -263,6 +266,22 @@ function normalizarUrlEmpresa(url = '') {
     return /^https?:\/\//i.test(limpa) ? limpa : `https://${limpa}`;
 }
 
+function atualizarRotulosColunasOrcamento() {
+    const definir = (id, valor) => {
+        const el = document.getElementById(id);
+        if (el) el.textContent = valor;
+    };
+    definir('th-custo-material', empresaConfig.colunaCustoMaterial || 'Custo Mat. m²');
+    definir('th-custo-mao-obra', empresaConfig.colunaCustoMaoObra || 'Mão Obra m²');
+    const thMaterial = document.querySelector('#tabela-itens thead .col-material');
+    if (thMaterial) thMaterial.textContent = empresaConfig.colunaMaterial || 'Material';
+    document.querySelectorAll('.linha-cabecalho').forEach((linha) => {
+        const celulas = linha.querySelectorAll('.cab-col-label');
+        [empresaConfig.colunaMaterial || 'Material', empresaConfig.colunaCustoMaterial || 'Mat./m²', empresaConfig.colunaCustoMaoObra || 'M.O./m²']
+            .forEach((rotulo, i) => { if (celulas[i + 1]) celulas[i + 1].textContent = rotulo; });
+    });
+}
+
 function aplicarMarcaEmpresa() {
     const nome = empresaConfig.empresaNome || 'Empresa';
     const navTexto = document.getElementById('nav-logo-texto');
@@ -285,7 +304,10 @@ function aplicarConfiguracoesEmpresa(perfil = {}) {
         empresaGestor: perfil.empresaGestor || '',
         empresaResponsavelTecnico: perfil.empresaResponsavelTecnico || '',
         empresaCrea: perfil.empresaCrea || '',
-        empresaUrl: perfil.empresaUrl || ''
+        empresaUrl: perfil.empresaUrl || '',
+        colunaMaterial: perfil.colunaMaterial || 'Material',
+        colunaCustoMaterial: perfil.colunaCustoMaterial || 'Mat./m²',
+        colunaCustoMaoObra: perfil.colunaCustoMaoObra || 'M.O./m²'
     };
     const empresa = document.getElementById('config-empresa');
     const local = document.getElementById('config-local');
@@ -295,6 +317,9 @@ function aplicarConfiguracoesEmpresa(perfil = {}) {
     const responsavelTecnico = document.getElementById('config-responsavel-tecnico');
     const crea = document.getElementById('config-crea');
     const url = document.getElementById('config-url');
+    const colunaMaterial = document.getElementById('config-coluna-material');
+    const colunaCustoMaterial = document.getElementById('config-coluna-material-m2');
+    const colunaCustoMaoObra = document.getElementById('config-coluna-mao-obra-m2');
     if (empresa) empresa.value = empresaConfig.empresaNome || '';
     if (local) local.value = empresaConfig.empresaLocal || '';
     if (contato) contato.value = empresaConfig.empresaContato || '';
@@ -303,6 +328,10 @@ function aplicarConfiguracoesEmpresa(perfil = {}) {
     if (responsavelTecnico) responsavelTecnico.value = empresaConfig.empresaResponsavelTecnico;
     if (crea) crea.value = empresaConfig.empresaCrea;
     if (url) url.value = empresaConfig.empresaUrl || '';
+    if (colunaMaterial) colunaMaterial.value = empresaConfig.colunaMaterial;
+    if (colunaCustoMaterial) colunaCustoMaterial.value = empresaConfig.colunaCustoMaterial;
+    if (colunaCustoMaoObra) colunaCustoMaoObra.value = empresaConfig.colunaCustoMaoObra;
+    atualizarRotulosColunasOrcamento();
     aplicarMarcaEmpresa();
 }
 
@@ -315,7 +344,10 @@ async function salvarConfiguracoesEmpresa() {
         empresaGestor: document.getElementById('config-gestor')?.value.trim() || '',
         empresaResponsavelTecnico: document.getElementById('config-responsavel-tecnico')?.value.trim() || '',
         empresaCrea: document.getElementById('config-crea')?.value.trim() || '',
-        empresaUrl: document.getElementById('config-url')?.value.trim() || ''
+        empresaUrl: document.getElementById('config-url')?.value.trim() || '',
+        colunaMaterial: document.getElementById('config-coluna-material')?.value.trim() || 'Material',
+        colunaCustoMaterial: document.getElementById('config-coluna-material-m2')?.value.trim() || 'Mat./m²',
+        colunaCustoMaoObra: document.getElementById('config-coluna-mao-obra-m2')?.value.trim() || 'M.O./m²'
     };
 
     try {
@@ -1247,9 +1279,9 @@ function adicionarCabecalho(texto = '') {
   </div>
 </td>
 <td class="cab-col-label">&Aacute;rea</td>
-<td class="cab-col-label">Material</td>
-<td class="cab-col-label">Custo Mat. m²</td>
-<td class="cab-col-label">Mão Obra m²</td>
+<td class="cab-col-label">${escapeHtml(empresaConfig.colunaMaterial || 'Material')}</td>
+<td class="cab-col-label">${escapeHtml(empresaConfig.colunaCustoMaterial || 'Mat./m²')}</td>
+<td class="cab-col-label">${escapeHtml(empresaConfig.colunaCustoMaoObra || 'M.O./m²')}</td>
 <td class="cab-col-label">Total Material</td>
 <td class="cab-col-label">Total M.O.</td>
 <td class="cab-col-label">Total (R$)</td>
@@ -3389,14 +3421,18 @@ function gerarPDF(baixar = true) {
     if (dados.obra) { doc.text(dados.obra, ML, y); y += 5; }
     doc.setDrawColor(...C_BORDA); doc.setLineWidth(0.3); doc.line(ML, y, ML + CW, y); y += 5;
 
+    const totais = calcularTotais();
+    const exibirColunasMaterialPdf = totais.subtotalMaterial > 0;
+    const exibirColunasMaoObraPdf = totais.subtotalMaoObra > 0;
+
     // Tabela — larguras responsivas por orientação
     // Paisagem tem +87mm de largura útil, distribuímos nas colunas de texto
     const COL_UNID  = isLandscape ? 23 : 18;
-    const COL_CMAT  = isLandscape ? 23 : 19;
-    const COL_CMO   = isLandscape ? 23 : 19;
-    const COL_TMAT  = isLandscape ? 30 : 27;
-    const COL_TMAO  = isLandscape ? 30 : 27;
-    const COL_FIXED = COL_UNID + COL_CMAT + COL_CMO + COL_TMAT + COL_TMAO; // colunas numéricas fixas
+    const COL_CMAT  = exibirColunasMaterialPdf ? (isLandscape ? 23 : 19) : 0;
+    const COL_CMO   = exibirColunasMaoObraPdf ? (isLandscape ? 23 : 19) : 0;
+    const COL_TMAT  = exibirColunasMaterialPdf ? (isLandscape ? 30 : 27) : 0;
+    const COL_TMAO  = exibirColunasMaoObraPdf ? (isLandscape ? 30 : 27) : 0;
+    const COL_FIXED = COL_UNID + COL_CMAT + COL_CMO + COL_TMAT + COL_TMAO;
     const COL_FLEX  = CW - COL_FIXED; // espaço restante para desc + material
     const COL_DESC  = Math.round(COL_FLEX * 0.45);
     const COL_MAT   = COL_FLEX - COL_DESC;
@@ -3436,11 +3472,11 @@ function gerarPDF(baixar = true) {
     const cols = [
         { label: 'Descrição do Serviço', w: COL_DESC, align: 'left'   },
         { label: 'Área',                 w: COL_UNID, align: 'center' },
-        { label: 'Material',             w: COL_MAT,  align: 'left'   },
-        { label: 'Mat./m²',              w: COL_CMAT, align: 'right'  },
-        { label: 'M.O./m²',              w: COL_CMO,  align: 'right'  },
-        { label: 'Total Mat.',           w: COL_TMAT, align: 'right'  },
-        { label: 'Total M.O.',           w: COL_TMAO, align: 'right'  },
+        { label: empresaConfig.colunaMaterial || 'Material', w: COL_MAT,  align: 'left'   },
+        ...(exibirColunasMaterialPdf ? [{ label: empresaConfig.colunaCustoMaterial || 'Mat./m²', w: COL_CMAT, align: 'right' }] : []),
+        ...(exibirColunasMaoObraPdf ? [{ label: empresaConfig.colunaCustoMaoObra || 'M.O./m²', w: COL_CMO, align: 'right' }] : []),
+        ...(exibirColunasMaterialPdf ? [{ label: 'Total Mat.', w: COL_TMAT, align: 'right' }] : []),
+        ...(exibirColunasMaoObraPdf ? [{ label: 'Total M.O.', w: COL_TMAO, align: 'right' }] : [])
     ];
 
     // ── Cabeçalho ──
@@ -3570,12 +3606,20 @@ function gerarPDF(baixar = true) {
 
             // VALORES NUMÉRICOS
             doc.setFont('helvetica', 'normal'); doc.setFontSize(8); doc.setTextColor(...C_TEXTO);
-            textRightFit(doc, formatarMoeda(l.custoMaterial || 0), ccx + COL_CMAT - 2, midY, COL_CMAT - 4, { maxFonte: 8, minFonte: 6.4 }); ccx += COL_CMAT;
-            textRightFit(doc, formatarMoeda(l.custoMao      || 0), ccx + COL_CMO  - 2, midY, COL_CMO  - 4, { maxFonte: 8, minFonte: 6.4 }); ccx += COL_CMO;
+            if (exibirColunasMaterialPdf) {
+                textRightFit(doc, formatarMoeda(l.custoMaterial || 0), ccx + COL_CMAT - 2, midY, COL_CMAT - 4, { maxFonte: 8, minFonte: 6.4 }); ccx += COL_CMAT;
+            }
+            if (exibirColunasMaoObraPdf) {
+                textRightFit(doc, formatarMoeda(l.custoMao || 0), ccx + COL_CMO - 2, midY, COL_CMO - 4, { maxFonte: 8, minFonte: 6.4 }); ccx += COL_CMO;
+            }
 
             doc.setFont('helvetica', 'bold'); doc.setTextColor(...C_AZUL_ESC);
-            textRightFit(doc, formatarMoeda(l.subtotalMaterial), ccx + COL_TMAT - 2, midY, COL_TMAT - 4, { maxFonte: 7.8, minFonte: 6.2 }); ccx += COL_TMAT;
-            textRightFit(doc, formatarMoeda(l.subtotalMao),      ccx + COL_TMAO - 2, midY, COL_TMAO - 4, { maxFonte: 7.8, minFonte: 6.2 });
+            if (exibirColunasMaterialPdf) {
+                textRightFit(doc, formatarMoeda(l.subtotalMaterial), ccx + COL_TMAT - 2, midY, COL_TMAT - 4, { maxFonte: 7.8, minFonte: 6.2 }); ccx += COL_TMAT;
+            }
+            if (exibirColunasMaoObraPdf) {
+                textRightFit(doc, formatarMoeda(l.subtotalMao), ccx + COL_TMAO - 2, midY, COL_TMAO - 4, { maxFonte: 7.8, minFonte: 6.2 });
+            }
 
             doc.setFont('helvetica', 'normal'); doc.setTextColor(...C_TEXTO);
             y += rowH;
@@ -3584,7 +3628,6 @@ function gerarPDF(baixar = true) {
     }
 
     doc.setDrawColor(...C_AZUL_ESC); doc.setLineWidth(0.5); doc.line(ML, y, ML + CW, y); y += 1;
-    const totais = calcularTotais();
     const totalGeral = totais.subtotalMaterial + totais.subtotalMaoObra;
     const descontoPdf = normalizarDescontoOrcamento(dados);
     const totaisDescontoPdf = calcularDescontoValores(totais.subtotalMaterial, totais.subtotalMaoObra, descontoPdf);
@@ -3604,21 +3647,21 @@ function gerarPDF(baixar = true) {
         y += 6;
     };
 
-    renderLinhaTotalPdf('Subtotal Material', totais.subtotalMaterial);
-    renderLinhaTotalPdf('Subtotal Mão de Obra', totais.subtotalMaoObra);
+    if (exibirColunasMaterialPdf) renderLinhaTotalPdf('Subtotal Material', totais.subtotalMaterial);
+    if (exibirColunasMaoObraPdf) renderLinhaTotalPdf('Subtotal Mão de Obra', totais.subtotalMaoObra);
     renderLinhaTotalPdf('Total geral', totalGeral, { bold: true });
     y += 2;
 
     if (temDescontoPdf) {
-        if (totaisDescontoPdf.descontoMaterialValor > 0) {
+        if (exibirColunasMaterialPdf && totaisDescontoPdf.descontoMaterialValor > 0) {
             renderLinhaTotalPdf(`Desconto Material (${formatarPercentualDesconto(totaisDescontoPdf.material)}%)`, totaisDescontoPdf.descontoMaterialValor, { cor: C_LARANJA, negativo: true });
         }
-        if (totaisDescontoPdf.descontoMaoValor > 0) {
+        if (exibirColunasMaoObraPdf && totaisDescontoPdf.descontoMaoValor > 0) {
             renderLinhaTotalPdf(`Desconto Mão de Obra (${formatarPercentualDesconto(totaisDescontoPdf.maoObra)}%)`, totaisDescontoPdf.descontoMaoValor, { cor: C_LARANJA, negativo: true });
         }
         y += 2;
-        renderLinhaTotalPdf('Subtotal Material com desconto', subtotalMaterialFinal);
-        renderLinhaTotalPdf('Subtotal Mão de Obra com desconto', subtotalMaoFinal);
+        if (exibirColunasMaterialPdf) renderLinhaTotalPdf('Subtotal Material com desconto', subtotalMaterialFinal);
+        if (exibirColunasMaoObraPdf) renderLinhaTotalPdf('Subtotal Mão de Obra com desconto', subtotalMaoFinal);
         y += 2;
     }
 
@@ -3643,11 +3686,11 @@ function gerarPDF(baixar = true) {
         doc.text(`CÁLCULO SEPARADO: ${(opcao.titulo || 'OPÇÃO').toUpperCase()}`, ML + 6, y + 6);
 
         doc.setFont('helvetica', 'normal'); doc.setFontSize(8.5); doc.setTextColor(...C_CINZA);
-        doc.text('Subtotal Material', ML + CW - 46, y + 13, { align: 'right' });
-        doc.text('Subtotal Mão de Obra', ML + CW - 46, y + 19, { align: 'right' });
+        if ((Number(opcao.subtotalMaterial) || 0) > 0) doc.text('Subtotal Material', ML + CW - 46, y + 13, { align: 'right' });
+        if ((Number(opcao.subtotalMaoObra) || 0) > 0) doc.text('Subtotal Mão de Obra', ML + CW - 46, y + 19, { align: 'right' });
         doc.setFont('helvetica', 'bold'); doc.setTextColor(...C_TEXTO);
-        doc.text(formatarMoeda(opcao.subtotalMaterial || 0), ML + CW - 4, y + 13, { align: 'right' });
-        doc.text(formatarMoeda(opcao.subtotalMaoObra || 0), ML + CW - 4, y + 19, { align: 'right' });
+        if ((Number(opcao.subtotalMaterial) || 0) > 0) doc.text(formatarMoeda(opcao.subtotalMaterial), ML + CW - 4, y + 13, { align: 'right' });
+        if ((Number(opcao.subtotalMaoObra) || 0) > 0) doc.text(formatarMoeda(opcao.subtotalMaoObra), ML + CW - 4, y + 19, { align: 'right' });
         doc.setFontSize(9.5); doc.setTextColor(...C_LARANJA);
         doc.text('TOTAL DA OPÇÃO', ML + CW - 46, y + 26, { align: 'right' });
         doc.text(formatarMoeda(opcao.totalGeral || 0), ML + CW - 4, y + 26, { align: 'right' });

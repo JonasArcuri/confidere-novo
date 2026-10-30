@@ -151,6 +151,12 @@
               <span>Link/URL</span>
               <input type="url" id="config-url" placeholder="Site, Instagram ou link público">
             </label>
+            <div class="config-campo">
+              <span>Colunas do orçamento</span>
+              <input type="text" id="config-coluna-material" aria-label="Nome da coluna Material" placeholder="Material" maxlength="40">
+              <input type="text" id="config-coluna-material-m2" aria-label="Nome da coluna Material por metro quadrado" placeholder="Custo Mat. m²" maxlength="40">
+              <input type="text" id="config-coluna-mao-obra-m2" aria-label="Nome da coluna Mão de Obra por metro quadrado" placeholder="Mão Obra m²" maxlength="40">
+            </div>
             <div class="config-acoes">
               <label class="btn-config-logo" for="input-logo">Logo</label>
               <button class="btn-config-salvar" type="button" onclick="salvarConfiguracoesEmpresa()">Salvar</button>
@@ -296,8 +302,8 @@
                     <th class="col-desc">Descrição do Serviço</th>
                     <th class="col-area">Área</th>
                     <th class="col-material">Material</th>
-                    <th class="col-qtd">Custo Mat. m²</th>
-                    <th class="col-unit">Mão Obra m²</th>
+                    <th class="col-qtd" id="th-custo-material">Custo Mat. m²</th>
+                    <th class="col-unit" id="th-custo-mao-obra">Mão Obra m²</th>
                     <th class="col-subtmat">Total Material</th>
                     <th class="col-subtmao">Total M.O.</th>
                     <th class="col-total">Total (R$)</th>

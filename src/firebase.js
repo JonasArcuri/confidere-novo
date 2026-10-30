@@ -309,7 +309,10 @@ const DB = {
       empresaGestor: config.empresaGestor || '',
       empresaResponsavelTecnico: config.empresaResponsavelTecnico || '',
       empresaCrea: config.empresaCrea || '',
-      empresaUrl: config.empresaUrl || ''
+      empresaUrl: config.empresaUrl || '',
+      colunaMaterial: config.colunaMaterial || 'Material',
+      colunaCustoMaterial: config.colunaCustoMaterial || 'Mat./m²',
+      colunaCustoMaoObra: config.colunaCustoMaoObra || 'M.O./m²'
     }, { merge: true });
   },
 
