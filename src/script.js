@@ -21,7 +21,9 @@ let empresaConfig = {
     empresaUrl: '',
     colunaMaterial: 'Material',
     colunaCustoMaterial: 'Mat./m²',
-    colunaCustoMaoObra: 'M.O./m²'
+    colunaCustoMaoObra: 'M.O./m²',
+    colunaTotalMaterial: 'Total Material',
+    colunaTotalMaoObra: 'Total M.O.'
 };
 let valoresFinanceirosInicioVisiveis = false;
 
@@ -274,9 +276,11 @@ function atualizarRotulosColunasOrcamento() {
     definir('rotulo-coluna-material', empresaConfig.colunaMaterial || 'Material');
     definir('rotulo-coluna-custo-material', empresaConfig.colunaCustoMaterial || 'Mat./m²');
     definir('rotulo-coluna-custo-mao-obra', empresaConfig.colunaCustoMaoObra || 'M.O./m²');
+    definir('rotulo-coluna-total-material', empresaConfig.colunaTotalMaterial || 'Total Material');
+    definir('rotulo-coluna-total-mao-obra', empresaConfig.colunaTotalMaoObra || 'Total M.O.');
     document.querySelectorAll('.linha-cabecalho').forEach((linha) => {
         const celulas = linha.querySelectorAll('.cab-col-label');
-        [empresaConfig.colunaMaterial || 'Material', empresaConfig.colunaCustoMaterial || 'Mat./m²', empresaConfig.colunaCustoMaoObra || 'M.O./m²']
+        [empresaConfig.colunaMaterial || 'Material', empresaConfig.colunaCustoMaterial || 'Mat./m²', empresaConfig.colunaCustoMaoObra || 'M.O./m²', empresaConfig.colunaTotalMaterial || 'Total Material', empresaConfig.colunaTotalMaoObra || 'Total M.O.']
             .forEach((rotulo, i) => { if (celulas[i + 1]) celulas[i + 1].textContent = rotulo; });
     });
 }
@@ -285,7 +289,9 @@ async function salvarRotuloColuna(elemento, chave) {
     const padroes = {
         colunaMaterial: 'Material',
         colunaCustoMaterial: 'Mat./m²',
-        colunaCustoMaoObra: 'M.O./m²'
+        colunaCustoMaoObra: 'M.O./m²',
+        colunaTotalMaterial: 'Total Material',
+        colunaTotalMaoObra: 'Total M.O.'
     };
     if (!Object.hasOwn(padroes, chave)) return;
     const anterior = empresaConfig[chave] || padroes[chave];
@@ -294,7 +300,9 @@ async function salvarRotuloColuna(elemento, chave) {
     const campos = {
         colunaMaterial: 'config-coluna-material',
         colunaCustoMaterial: 'config-coluna-material-m2',
-        colunaCustoMaoObra: 'config-coluna-mao-obra-m2'
+        colunaCustoMaoObra: 'config-coluna-mao-obra-m2',
+        colunaTotalMaterial: 'config-coluna-total-material',
+        colunaTotalMaoObra: 'config-coluna-total-mao-obra'
     };
     const campo = document.getElementById(campos[chave]);
     if (campo) campo.value = valor;
@@ -303,7 +311,9 @@ async function salvarRotuloColuna(elemento, chave) {
         await DB.salvarRotulosColunasOrcamento({
             colunaMaterial: empresaConfig.colunaMaterial,
             colunaCustoMaterial: empresaConfig.colunaCustoMaterial,
-            colunaCustoMaoObra: empresaConfig.colunaCustoMaoObra
+            colunaCustoMaoObra: empresaConfig.colunaCustoMaoObra,
+            colunaTotalMaterial: empresaConfig.colunaTotalMaterial,
+            colunaTotalMaoObra: empresaConfig.colunaTotalMaoObra
         });
         mostrarToast('Nome da coluna salvo.', 'sucesso');
     } catch (err) {
@@ -340,7 +350,9 @@ function aplicarConfiguracoesEmpresa(perfil = {}) {
         empresaUrl: perfil.empresaUrl || '',
         colunaMaterial: perfil.colunaMaterial || 'Material',
         colunaCustoMaterial: perfil.colunaCustoMaterial || 'Mat./m²',
-        colunaCustoMaoObra: perfil.colunaCustoMaoObra || 'M.O./m²'
+        colunaCustoMaoObra: perfil.colunaCustoMaoObra || 'M.O./m²',
+        colunaTotalMaterial: perfil.colunaTotalMaterial || 'Total Material',
+        colunaTotalMaoObra: perfil.colunaTotalMaoObra || 'Total M.O.'
     };
     const empresa = document.getElementById('config-empresa');
     const local = document.getElementById('config-local');
@@ -353,6 +365,8 @@ function aplicarConfiguracoesEmpresa(perfil = {}) {
     const colunaMaterial = document.getElementById('config-coluna-material');
     const colunaCustoMaterial = document.getElementById('config-coluna-material-m2');
     const colunaCustoMaoObra = document.getElementById('config-coluna-mao-obra-m2');
+    const colunaTotalMaterial = document.getElementById('config-coluna-total-material');
+    const colunaTotalMaoObra = document.getElementById('config-coluna-total-mao-obra');
     if (empresa) empresa.value = empresaConfig.empresaNome || '';
     if (local) local.value = empresaConfig.empresaLocal || '';
     if (contato) contato.value = empresaConfig.empresaContato || '';
@@ -364,6 +378,8 @@ function aplicarConfiguracoesEmpresa(perfil = {}) {
     if (colunaMaterial) colunaMaterial.value = empresaConfig.colunaMaterial;
     if (colunaCustoMaterial) colunaCustoMaterial.value = empresaConfig.colunaCustoMaterial;
     if (colunaCustoMaoObra) colunaCustoMaoObra.value = empresaConfig.colunaCustoMaoObra;
+    if (colunaTotalMaterial) colunaTotalMaterial.value = empresaConfig.colunaTotalMaterial;
+    if (colunaTotalMaoObra) colunaTotalMaoObra.value = empresaConfig.colunaTotalMaoObra;
     atualizarRotulosColunasOrcamento();
     aplicarMarcaEmpresa();
 }
@@ -380,7 +396,9 @@ async function salvarConfiguracoesEmpresa() {
         empresaUrl: document.getElementById('config-url')?.value.trim() || '',
         colunaMaterial: document.getElementById('config-coluna-material')?.value.trim() || 'Material',
         colunaCustoMaterial: document.getElementById('config-coluna-material-m2')?.value.trim() || 'Mat./m²',
-        colunaCustoMaoObra: document.getElementById('config-coluna-mao-obra-m2')?.value.trim() || 'M.O./m²'
+        colunaCustoMaoObra: document.getElementById('config-coluna-mao-obra-m2')?.value.trim() || 'M.O./m²',
+        colunaTotalMaterial: document.getElementById('config-coluna-total-material')?.value.trim() || 'Total Material',
+        colunaTotalMaoObra: document.getElementById('config-coluna-total-mao-obra')?.value.trim() || 'Total M.O.'
     };
 
     try {
@@ -1315,8 +1333,8 @@ function adicionarCabecalho(texto = '') {
 <td class="cab-col-label">${escapeHtml(empresaConfig.colunaMaterial || 'Material')}</td>
 <td class="cab-col-label">${escapeHtml(empresaConfig.colunaCustoMaterial || 'Mat./m²')}</td>
 <td class="cab-col-label">${escapeHtml(empresaConfig.colunaCustoMaoObra || 'M.O./m²')}</td>
-<td class="cab-col-label">Total Material</td>
-<td class="cab-col-label">Total M.O.</td>
+<td class="cab-col-label">${escapeHtml(empresaConfig.colunaTotalMaterial || 'Total Material')}</td>
+<td class="cab-col-label">${escapeHtml(empresaConfig.colunaTotalMaoObra || 'Total M.O.')}</td>
 <td class="cab-col-label">Total (R$)</td>
 <td class="cab-col-label"></td>`;
     tbody.appendChild(tr);
@@ -3508,8 +3526,8 @@ function gerarPDF(baixar = true) {
         { label: empresaConfig.colunaMaterial || 'Material', w: COL_MAT,  align: 'left'   },
         ...(exibirColunasMaterialPdf ? [{ label: empresaConfig.colunaCustoMaterial || 'Mat./m²', w: COL_CMAT, align: 'right' }] : []),
         ...(exibirColunasMaoObraPdf ? [{ label: empresaConfig.colunaCustoMaoObra || 'M.O./m²', w: COL_CMO, align: 'right' }] : []),
-        ...(exibirColunasMaterialPdf ? [{ label: 'Total Mat.', w: COL_TMAT, align: 'right' }] : []),
-        ...(exibirColunasMaoObraPdf ? [{ label: 'Total M.O.', w: COL_TMAO, align: 'right' }] : [])
+        ...(exibirColunasMaterialPdf ? [{ label: empresaConfig.colunaTotalMaterial || 'Total Material', w: COL_TMAT, align: 'right' }] : []),
+        ...(exibirColunasMaoObraPdf ? [{ label: empresaConfig.colunaTotalMaoObra || 'Total M.O.', w: COL_TMAO, align: 'right' }] : [])
     ];
 
     // ── Cabeçalho ──

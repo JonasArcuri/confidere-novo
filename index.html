@@ -156,6 +156,8 @@
               <input type="text" id="config-coluna-material" aria-label="Nome da coluna Material" placeholder="Material" maxlength="40">
               <input type="text" id="config-coluna-material-m2" aria-label="Nome da coluna Material por metro quadrado" placeholder="Custo Mat. m²" maxlength="40">
               <input type="text" id="config-coluna-mao-obra-m2" aria-label="Nome da coluna Mão de Obra por metro quadrado" placeholder="Mão Obra m²" maxlength="40">
+              <input type="text" id="config-coluna-total-material" aria-label="Nome da coluna Total Material" placeholder="Total Material" maxlength="40">
+              <input type="text" id="config-coluna-total-mao-obra" aria-label="Nome da coluna Total Mão de Obra" placeholder="Total M.O." maxlength="40">
             </div>
             <div class="config-acoes">
               <label class="btn-config-logo" for="input-logo">Logo</label>
@@ -304,8 +306,8 @@
                     <th class="col-material"><span id="rotulo-coluna-material" class="rotulo-coluna-editavel" contenteditable="true" role="textbox" aria-label="Editar nome da coluna Material" title="Clique para editar" onkeydown="if(event.key==='Enter'){event.preventDefault();this.blur()}" onblur="salvarRotuloColuna(this,'colunaMaterial')">Material</span></th>
                     <th class="col-qtd"><span id="rotulo-coluna-custo-material" class="rotulo-coluna-editavel" contenteditable="true" role="textbox" aria-label="Editar nome da coluna Material por metro quadrado" title="Clique para editar" onkeydown="if(event.key==='Enter'){event.preventDefault();this.blur()}" onblur="salvarRotuloColuna(this,'colunaCustoMaterial')">Custo Mat. m²</span></th>
                     <th class="col-unit"><span id="rotulo-coluna-custo-mao-obra" class="rotulo-coluna-editavel" contenteditable="true" role="textbox" aria-label="Editar nome da coluna Mão de Obra por metro quadrado" title="Clique para editar" onkeydown="if(event.key==='Enter'){event.preventDefault();this.blur()}" onblur="salvarRotuloColuna(this,'colunaCustoMaoObra')">Mão Obra m²</span></th>
-                    <th class="col-subtmat">Total Material</th>
-                    <th class="col-subtmao">Total M.O.</th>
+                    <th class="col-subtmat"><span id="rotulo-coluna-total-material" class="rotulo-coluna-editavel" contenteditable="true" role="textbox" aria-label="Editar nome da coluna Total Material" title="Clique para editar" onkeydown="if(event.key==='Enter'){event.preventDefault();this.blur()}" onblur="salvarRotuloColuna(this,'colunaTotalMaterial')">Total Material</span></th>
+                    <th class="col-subtmao"><span id="rotulo-coluna-total-mao-obra" class="rotulo-coluna-editavel" contenteditable="true" role="textbox" aria-label="Editar nome da coluna Total Mão de Obra" title="Clique para editar" onkeydown="if(event.key==='Enter'){event.preventDefault();this.blur()}" onblur="salvarRotuloColuna(this,'colunaTotalMaoObra')">Total M.O.</span></th>
                     <th class="col-total">Total (R$)</th>
                     <th class="col-acao"></th>
                   </tr>

@@ -312,7 +312,9 @@ const DB = {
       empresaUrl: config.empresaUrl || '',
       colunaMaterial: config.colunaMaterial || 'Material',
       colunaCustoMaterial: config.colunaCustoMaterial || 'Mat./m²',
-      colunaCustoMaoObra: config.colunaCustoMaoObra || 'M.O./m²'
+      colunaCustoMaoObra: config.colunaCustoMaoObra || 'M.O./m²',
+      colunaTotalMaterial: config.colunaTotalMaterial || 'Total Material',
+      colunaTotalMaoObra: config.colunaTotalMaoObra || 'Total M.O.'
     }, { merge: true });
   },
 
@@ -320,7 +322,9 @@ const DB = {
     await setDoc(doc(db, "users", getDataOwnerUid()), {
       colunaMaterial: rotulos.colunaMaterial || 'Material',
       colunaCustoMaterial: rotulos.colunaCustoMaterial || 'Mat./m²',
-      colunaCustoMaoObra: rotulos.colunaCustoMaoObra || 'M.O./m²'
+      colunaCustoMaoObra: rotulos.colunaCustoMaoObra || 'M.O./m²',
+      colunaTotalMaterial: rotulos.colunaTotalMaterial || 'Total Material',
+      colunaTotalMaoObra: rotulos.colunaTotalMaoObra || 'Total M.O.'
     }, { merge: true });
   },
 
