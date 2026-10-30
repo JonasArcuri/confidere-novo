@@ -3475,6 +3475,7 @@ function gerarPDF(baixar = true) {
     const totais = calcularTotais();
     const exibirColunasMaterialPdf = totais.subtotalMaterial > 0;
     const exibirColunasMaoObraPdf = totais.subtotalMaoObra > 0;
+    const exibirSubtotalGenericoPdf = exibirColunasMaterialPdf !== exibirColunasMaoObraPdf;
 
     // Tabela — larguras responsivas por orientação
     // Paisagem tem +87mm de largura útil, distribuímos nas colunas de texto
@@ -3698,8 +3699,8 @@ function gerarPDF(baixar = true) {
         y += 6;
     };
 
-    if (exibirColunasMaterialPdf) renderLinhaTotalPdf('Subtotal Material', totais.subtotalMaterial);
-    if (exibirColunasMaoObraPdf) renderLinhaTotalPdf('Subtotal Mão de Obra', totais.subtotalMaoObra);
+    if (exibirColunasMaterialPdf) renderLinhaTotalPdf(exibirSubtotalGenericoPdf ? 'Subtotal' : 'Subtotal Material', totais.subtotalMaterial);
+    if (exibirColunasMaoObraPdf) renderLinhaTotalPdf(exibirSubtotalGenericoPdf ? 'Subtotal' : 'Subtotal Mão de Obra', totais.subtotalMaoObra);
     renderLinhaTotalPdf('Total geral', totalGeral, { bold: true });
     y += 2;
 
@@ -3711,8 +3712,8 @@ function gerarPDF(baixar = true) {
             renderLinhaTotalPdf(`Desconto Mão de Obra (${formatarPercentualDesconto(totaisDescontoPdf.maoObra)}%)`, totaisDescontoPdf.descontoMaoValor, { cor: C_LARANJA, negativo: true });
         }
         y += 2;
-        if (exibirColunasMaterialPdf) renderLinhaTotalPdf('Subtotal Material com desconto', subtotalMaterialFinal);
-        if (exibirColunasMaoObraPdf) renderLinhaTotalPdf('Subtotal Mão de Obra com desconto', subtotalMaoFinal);
+        if (exibirColunasMaterialPdf) renderLinhaTotalPdf(exibirSubtotalGenericoPdf ? 'Subtotal com desconto' : 'Subtotal Material com desconto', subtotalMaterialFinal);
+        if (exibirColunasMaoObraPdf) renderLinhaTotalPdf(exibirSubtotalGenericoPdf ? 'Subtotal com desconto' : 'Subtotal Mão de Obra com desconto', subtotalMaoFinal);
         y += 2;
     }
 
