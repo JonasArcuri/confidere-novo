@@ -3838,7 +3838,7 @@ function gerarPDF(baixar = true) {
     doc.setDrawColor(...C_BORDA); doc.setLineWidth(0.3); doc.line(ML, footerLineY, ML + CW, footerLineY);
     doc.setFont('helvetica', 'normal'); doc.setFontSize(8); doc.setTextColor(...C_CINZA);
     _pdfTextoEmpresaComLink(doc, empresaConfig.empresaNome || 'Empresa', ML, footerInfoY, {});
-    doc.text(isCobranca ? `Mes referencia: ${validFmt}` : `Orcamento valido ate ${validFmt}`, ML + CW, footerInfoY, { align: 'right' });
+    doc.text(isCobranca ? `Mes referencia: ${validFmt}` : `Orcamento valido ate ${validFmt}`, ML + CW - 19, footerInfoY, { align: 'right' });
     tecnicoLinhas.forEach((linha, indice) => doc.text(linha, ML, footerInfoY + 4 * (indice + 1)));
     const devPrefix = 'Desenvolvido por ';
     const devLink = 'Sanoj Sistemas';
@@ -3847,6 +3847,19 @@ function gerarPDF(baixar = true) {
     doc.text(devPrefix, devX, devY);
     doc.setTextColor(...C_AZUL_MED);
     doc.textWithLink(devLink, devX + doc.getTextWidth(devPrefix), devY, { url: 'https://www.sanojsistemas.com.br' });
+
+    const totalPaginas = doc.getNumberOfPages();
+    for (let pagina = 1; pagina <= totalPaginas; pagina++) {
+        doc.setPage(pagina);
+        const badgeX = PW - MR - 7;
+        const badgeY = PH - 11;
+        doc.setFillColor(...C_AZUL_MED);
+        doc.circle(badgeX, badgeY, 7, 'F');
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(6.5);
+        doc.setTextColor(...C_BRANCO);
+        doc.text(`${String(pagina).padStart(2, '0')}/${String(totalPaginas).padStart(2, '0')}`, badgeX, badgeY + 1.2, { align: 'center' });
+    }
 
     const assuntoAdendo = (dados.assunto || dados.obra || '').trim().replace(/\s+/g, '_').replace(/[^\w\-]/g, '');
     const nomeArq = `${isCobranca ? 'Relatorio_Cobranca' : 'Orcamento'}_${numDisplay.replace('#', '')}_${(dados.cliente || 'cliente').replace(/\s+/g, '_')}${assuntoAdendo ? '_' + assuntoAdendo : ''}.pdf`;
