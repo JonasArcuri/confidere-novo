@@ -3851,16 +3851,16 @@ function gerarPDF(baixar = true) {
     const totalPaginas = doc.getNumberOfPages();
     for (let pagina = 1; pagina <= totalPaginas; pagina++) {
         doc.setPage(pagina);
-        const badgeW = 20;
-        const badgeH = 10;
+        const badgeW = 10;
+        const badgeH = 5;
         const badgeX = PW - MR - badgeW;
-        const badgeY = PH - 16;
+        const badgeY = PH - 13.5;
         doc.setFillColor(...C_AZUL_MED);
-        doc.roundedRect(badgeX, badgeY, badgeW, badgeH, 3, 3, 'F');
+        doc.roundedRect(badgeX, badgeY, badgeW, badgeH, 1.5, 1.5, 'F');
         doc.setFont('helvetica', 'bold');
-        doc.setFontSize(7);
+        doc.setFontSize(5);
         doc.setTextColor(...C_BRANCO);
-        doc.text(`${String(pagina).padStart(2, '0')}/${String(totalPaginas).padStart(2, '0')}`, badgeX + badgeW / 2, badgeY + 6.5, { align: 'center' });
+        doc.text(`${String(pagina).padStart(2, '0')}/${String(totalPaginas).padStart(2, '0')}`, badgeX + badgeW / 2, badgeY + 3.35, { align: 'center' });
     }
 
     const assuntoAdendo = (dados.assunto || dados.obra || '').trim().replace(/\s+/g, '_').replace(/[^\w\-]/g, '');
