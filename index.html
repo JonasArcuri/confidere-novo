@@ -551,7 +551,7 @@
                 GERAR PDF
               </button>
             </span>
-            <span class="tooltip-wrap" data-tooltip="Gera uma lista de itens, materiais e quantidades sem dados comerciais.">
+            <span class="tooltip-wrap" data-tooltip="Gera uma lista de itens, materiais e quantidades sem dados comerciais. Ideal para orçar materiais com distribuidores e fornecedores.">
               <button class="btn-secundario" type="button" onclick="abrirPreviewQuantitativo()">QUANTITATIVO</button>
             </span>
             <span class="tooltip-wrap tooltip-salvar-orcamento" data-tooltip="Salva o orçamento no histórico de orçamentos. Se for uma revisão, ele será salvo automaticamente como revisão.">
@@ -1481,6 +1481,10 @@
             <button type="button" class="pdf-layout-btn ativo" data-q-orientacao="portrait" onclick="setQuantitativoOrientacao('portrait')"><span class="layout-icon icon-portrait"></span>Retrato</button>
             <button type="button" class="pdf-layout-btn" data-q-orientacao="landscape" onclick="setQuantitativoOrientacao('landscape')"><span class="layout-icon icon-landscape"></span>Paisagem</button>
           </div>
+          <div class="quantitativo-opcoes-identificacao">
+            <label><input type="checkbox" id="quantitativo-incluir-cliente" onchange="atualizarPreviewQuantitativo()"> Incluir cliente</label>
+            <label><input type="checkbox" id="quantitativo-incluir-obra" onchange="atualizarPreviewQuantitativo()"> Incluir obra</label>
+          </div>
           <label>Formato: <select id="quantitativo-formato" onchange="atualizarPreviewQuantitativo()"><option value="pdf">PDF</option><option value="csv">Tabela editável (CSV)</option></select></label>
           <button type="button" class="btn-primario" onclick="baixarQuantitativo()">Baixar</button>
         </div>
@@ -1511,7 +1515,7 @@
       }, 7000);
     });
   </script>
-  <script type="module" src="src/script.js?v=20261112-quantitativo-fix-runtime"></script>
+  <script type="module" src="src/script.js?v=20261112-quantitativo-opcoes-identificacao"></script>
   <script type="module" src="src/obraflux-assistente.js?v=20261005"></script>
   <script type="module" src="src/gestao.js?v=20260616-relatorio-imagem-multipla-fallback"></script>
   <script type="module" src="src/funcionario_status.js?v=20260602-login-logo-transparent"></script>

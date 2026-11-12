@@ -3356,6 +3356,19 @@ function linhasDoQuantitativo() {
         .filter(l => l.tipo === 'cabecalho' ? l.texto : (l.descricao || l.quantidade || l.materiais));
 }
 
+function identificacaoQuantitativo() {
+    const campos = [];
+    if (document.getElementById('quantitativo-incluir-cliente')?.checked) {
+        const cliente = document.getElementById('campo-cliente')?.value.trim();
+        if (cliente) campos.push(['Cliente', cliente]);
+    }
+    if (document.getElementById('quantitativo-incluir-obra')?.checked) {
+        const obra = document.getElementById('campo-obra')?.value.trim();
+        if (obra) campos.push(['Obra', obra]);
+    }
+    return campos;
+}
+
 function abrirPreviewQuantitativo() {
     if (typeof window.jspdf === 'undefined' && typeof jsPDF === 'undefined') {
         mostrarToast('Biblioteca PDF não carregada. Recarregue a página.', 'erro'); return;
@@ -3378,10 +3391,11 @@ function atualizarPreviewQuantitativo() {
         quantitativoDoc = null;
         const rows = linhasDoQuantitativo();
         const esc = v => String(v ?? '').replace(/[&<>"']/g, c => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c]));
+        const identificacao = identificacaoQuantitativo().map(([label, valor]) => `<p><strong>${label}:</strong> ${esc(valor)}</p>`).join('');
         const htmlRows = rows.map(l => l.tipo === 'cabecalho'
             ? `<tr class="section"><th colspan="4">${esc(l.texto)}</th></tr>`
             : `<tr><td>${esc(l.descricao)}</td><td>${l.quantidade.toLocaleString('pt-BR')}</td><td>${esc(l.unidade)}</td><td>${esc(l.materiais)}</td></tr>`).join('');
-        frame.srcdoc = `<!doctype html><html lang="pt-BR"><meta charset="utf-8"><style>body{font:14px Arial;margin:28px;color:#1a3a5c}table{border-collapse:collapse;width:100%}th,td{border:1px solid #d8d4cc;padding:9px;text-align:left}.section th{background:#1a3a5c;color:white}</style><h2>Quantitativo de materiais e serviços</h2><table><thead><tr><th>Descrição</th><th>Quantidade</th><th>Unidade</th><th>Materiais</th></tr></thead><tbody>${htmlRows || '<tr><td colspan="4">Nenhum item adicionado</td></tr>'}</tbody></table></html>`;
+        frame.srcdoc = `<!doctype html><html lang="pt-BR"><meta charset="utf-8"><style>body{font:14px Arial;margin:28px;color:#1a3a5c}table{border-collapse:collapse;width:100%}th,td{border:1px solid #d8d4cc;padding:9px;text-align:left;color:#1a1814}.section th{background:#1a3a5c;color:white}thead th{background:#1a3a5c;color:white}</style><h2>Quantitativo de materiais e serviços</h2>${identificacao}<table><thead><tr><th>Descrição</th><th>Quantidade</th><th>Unidade</th><th>Materiais</th></tr></thead><tbody>${htmlRows || '<tr><td colspan="4">Nenhum item adicionado</td></tr>'}</tbody></table></html>`;
         return;
     }
     if (quantitativoUrl) URL.revokeObjectURL(quantitativoUrl);
@@ -3433,7 +3447,19 @@ function criarPdfQuantitativo() {
     const iniciarPagina = (nova = false) => {
         if (nova) doc.addPage();
         desenharCabecalhoPagina();
-        return desenharCabecalhoTabela(headerHeight + 5);
+        let topoTabela = headerHeight + 5;
+        const identificacao = identificacaoQuantitativo();
+        if (identificacao.length) {
+            doc.setFont('helvetica', 'normal'); doc.setFontSize(8); doc.setTextColor(26, 24, 20);
+            identificacao.forEach(([label, valor]) => {
+                doc.setFont('helvetica', 'bold'); doc.text(`${label}:`, margin, topoTabela + 4);
+                const larguraLabel = doc.getTextWidth(`${label}: `);
+                doc.setFont('helvetica', 'normal'); doc.text(valor, margin + larguraLabel, topoTabela + 4);
+                topoTabela += 5;
+            });
+            topoTabela += 2;
+        }
+        return desenharCabecalhoTabela(topoTabela);
     };
     let y = iniciarPagina();
     const rows = linhasDoQuantitativo();
@@ -3443,11 +3469,12 @@ function criarPdfQuantitativo() {
             doc.setFillColor(232,240,250); doc.rect(margin,y,width,8,'F'); doc.setTextColor(26,58,92); doc.setFont('helvetica','bold'); doc.text(l.texto,margin+2,y+5.5); y+=8; return;
         }
         const vals = [l.descricao, l.quantidade.toLocaleString('pt-BR'), l.unidade, l.materiais];
-        doc.setFont('helvetica','normal'); doc.setFontSize(8); doc.setTextColor(26,24,20);
+        doc.setFont('helvetica','normal'); doc.setFontSize(8);
         const wrapped = vals.map((v,i) => doc.splitTextToSize(String(v || '—'), cols[i]-4));
         const h = Math.max(8, ...wrapped.map(a => a.length * 4 + 3));
         if (y + h > ph - 18) y = iniciarPagina(true);
         if (idx % 2 === 1) { doc.setFillColor(245,247,250); doc.rect(margin,y,width,h,'F'); }
+        doc.setFont('helvetica','normal'); doc.setFontSize(8); doc.setTextColor(26,24,20);
         let xLinha = margin;
         wrapped.forEach((lines,i) => { doc.text(lines, xLinha+2, y+5); xLinha += cols[i]; });
         doc.setDrawColor(216,212,204); doc.line(margin,y+h,margin+width,y+h); y += h;
@@ -3478,7 +3505,11 @@ function baixarQuantitativo() {
         return;
     }
     const escapeCsv = v => `"${String(v ?? '').replace(/"/g, '""')}"`;
-    const records = [['Descrição','Quantidade','Unidade','Materiais'], ...linhasDoQuantitativo().map(l => l.tipo === 'cabecalho' ? [l.texto,'','',''] : [l.descricao,l.quantidade,l.unidade,l.materiais])];
+    const records = [
+        ...identificacaoQuantitativo().map(([label, valor]) => [label, valor, '', '']),
+        ['Descrição','Quantidade','Unidade','Materiais'],
+        ...linhasDoQuantitativo().map(l => l.tipo === 'cabecalho' ? [l.texto,'','',''] : [l.descricao,l.quantidade,l.unidade,l.materiais])
+    ];
     const blob = new Blob(['\uFEFF' + records.map(row => row.map(escapeCsv).join(';')).join('\r\n')], { type: 'text/csv;charset=utf-8' });
     const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url; a.download = 'Quantitativo.csv'; document.body.appendChild(a); a.click(); a.remove();
     setTimeout(() => URL.revokeObjectURL(url), 1000);

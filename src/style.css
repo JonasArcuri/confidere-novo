@@ -2169,6 +2169,38 @@ td .subtot-mao.ativo {
   margin-left: 0;
 }
 
+.quantitativo-opcoes-identificacao {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  color: var(--cinza-texto);
+  font-size: 13px;
+}
+
+.quantitativo-opcoes-identificacao label {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.quantitativo-opcoes-identificacao input {
+  width: 15px;
+  height: 15px;
+  margin: 0;
+  accent-color: var(--azul);
+}
+
+#quantitativo-formato {
+  min-height: 36px;
+  padding: 0 8px;
+  border: 1px solid var(--cinza-borda);
+  border-radius: 6px;
+  background: var(--branco);
+  color: var(--preto);
+}
+
 .pdf-preview-frame {
   flex: 1;
   width: 100%;
@@ -2197,6 +2229,11 @@ td .subtot-mao.ativo {
   }
 
   .pdf-preview-toolbar .btn-primario {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .quantitativo-opcoes-identificacao {
     width: 100%;
     justify-content: center;
   }
