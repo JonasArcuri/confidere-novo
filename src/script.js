@@ -3465,14 +3465,14 @@ function criarPdfQuantitativo() {
     const rows = linhasDoQuantitativo();
     rows.forEach((l, idx) => {
         if (l.tipo === 'cabecalho') {
-            if (y + 8 > ph - 18) y = iniciarPagina(true);
+            if (y + 8 > ph - 23) y = iniciarPagina(true);
             doc.setFillColor(232,240,250); doc.rect(margin,y,width,8,'F'); doc.setTextColor(26,58,92); doc.setFont('helvetica','bold'); doc.text(l.texto,margin+2,y+5.5); y+=8; return;
         }
         const vals = [l.descricao, l.quantidade.toLocaleString('pt-BR'), l.unidade, l.materiais];
         doc.setFont('helvetica','normal'); doc.setFontSize(8);
         const wrapped = vals.map((v,i) => doc.splitTextToSize(String(v || '—'), cols[i]-4));
         const h = Math.max(8, ...wrapped.map(a => a.length * 4 + 3));
-        if (y + h > ph - 18) y = iniciarPagina(true);
+        if (y + h > ph - 23) y = iniciarPagina(true);
         if (idx % 2 === 1) { doc.setFillColor(245,247,250); doc.rect(margin,y,width,h,'F'); }
         doc.setFont('helvetica','normal'); doc.setFontSize(8); doc.setTextColor(26,24,20);
         let xLinha = margin;
@@ -3482,6 +3482,16 @@ function criarPdfQuantitativo() {
     const totalPaginas = doc.getNumberOfPages();
     for (let pagina = 1; pagina <= totalPaginas; pagina++) {
         doc.setPage(pagina);
+        const devPrefix = 'Desenvolvido por ';
+        const devLink = 'Sanoj Sistemas';
+        doc.setDrawColor(216, 212, 204); doc.setLineWidth(0.3);
+        doc.line(margin, ph - 11, pw - margin, ph - 11);
+        doc.setFont('helvetica', 'normal'); doc.setFontSize(8); doc.setTextColor(107, 102, 96);
+        const devTexto = devPrefix + devLink;
+        const devX = pw / 2 - doc.getTextWidth(devTexto) / 2;
+        doc.text(devPrefix, devX, ph - 5.5);
+        doc.setTextColor(37, 99, 168);
+        doc.textWithLink(devLink, devX + doc.getTextWidth(devPrefix), ph - 5.5, { url: 'https://www.sanojsistemas.com.br' });
         const badgeW = 10, badgeH = 5;
         const badgeX = pw - margin - badgeW, badgeY = ph - 13.5;
         doc.setFillColor(37, 99, 168); doc.roundedRect(badgeX, badgeY, badgeW, badgeH, 1.5, 1.5, 'F');
