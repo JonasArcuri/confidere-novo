@@ -3348,12 +3348,40 @@ let quantitativoUrl = '';
 let quantitativoDoc = null;
 
 function linhasDoQuantitativo() {
-    return coletarDados().linhas
-        .filter(l => l.tipo === 'item' || l.tipo === 'opcao' || l.tipo === 'cabecalho')
-        .map(l => l.tipo === 'cabecalho'
-            ? { tipo: 'cabecalho', texto: l.texto || '' }
-            : { tipo: l.tipo, descricao: l.desc || '', quantidade: Number(l.area) || 0, unidade: l.areaLabel || '', materiais: Array.isArray(l.materialArr) ? l.materialArr.join(', ') : (l.material || '') })
-        .filter(l => l.tipo === 'cabecalho' ? l.texto : (l.descricao || l.quantidade || l.materiais));
+    const linhas = [];
+    document.querySelectorAll('#linhas-tbody tr').forEach(tr => {
+        if (tr.dataset.cabId) {
+            const texto = tr.querySelector('.cabecalho-input')?.value.trim() || '';
+            if (texto) linhas.push({ tipo: 'cabecalho', texto });
+            return;
+        }
+        if (tr.dataset.imgId) return;
+        const id = Number(tr.dataset.id);
+        if (!id) return;
+
+        const descricaoManual = document.getElementById(`desc-manual-${id}`);
+        const descricaoBotao = document.getElementById(`desc-btn-${id}`);
+        const descricao = descricaoManual && descricaoManual.style.display !== 'none'
+            ? descricaoManual.value.trim()
+            : (descricaoBotao?.textContent.trim() || '');
+        const area = Number(tr.querySelector('.col-area input[type="number"]')?.value) || 0;
+        const areaManual = document.getElementById(`area-manual-${id}`);
+        const areaBotao = document.querySelector(`#area-btn-${id} .area-btn-label`);
+        const unidade = areaManual && areaManual.style.display !== 'none'
+            ? areaManual.value.trim()
+            : (areaBotao?.textContent.trim() || '');
+
+        const materialSelecionados = [...(document.getElementById(`mat-opcoes-${id}`)?.querySelectorAll('input[type="checkbox"]:checked') || [])]
+            .map(input => input.value.trim()).filter(Boolean);
+        const manualMarcado = document.getElementById(`mat-manual-cb-${id}`)?.checked;
+        const materialManual = manualMarcado ? document.getElementById(`mat-manual-input-${id}`)?.value.trim() : '';
+        if (materialManual && !materialSelecionados.includes(materialManual)) materialSelecionados.push(materialManual);
+
+        if (descricao || area || unidade || materialSelecionados.length) {
+            linhas.push({ tipo: 'item', descricao, quantidade: area, unidade, materiais: materialSelecionados.join(', ') });
+        }
+    });
+    return linhas;
 }
 
 function identificacaoQuantitativo() {
