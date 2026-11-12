@@ -3343,9 +3343,106 @@ let pdfPreviewUrl = '';
 let pdfPreviewDoc = null;
 let pdfPreviewNome = '';
 
+let quantitativoOrientacao = 'portrait';
+let quantitativoUrl = '';
+let quantitativoDoc = null;
+
+function linhasDoQuantitativo() {
+    return coletarDados().linhas
+        .filter(l => l.tipo === 'item' || l.tipo === 'opcao' || l.tipo === 'cabecalho')
+        .map(l => l.tipo === 'cabecalho'
+            ? { tipo: 'cabecalho', texto: l.texto || '' }
+            : { tipo: l.tipo, descricao: l.desc || '', quantidade: Number(l.area) || 0, unidade: l.areaLabel || '', materiais: Array.isArray(l.materialArr) ? l.materialArr.join(', ') : (l.material || '') })
+        .filter(l => l.tipo === 'cabecalho' ? l.texto : (l.descricao || l.quantidade || l.materiais));
+}
+
+function abrirPreviewQuantitativo() {
+    if (typeof window.jspdf === 'undefined' && typeof jsPDF === 'undefined') {
+        mostrarToast('Biblioteca PDF não carregada. Recarregue a página.', 'erro'); return;
+    }
+    document.getElementById('modal-preview-quantitativo')?.classList.add('aberto');
+    atualizarPreviewQuantitativo();
+}
+
+function setQuantitativoOrientacao(valor) {
+    quantitativoOrientacao = valor;
+    document.querySelectorAll('.pdf-layout-btn[data-q-orientacao]').forEach(b => b.classList.toggle('ativo', b.dataset.qOrientacao === valor));
+    atualizarPreviewQuantitativo();
+}
+
+function atualizarPreviewQuantitativo() {
+    if (!document.getElementById('modal-preview-quantitativo')?.classList.contains('aberto')) return;
+    const frame = document.getElementById('quantitativo-preview-frame');
+    if (document.getElementById('quantitativo-formato')?.value === 'csv') {
+        if (quantitativoUrl) URL.revokeObjectURL(quantitativoUrl);
+        quantitativoDoc = null;
+        const rows = linhasDoQuantitativo();
+        const esc = v => String(v ?? '').replace(/[&<>"']/g, c => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c]));
+        const htmlRows = rows.map(l => l.tipo === 'cabecalho'
+            ? `<tr class="section"><th colspan="4">${esc(l.texto)}</th></tr>`
+            : `<tr><td>${esc(l.descricao)}</td><td>${l.quantidade.toLocaleString('pt-BR')}</td><td>${esc(l.unidade)}</td><td>${esc(l.materiais)}</td></tr>`).join('');
+        frame.srcdoc = `<!doctype html><html lang="pt-BR"><meta charset="utf-8"><style>body{font:14px Arial;margin:28px;color:#1a3a5c}table{border-collapse:collapse;width:100%}th,td{border:1px solid #d8d4cc;padding:9px;text-align:left}.section th{background:#1a3a5c;color:white}</style><h2>Quantitativo de materiais e serviços</h2><table><thead><tr><th>Descrição</th><th>Quantidade</th><th>Unidade</th><th>Materiais</th></tr></thead><tbody>${htmlRows || '<tr><td colspan="4">Nenhum item adicionado</td></tr>'}</tbody></table></html>`;
+        return;
+    }
+    if (quantitativoUrl) URL.revokeObjectURL(quantitativoUrl);
+    quantitativoDoc = criarPdfQuantitativo();
+    quantitativoUrl = URL.createObjectURL(quantitativoDoc.output('blob'));
+    frame.src = quantitativoUrl;
+}
+
+function criarPdfQuantitativo() {
+    const { jsPDF: JsPDF } = window.jspdf || {};
+    const Doc = JsPDF || jsPDF;
+    const doc = new Doc({ unit: 'mm', format: 'a4', orientation: quantitativoOrientacao });
+    const pw = quantitativoOrientacao === 'landscape' ? 297 : 210;
+    const margin = 14, width = pw - margin * 2;
+    let y = 18;
+    doc.setFont('helvetica', 'bold'); doc.setFontSize(15); doc.setTextColor(26, 58, 92);
+    doc.text('QUANTITATIVO DE MATERIAIS E SERVIÇOS', margin, y); y += 12;
+    const cols = [width * .38, width * .18, width * .16, width * .28];
+    const headers = ['Descrição', 'Quantidade', 'Unidade', 'Materiais'];
+    doc.setFillColor(26, 58, 92); doc.rect(margin, y, width, 9, 'F');
+    doc.setFont('helvetica', 'bold'); doc.setFontSize(8); doc.setTextColor(255,255,255);
+    let x = margin; headers.forEach((h,i) => { doc.text(h, x + 2, y + 6); x += cols[i]; }); y += 9;
+    const rows = linhasDoQuantitativo();
+    rows.forEach((l, idx) => {
+        if (l.tipo === 'cabecalho') {
+            if (y > 275) { doc.addPage(); y = 18; }
+            doc.setFillColor(232,240,250); doc.rect(margin,y,width,8,'F'); doc.setTextColor(26,58,92); doc.setFont('helvetica','bold'); doc.text(l.texto,margin+2,y+5.5); y+=8; return;
+        }
+        const vals = [l.descricao, l.quantidade.toLocaleString('pt-BR'), l.unidade, l.materiais];
+        doc.setFont('helvetica','normal'); doc.setFontSize(8); doc.setTextColor(26,24,20);
+        const wrapped = vals.map((v,i) => doc.splitTextToSize(String(v || '—'), cols[i]-4));
+        const h = Math.max(8, ...wrapped.map(a => a.length * 4 + 3));
+        if (y + h > 280) { doc.addPage(); y = 18; }
+        if (idx % 2 === 1) { doc.setFillColor(245,247,250); doc.rect(margin,y,width,h,'F'); }
+        x = margin; wrapped.forEach((lines,i) => { doc.text(lines, x+2, y+5); x += cols[i]; });
+        doc.setDrawColor(216,212,204); doc.line(margin,y+h,margin+width,y+h); y += h;
+    });
+    return doc;
+}
+
+function baixarQuantitativo() {
+    const csv = document.getElementById('quantitativo-formato')?.value === 'csv';
+    if (!csv) {
+        if (!quantitativoDoc) quantitativoDoc = criarPdfQuantitativo();
+        quantitativoDoc.save('Quantitativo.pdf'); return;
+    }
+    const escapeCsv = v => `"${String(v ?? '').replace(/"/g, '""')}"`;
+    const records = [['Descrição','Quantidade','Unidade','Materiais'], ...linhasDoQuantitativo().map(l => l.tipo === 'cabecalho' ? [l.texto,'','',''] : [l.descricao,l.quantidade,l.unidade,l.materiais])];
+    const blob = new Blob(['\uFEFF' + records.map(row => row.map(escapeCsv).join(';')).join('\r\n')], { type: 'text/csv;charset=utf-8' });
+    const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url; a.download = 'Quantitativo.csv'; a.click(); URL.revokeObjectURL(url);
+}
+
+function fecharPreviewQuantitativo() {
+    document.getElementById('modal-preview-quantitativo')?.classList.remove('aberto');
+    const frame = document.getElementById('quantitativo-preview-frame'); if (frame) { frame.src = 'about:blank'; frame.srcdoc = ''; }
+    if (quantitativoUrl) URL.revokeObjectURL(quantitativoUrl); quantitativoUrl = ''; quantitativoDoc = null;
+}
+
 function setPdfOrientacao(valor, btn) {
     pdfOrientacao = valor;
-    document.querySelectorAll('.pdf-layout-btn').forEach(b => {
+    document.querySelectorAll('.pdf-layout-btn[data-orientacao]').forEach(b => {
         const ativo = b.dataset.orientacao ? b.dataset.orientacao === valor : b === btn;
         b.classList.toggle('ativo', ativo);
     });

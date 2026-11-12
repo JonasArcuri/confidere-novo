@@ -551,6 +551,9 @@
                 GERAR PDF
               </button>
             </span>
+            <span class="tooltip-wrap" data-tooltip="Gera uma lista de itens, materiais e quantidades sem dados comerciais.">
+              <button class="btn-secundario" type="button" onclick="abrirPreviewQuantitativo()">QUANTITATIVO</button>
+            </span>
             <span class="tooltip-wrap tooltip-salvar-orcamento" data-tooltip="Salva o orçamento no histórico de orçamentos. Se for uma revisão, ele será salvo automaticamente como revisão.">
               <button class="btn-primario" onclick="salvarOrcamento()">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
@@ -1465,6 +1468,23 @@
           </button>
         </div>
         <iframe id="pdf-preview-frame" class="pdf-preview-frame" title="Prévia do PDF"></iframe>
+      </div>
+    </div>
+
+    <div class="modal-overlay pdf-preview-overlay" id="modal-preview-quantitativo" onclick="if(event.target===this)fecharPreviewQuantitativo()">
+      <div class="pdf-preview-modal">
+        <div class="pdf-preview-topo"><div><h3>Prévia do quantitativo</h3><p>Somente itens, materiais e quantidades.</p></div>
+          <button type="button" class="pdf-preview-fechar" onclick="fecharPreviewQuantitativo()" aria-label="Fechar">×</button></div>
+        <div class="pdf-preview-toolbar">
+          <div class="pdf-layout-selector">
+            <span class="pdf-layout-label">Layout:</span>
+            <button type="button" class="pdf-layout-btn ativo" data-q-orientacao="portrait" onclick="setQuantitativoOrientacao('portrait')"><span class="layout-icon icon-portrait"></span>Retrato</button>
+            <button type="button" class="pdf-layout-btn" data-q-orientacao="landscape" onclick="setQuantitativoOrientacao('landscape')"><span class="layout-icon icon-landscape"></span>Paisagem</button>
+          </div>
+          <label>Formato: <select id="quantitativo-formato" onchange="atualizarPreviewQuantitativo()"><option value="pdf">PDF</option><option value="csv">Tabela editável (CSV)</option></select></label>
+          <button type="button" class="btn-primario" onclick="baixarQuantitativo()">Baixar</button>
+        </div>
+        <iframe id="quantitativo-preview-frame" class="pdf-preview-frame" title="Prévia do quantitativo"></iframe>
       </div>
     </div>
 
