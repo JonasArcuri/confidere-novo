@@ -3369,6 +3369,19 @@ function identificacaoQuantitativo() {
     return campos;
 }
 
+function nomeArquivoQuantitativo(extensao) {
+    const agora = new Date();
+    const data = [agora.getFullYear(), String(agora.getMonth() + 1).padStart(2, '0'), String(agora.getDate()).padStart(2, '0')].join('-');
+    const slug = texto => String(texto || '')
+        .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+        .replace(/[^a-zA-Z0-9]+/g, '-')
+        .replace(/^-+|-+$/g, '');
+    const identificacao = identificacaoQuantitativo()
+        .map(([, valor]) => slug(valor))
+        .filter(Boolean);
+    return ['Quantitativo', data, ...identificacao, 'Confidere'].join('-') + `.${extensao}`;
+}
+
 function abrirPreviewQuantitativo() {
     if (typeof window.jspdf === 'undefined' && typeof jsPDF === 'undefined') {
         mostrarToast('Biblioteca PDF não carregada. Recarregue a página.', 'erro'); return;
@@ -3506,7 +3519,7 @@ function baixarQuantitativo() {
     if (!csv) {
         try {
             if (!quantitativoDoc) quantitativoDoc = criarPdfQuantitativo();
-            quantitativoDoc.save('Quantitativo.pdf');
+            quantitativoDoc.save(nomeArquivoQuantitativo('pdf'));
             mostrarToast('Quantitativo baixado com sucesso!', 'sucesso');
         } catch (err) {
             console.error('Erro ao baixar quantitativo:', err);
@@ -3521,7 +3534,7 @@ function baixarQuantitativo() {
         ...linhasDoQuantitativo().map(l => l.tipo === 'cabecalho' ? [l.texto,'','',''] : [l.descricao,l.quantidade,l.unidade,l.materiais])
     ];
     const blob = new Blob(['\uFEFF' + records.map(row => row.map(escapeCsv).join(';')).join('\r\n')], { type: 'text/csv;charset=utf-8' });
-    const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url; a.download = 'Quantitativo.csv'; document.body.appendChild(a); a.click(); a.remove();
+    const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url; a.download = nomeArquivoQuantitativo('csv'); document.body.appendChild(a); a.click(); a.remove();
     setTimeout(() => URL.revokeObjectURL(url), 1000);
     mostrarToast('Tabela editável baixada com sucesso!', 'sucesso');
 }
