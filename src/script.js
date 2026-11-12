@@ -3448,7 +3448,7 @@ function criarPdfQuantitativo() {
         if (nova) doc.addPage();
         desenharCabecalhoPagina();
         let topoTabela = headerHeight + 5;
-        const identificacao = identificacaoQuantitativo();
+        const identificacao = nova ? [] : identificacaoQuantitativo();
         if (identificacao.length) {
             doc.setFont('helvetica', 'normal'); doc.setFontSize(8); doc.setTextColor(26, 24, 20);
             identificacao.forEach(([label, valor]) => {
