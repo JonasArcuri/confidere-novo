@@ -4446,7 +4446,8 @@ Object.assign(window, {
     carregarLogo, carregarLogoSalva, aplicarLogoNaTela, removerLogo,
     aplicarConfiguracoesEmpresa, salvarConfiguracoesEmpresa, salvarRotuloColuna,
     gerarPDF, abrirPreviewPDF, atualizarPreviewPDF, baixarPDFPreview, fecharPreviewPDF,
-    setPdfOrientacao, formatarMoeda, mostrarToast, abrirModal, fecharModal,
+    setPdfOrientacao, abrirPreviewQuantitativo, atualizarPreviewQuantitativo, baixarQuantitativo,
+    fecharPreviewQuantitativo, setQuantitativoOrientacao, formatarMoeda, mostrarToast, abrirModal, fecharModal,
     getHistorico, setHistorico, proximoNumero, atualizarNumeroDisplay,
     logoBase64,
     // Observações (presets editáveis)
