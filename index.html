@@ -234,6 +234,14 @@
             </div>
           </div>
 
+          <div class="acoes-topo-orcamento" aria-label="Ações do orçamento">
+            <button class="btn-topo-pdf" type="button" onclick="abrirPreviewPDF()" title="Gerar PDF">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14,2 14,8 20,8"/><line x1="12" y1="18" x2="12" y2="12"/><line x1="9" y1="15" x2="15" y2="15"/></svg>
+              GERAR PDF
+            </button>
+            <button class="btn-topo-quantitativo" type="button" onclick="abrirPreviewQuantitativo()" title="Exportar quantitativo">QUANTITATIVO</button>
+          </div>
+
           <!-- DADOS DO CLIENTE -->
           <div class="secao">
             <div class="secao-titulo">Dados do Cliente</div>
@@ -1515,7 +1523,7 @@
       }, 7000);
     });
   </script>
-  <script type="module" src="src/script.js?v=20261112-quantitativo-live-form"></script>
+  <script type="module" src="src/script.js?v=20261112-quantitativo-top-buttons"></script>
   <script type="module" src="src/obraflux-assistente.js?v=20261005"></script>
   <script type="module" src="src/gestao.js?v=20260616-relatorio-imagem-multipla-fallback"></script>
   <script type="module" src="src/funcionario_status.js?v=20260602-login-logo-transparent"></script>

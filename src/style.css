@@ -2169,6 +2169,48 @@ td .subtot-mao.ativo {
   margin-left: 0;
 }
 
+.acoes-topo-orcamento {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 7px;
+  padding: 7px 18px 0;
+}
+
+.acoes-topo-orcamento button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  min-height: 27px;
+  padding: 4px 9px;
+  border: 1px solid var(--azul);
+  border-radius: 6px;
+  font: 600 10px 'DM Sans', sans-serif;
+  line-height: 1;
+  cursor: pointer;
+  transition: background .15s ease, color .15s ease;
+}
+
+.acoes-topo-orcamento .btn-topo-pdf {
+  background: var(--laranja);
+  border-color: var(--laranja);
+  color: #fff;
+}
+
+.acoes-topo-orcamento .btn-topo-pdf:hover {
+  background: #c94b11;
+}
+
+.acoes-topo-orcamento .btn-topo-quantitativo {
+  background: #fff;
+  color: var(--azul);
+}
+
+.acoes-topo-orcamento .btn-topo-quantitativo:hover {
+  background: #eaf1f8;
+}
+
 .quantitativo-opcoes-identificacao {
   display: flex;
   align-items: center;
