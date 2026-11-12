@@ -3085,6 +3085,11 @@ table {
   white-space: normal;
 }
 
+.tooltip-wrap.tooltip-quantitativo::before {
+  white-space: pre-line;
+  text-align: left;
+}
+
 .tooltip-wrap::after {
   content: '';
   bottom: calc(100% + 5px);
