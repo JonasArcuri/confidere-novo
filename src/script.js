@@ -3395,30 +3395,64 @@ function criarPdfQuantitativo() {
     const Doc = JsPDF || jsPDF;
     const doc = new Doc({ unit: 'mm', format: 'a4', orientation: quantitativoOrientacao });
     const pw = quantitativoOrientacao === 'landscape' ? 297 : 210;
+    const ph = quantitativoOrientacao === 'landscape' ? 210 : 297;
     const margin = 14, width = pw - margin * 2;
-    let y = 18;
-    doc.setFont('helvetica', 'bold'); doc.setFontSize(15); doc.setTextColor(26, 58, 92);
-    doc.text('QUANTITATIVO DE MATERIAIS E SERVIÇOS', margin, y); y += 12;
     const cols = [width * .38, width * .18, width * .16, width * .28];
     const headers = ['Descrição', 'Quantidade', 'Unidade', 'Materiais'];
-    doc.setFillColor(26, 58, 92); doc.rect(margin, y, width, 9, 'F');
-    doc.setFont('helvetica', 'bold'); doc.setFontSize(8); doc.setTextColor(255,255,255);
-    let x = margin; headers.forEach((h,i) => { doc.text(h, x + 2, y + 6); x += cols[i]; }); y += 9;
+    const headerHeight = 28;
+    const desenharCabecalhoPagina = () => {
+        doc.setFillColor(26, 58, 92); doc.rect(0, 0, pw, headerHeight, 'F');
+        if (logoBase64) {
+            try {
+                const fmt = logoBase64.startsWith('data:image/png') ? 'PNG' : logoBase64.startsWith('data:image/svg') ? 'SVG' : 'JPEG';
+                doc.addImage(logoBase64, fmt === 'SVG' ? 'PNG' : fmt, margin, 4, 38, 16, undefined, 'FAST');
+                _pdfMarcaDetalhes(doc, margin, 24, 6.5, [200, 210, 225]);
+            } catch { _pdfLogoTexto(doc, margin, [255, 255, 255], [74, 144, 217]); }
+        } else {
+            _pdfLogoTexto(doc, margin, [255, 255, 255], [74, 144, 217]);
+        }
+        doc.setFont('helvetica', 'bold'); doc.setFontSize(10); doc.setTextColor(74, 144, 217);
+        doc.text('QUANTITATIVO', pw - margin, 12, { align: 'right' });
+        doc.setFont('helvetica', 'bold'); doc.setFontSize(15); doc.setTextColor(255, 255, 255);
+        doc.text('MATERIAIS E SERVIÇOS', pw - margin, 22, { align: 'right' });
+    };
+    const desenharCabecalhoTabela = yTabela => {
+        doc.setFillColor(26, 58, 92); doc.rect(margin, yTabela, width, 9, 'F');
+        doc.setFont('helvetica', 'bold'); doc.setFontSize(8); doc.setTextColor(255, 255, 255);
+        let xTabela = margin;
+        headers.forEach((h, i) => { doc.text(h, xTabela + 2, yTabela + 6); xTabela += cols[i]; });
+        return yTabela + 9;
+    };
+    const iniciarPagina = (nova = false) => {
+        if (nova) doc.addPage();
+        desenharCabecalhoPagina();
+        return desenharCabecalhoTabela(headerHeight + 5);
+    };
+    let y = iniciarPagina();
     const rows = linhasDoQuantitativo();
     rows.forEach((l, idx) => {
         if (l.tipo === 'cabecalho') {
-            if (y > 275) { doc.addPage(); y = 18; }
+            if (y + 8 > ph - 18) y = iniciarPagina(true);
             doc.setFillColor(232,240,250); doc.rect(margin,y,width,8,'F'); doc.setTextColor(26,58,92); doc.setFont('helvetica','bold'); doc.text(l.texto,margin+2,y+5.5); y+=8; return;
         }
         const vals = [l.descricao, l.quantidade.toLocaleString('pt-BR'), l.unidade, l.materiais];
         doc.setFont('helvetica','normal'); doc.setFontSize(8); doc.setTextColor(26,24,20);
         const wrapped = vals.map((v,i) => doc.splitTextToSize(String(v || '—'), cols[i]-4));
         const h = Math.max(8, ...wrapped.map(a => a.length * 4 + 3));
-        if (y + h > 280) { doc.addPage(); y = 18; }
+        if (y + h > ph - 18) y = iniciarPagina(true);
         if (idx % 2 === 1) { doc.setFillColor(245,247,250); doc.rect(margin,y,width,h,'F'); }
         x = margin; wrapped.forEach((lines,i) => { doc.text(lines, x+2, y+5); x += cols[i]; });
         doc.setDrawColor(216,212,204); doc.line(margin,y+h,margin+width,y+h); y += h;
     });
+    const totalPaginas = doc.getNumberOfPages();
+    for (let pagina = 1; pagina <= totalPaginas; pagina++) {
+        doc.setPage(pagina);
+        const badgeW = 10, badgeH = 5;
+        const badgeX = pw - margin - badgeW, badgeY = ph - 13.5;
+        doc.setFillColor(37, 99, 168); doc.roundedRect(badgeX, badgeY, badgeW, badgeH, 1.5, 1.5, 'F');
+        doc.setFont('helvetica', 'bold'); doc.setFontSize(5); doc.setTextColor(255, 255, 255);
+        doc.text(`${String(pagina).padStart(2, '0')}/${String(totalPaginas).padStart(2, '0')}`, badgeX + badgeW / 2, badgeY + 3.35, { align: 'center' });
+    }
     return doc;
 }
 
