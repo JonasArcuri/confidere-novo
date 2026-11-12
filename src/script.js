@@ -3385,9 +3385,16 @@ function atualizarPreviewQuantitativo() {
         return;
     }
     if (quantitativoUrl) URL.revokeObjectURL(quantitativoUrl);
-    quantitativoDoc = criarPdfQuantitativo();
-    quantitativoUrl = URL.createObjectURL(quantitativoDoc.output('blob'));
-    frame.src = quantitativoUrl;
+    try {
+        quantitativoDoc = criarPdfQuantitativo();
+        quantitativoUrl = URL.createObjectURL(quantitativoDoc.output('blob'));
+        frame.src = quantitativoUrl;
+    } catch (err) {
+        console.error('Erro ao gerar preview do quantitativo:', err);
+        quantitativoDoc = null;
+        frame.srcdoc = '<!doctype html><html lang="pt-BR"><meta charset="utf-8"><body style="font:16px Arial;color:#9b2c2c;padding:24px">Não foi possível gerar a prévia. Confira os itens do orçamento e tente novamente.</body></html>';
+        mostrarToast('Não foi possível gerar a prévia do quantitativo.', 'erro');
+    }
 }
 
 function criarPdfQuantitativo() {
@@ -3441,7 +3448,8 @@ function criarPdfQuantitativo() {
         const h = Math.max(8, ...wrapped.map(a => a.length * 4 + 3));
         if (y + h > ph - 18) y = iniciarPagina(true);
         if (idx % 2 === 1) { doc.setFillColor(245,247,250); doc.rect(margin,y,width,h,'F'); }
-        x = margin; wrapped.forEach((lines,i) => { doc.text(lines, x+2, y+5); x += cols[i]; });
+        let xLinha = margin;
+        wrapped.forEach((lines,i) => { doc.text(lines, xLinha+2, y+5); xLinha += cols[i]; });
         doc.setDrawColor(216,212,204); doc.line(margin,y+h,margin+width,y+h); y += h;
     });
     const totalPaginas = doc.getNumberOfPages();
@@ -3459,13 +3467,22 @@ function criarPdfQuantitativo() {
 function baixarQuantitativo() {
     const csv = document.getElementById('quantitativo-formato')?.value === 'csv';
     if (!csv) {
-        if (!quantitativoDoc) quantitativoDoc = criarPdfQuantitativo();
-        quantitativoDoc.save('Quantitativo.pdf'); return;
+        try {
+            if (!quantitativoDoc) quantitativoDoc = criarPdfQuantitativo();
+            quantitativoDoc.save('Quantitativo.pdf');
+            mostrarToast('Quantitativo baixado com sucesso!', 'sucesso');
+        } catch (err) {
+            console.error('Erro ao baixar quantitativo:', err);
+            mostrarToast('Não foi possível baixar o quantitativo.', 'erro');
+        }
+        return;
     }
     const escapeCsv = v => `"${String(v ?? '').replace(/"/g, '""')}"`;
     const records = [['Descrição','Quantidade','Unidade','Materiais'], ...linhasDoQuantitativo().map(l => l.tipo === 'cabecalho' ? [l.texto,'','',''] : [l.descricao,l.quantidade,l.unidade,l.materiais])];
     const blob = new Blob(['\uFEFF' + records.map(row => row.map(escapeCsv).join(';')).join('\r\n')], { type: 'text/csv;charset=utf-8' });
-    const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url; a.download = 'Quantitativo.csv'; a.click(); URL.revokeObjectURL(url);
+    const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url; a.download = 'Quantitativo.csv'; document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+    mostrarToast('Tabela editável baixada com sucesso!', 'sucesso');
 }
 
 function fecharPreviewQuantitativo() {
