@@ -1194,6 +1194,7 @@ function adicionarLinha(desc = '', area = '', material = '', custoMaterial = '',
     const tbody = document.getElementById('linhas-tbody');
     const tr = document.createElement('tr');
     tr.dataset.id = id;
+    tr.draggable = true;
     const isOpcao = opcoes.tipo === 'opcao';
     if (isOpcao) {
         tr.dataset.tipo = 'opcao';
@@ -1231,6 +1232,7 @@ function adicionarLinha(desc = '', area = '', material = '', custoMaterial = '',
 
     tr.innerHTML = `
 <td class="col-desc">
+  <button type="button" class="linha-arraste-handle" aria-label="Arrastar para reorganizar item" title="Clique e arraste para reorganizar" draggable="false">⠿</button>
   <div class="desc-dropdown-wrapper" style="position:relative">
     <button type="button" id="desc-btn-${id}" class="desc-select-btn" onclick="toggleDropdownDesc(${id})" style="${descManualVal ? 'display:none' : ''}">${escapeHtml(desc || 'Selecione o servi\u00e7o')}</button>
     <div id="desc-dropdown-${id}" class="desc-dropdown-panel" style="display:none;">
@@ -1293,6 +1295,42 @@ function adicionarLinha(desc = '', area = '', material = '', custoMaterial = '',
 
     tbody.appendChild(tr);
 }
+
+// Permite reorganizar itens do orçamento pelo controle de arraste da descrição.
+const tbodyItensOrcamento = document.getElementById('linhas-tbody');
+let linhaArrastadaOrcamento = null;
+let origemArrasteOrcamentoAtiva = false;
+tbodyItensOrcamento.addEventListener('pointerdown', event => {
+    origemArrasteOrcamentoAtiva = Boolean(event.target.closest('.linha-arraste-handle'));
+});
+window.addEventListener('pointerup', () => { origemArrasteOrcamentoAtiva = false; });
+tbodyItensOrcamento.addEventListener('dragstart', event => {
+    const linha = event.target.closest('#linhas-tbody tr[data-id]');
+    if (!linha || !origemArrasteOrcamentoAtiva) {
+        event.preventDefault();
+        return;
+    }
+    origemArrasteOrcamentoAtiva = false;
+    linhaArrastadaOrcamento = linha;
+    linha.classList.add('linha-arrastando');
+    event.dataTransfer.effectAllowed = 'move';
+    event.dataTransfer.setData('text/plain', linha.dataset.id);
+});
+tbodyItensOrcamento.addEventListener('dragover', event => {
+    if (!linhaArrastadaOrcamento) return;
+    const alvo = event.target.closest('#linhas-tbody tr[data-id]');
+    if (!alvo || alvo === linhaArrastadaOrcamento) return;
+    event.preventDefault();
+    const depois = event.clientY > alvo.getBoundingClientRect().top + alvo.offsetHeight / 2;
+    tbodyItensOrcamento.insertBefore(linhaArrastadaOrcamento, depois ? alvo.nextSibling : alvo);
+});
+tbodyItensOrcamento.addEventListener('drop', event => {
+    if (linhaArrastadaOrcamento) event.preventDefault();
+});
+tbodyItensOrcamento.addEventListener('dragend', () => {
+    linhaArrastadaOrcamento?.classList.remove('linha-arrastando');
+    linhaArrastadaOrcamento = null;
+});
 
 function removerLinha(id) {
     const tr = document.querySelector(`tr[data-id="${id}"]`);

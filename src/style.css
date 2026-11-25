@@ -398,6 +398,38 @@ table tbody tr:hover {
   background: var(--azul-fade);
 }
 
+#linhas-tbody tr[data-id] > .col-desc {
+  position: relative;
+  padding-left: 34px;
+}
+
+.linha-arraste-handle {
+  position: absolute;
+  left: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+  border: 0;
+  padding: 4px 2px;
+  background: transparent;
+  color: #8292a3;
+  font-size: 19px;
+  line-height: 1;
+  cursor: grab;
+  touch-action: none;
+}
+
+.linha-arraste-handle:hover {
+  color: var(--azul);
+}
+
+.linha-arraste-handle:active {
+  cursor: grabbing;
+}
+
+#linhas-tbody tr.linha-arrastando {
+  opacity: 0.45;
+}
+
 table tbody td {
   padding: 8px 10px;
 }
