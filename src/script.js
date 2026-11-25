@@ -3949,10 +3949,17 @@ function gerarPDF(baixar = true) {
 
     if (y + 10 > PH - 27) { doc.addPage(); y = 14; }
     doc.setFillColor(...C_AZUL_ESC); doc.rect(ML, y, CW, 12, 'F');
+    const labelTotalGeral = temDescontoPdf ? 'TOTAL GERAL com DESCONTO' : 'TOTAL GERAL';
+    const valorTotalGeral = formatarMoeda(totalComDesconto);
+    const xFinalTotalGeral = ML + CW - 2;
+    const larguraValorTotalGeral = doc.getTextWidth(valorTotalGeral) * 13 / 10;
+    const larguraMaximaValorTotalGeral = CW * 0.62;
+    const tamanhoValorTotalGeral = Math.min(13, Math.max(8, 13 * larguraMaximaValorTotalGeral / larguraValorTotalGeral));
+    const inicioValorTotalGeral = xFinalTotalGeral - larguraValorTotalGeral * tamanhoValorTotalGeral / 13;
     doc.setFont('helvetica', 'bold'); doc.setFontSize(10); doc.setTextColor(...C_BRANCO);
-    doc.text(temDescontoPdf ? 'TOTAL GERAL com DESCONTO' : 'TOTAL GERAL', ML + CW - COL_TMAO - 30, y + 8, { align: 'right' });
-    doc.setFontSize(13); doc.setTextColor(...C_AZUL_CLA);
-    doc.text(formatarMoeda(totalComDesconto), ML + CW - 2, y + 8.5, { align: 'right' }); y += 16;
+    doc.text(labelTotalGeral, ML + 2, y + 8, { maxWidth: Math.max(1, inicioValorTotalGeral - ML - 5) });
+    doc.setFontSize(tamanhoValorTotalGeral); doc.setTextColor(...C_AZUL_CLA);
+    doc.text(valorTotalGeral, xFinalTotalGeral, y + 8.5, { align: 'right' }); y += 16;
 
     (dados.totaisOpcoes || totais.opcoes || []).forEach(opcao => {
         const blocoH = 30;
